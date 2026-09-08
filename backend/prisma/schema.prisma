@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum PaperVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum PaperStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Semester {
+  FIRST
+  SECOND
+}
+
+enum GeneratedSetType {
+  QUIZ
+  FLASHCARD
+}
+
+enum ReviewDecision {
+  APPROVED
+  REJECTED
+}
+
+model Profile {
+  id          String   @id // Matches the Supabase Auth user UUID.
+  email       String?  @unique
+  displayName String?
+  isAdmin     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  papers       Paper[]
+  generatedSets GeneratedSet[]
+}
+
+model University {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  faculties Faculty[]
+}
+
+model Faculty {
+  id           String     @id @default(cuid())
+  universityId String
+  name         String
+  slug         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departments  Department[]
+
+  @@unique([universityId, slug])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  facultyId String
+  name      String
+  slug      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  faculty   Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  courses   Course[]
+
+  @@unique([facultyId, slug])
+}
+
+model Course {
+  id              String   @id @default(cuid())
+  departmentId    String
+  code            String
+  title           String
+  crossListingCode String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  department      Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  papers          Paper[]
+  generatedSets   GeneratedSet[]
+
+  @@unique([departmentId, code])
+  @@index([crossListingCode])
+}
+
+model Paper {
+  id          String          @id @default(cuid())
+  ownerId     String
+  courseId    String
+  session     String
+  year        Int
+  semester    Semester
+  fileUrl     String
+  visibility  PaperVisibility @default(PRIVATE)
+  status      PaperStatus     @default(DRAFT)
+  extractedAt DateTime?
+  reviewedAt  DateTime?
+  reviewedBy  String?
+  reviewNote  String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  owner       Profile         @relation(fields: [ownerId], references: [id])
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions   Question[]
+
+  @@index([courseId, status, visibility])
+  @@index([ownerId])
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  paperId     String
+  questionNo  String?
+  prompt      String
+  answer      String?
+  explanation String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  paper       Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  setItems    GeneratedSetItem[]
+
+  @@index([paperId])
+}
+
+model GeneratedSet {
+  id          String          @id @default(cuid())
+  userId      String
+  courseId    String
+  type        GeneratedSetType
+  title       String
+  requestedLength Int
+  createdAt   DateTime        @default(now())
+
+  user        Profile         @relation(fields: [userId], references: [id])
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items       GeneratedSetItem[]
+
+  @@index([userId, courseId])
+}
+
+model GeneratedSetItem {
+  setId      String
+  questionId String
+  position   Int
+
+  set        GeneratedSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([setId, questionId])
+  @@unique([setId, position])
+}
+
+model AuditEvent {
+  id           String   @id @default(cuid())
+  actorId      String?
+  action       String
+  entityType   String
+  entityId     String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  actor        Profile?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
