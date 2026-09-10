@@ -25,7 +25,7 @@ export function PersonalPractice() {
     <PageFrame
       title="Practise from your own PDF"
       subtitle="Your upload stays private to your workspace."
-      back="home"
+      back="dashboard"
     >
       <label className="personal-drop">
         <Upload size={22} />
@@ -74,7 +74,7 @@ export function Hierarchy({
     <PageFrame
       title="Find your course"
       subtitle="Choose where your paper belongs, or add the missing level."
-      back="home"
+      back="dashboard"
     >
       <div className="field">
         <label>Institution</label>
@@ -204,7 +204,7 @@ export function CoursePage({
       eyebrow="Cyber Security / Course workspace"
       title={course.title}
       subtitle={`${course.papers} papers in the shared repository · ${uploaded ? 4 : 3} uploaded by you`}
-      back="courses"
+      back="dashboard"
     >
       <div className="tabs">
         <button className="active">Repository & uploads</button>

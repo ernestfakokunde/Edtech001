@@ -7,9 +7,11 @@ export function go(route: Route) {
 }
 
 export function Header({ route }: { route: Route }) {
+  const isApplicationRoute = route !== "home" && route !== "login" && route !== "signup";
+
   return (
     <header className="topbar">
-      <button className="wordmark" onClick={() => go("home")}>
+      <button className="wordmark" onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>
         <span>
           <LayoutGrid size={16} />
         </span>{" "}
@@ -22,8 +24,8 @@ export function Header({ route }: { route: Route }) {
         >
           My courses
         </button>
-        <button onClick={() => go("course")}>Repository</button>
-        <button onClick={() => go("home")}>My sets</button>
+        <button onClick={() => go("courses")}>Repository</button>
+        <button onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>My sets</button>
       </nav>
       <button className="avatar" aria-label="Open profile menu">
         AO

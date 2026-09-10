@@ -3,6 +3,7 @@ import "./App.css";
 import { Header, Footer, go } from "./components/Layout";
 import { Home } from "./pages/Home";
 import { AuthPage } from "./pages/Auth";
+import { Dashboard } from "./pages/Dashboard";
 import {
   CoursePage,
   CourseSelection,
@@ -15,6 +16,19 @@ import {
 } from "./pages/Study";
 import { courses, papers } from "./data";
 import type { Course, Mode, Paper, Route } from "./types";
+import { getCurrentProfile, logout } from "./lib/api";
+
+const protectedRoutes: Route[] = [
+  "dashboard",
+  "personal",
+  "hierarchy",
+  "courses",
+  "course",
+  "generate",
+  "flashcards",
+  "quiz",
+  "results",
+];
 
 function App() {
   const [route, setRoute] = useState<Route>(
@@ -25,6 +39,7 @@ function App() {
   const [mode, setMode] = useState<Mode>("flashcards");
   const [length, setLength] = useState("30");
   const [isUploaded, setIsUploaded] = useState(false);
+  const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">("checking");
 
   useEffect(() => {
     const onHashChange = () =>
@@ -33,21 +48,41 @@ function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  useEffect(() => {
+    getCurrentProfile()
+      .then(() => {
+        setAuthStatus("authenticated");
+        if (window.location.hash.slice(1) === "home") go("dashboard");
+      })
+      .catch(() => setAuthStatus("anonymous"));
+  }, []);
+
+  useEffect(() => {
+    if (authStatus === "anonymous" && protectedRoutes.includes(route)) {
+      go("login");
+    }
+  }, [authStatus, route]);
+
   const chooseCourse = (course: Course) => {
     setSelectedCourse(course);
     go("course");
   };
   const beginGeneration = () =>
     go(mode === "flashcards" ? "flashcards" : "quiz");
-  const showHeader = !["login", "signup", "flashcards", "quiz"].includes(route);
+  const showHeader = !["login", "signup", "dashboard", "flashcards", "quiz"].includes(route);
   const showFooter = ["home", "hierarchy", "courses"].includes(route);
+
+  if (authStatus === "checking" && protectedRoutes.includes(route)) {
+    return <div className="app-shell auth-loading"><span>Checking your session...</span></div>;
+  }
 
   return (
     <div className="app-shell">
       {showHeader && <Header route={route} />}
       {route === "home" && <Home />}
-      {route === "login" && <AuthPage mode="login" />}
-      {route === "signup" && <AuthPage mode="signup" />}
+      {route === "dashboard" && <Dashboard onCourse={chooseCourse} onLogout={async () => { try { await logout(); } finally { setAuthStatus("anonymous"); go("home"); } }} />}
+      {route === "login" && <AuthPage mode="login" onAuthenticated={() => setAuthStatus("authenticated")} />}
+      {route === "signup" && <AuthPage mode="signup" onAuthenticated={() => setAuthStatus("authenticated")} />}
       {route === "personal" && <PersonalPractice />}
       {route === "hierarchy" && <Hierarchy onCourse={chooseCourse} />}
       {route === "courses" && <CourseSelection onCourse={chooseCourse} />}

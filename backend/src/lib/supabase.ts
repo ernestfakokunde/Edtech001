@@ -1,13 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { env } from '../config/env.js'
 
-export const supabase = env.supabaseUrl && env.supabaseAnonKey
-  ? createClient(env.supabaseUrl, env.supabaseAnonKey)
-  : null
+if (!env.supabaseUrl || !env.supabaseServiceRoleKey) {
+  console.warn('[config] SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set; uploads will be unavailable.')
+}
 
-// Keep the service-role client separate and server-only. Never expose this key to the frontend.
-export const supabaseAdmin = env.supabaseUrl && env.supabaseServiceRoleKey
-  ? createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
-  : null
+export const supabase = createClient(
+  env.supabaseUrl ?? 'https://placeholder.supabase.co',
+  env.supabaseServiceRoleKey ?? 'placeholder-service-role-key',
+  { auth: { autoRefreshToken: false, persistSession: false } },
+)

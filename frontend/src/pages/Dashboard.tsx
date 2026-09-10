@@ -1,0 +1,82 @@
+import {
+  ArrowRight,
+  Bell,
+  BookOpen,
+  Check,
+  FileText,
+  Flame,
+  Layers3,
+  Plus,
+  Sparkles,
+} from "lucide-react";
+import { courses } from "../data";
+import { go } from "../components/Layout";
+import type { Course } from "../types";
+
+const studySets = [
+  {
+    type: "Flashcards",
+    title: "CPT 412 — Human computer interaction",
+    progress: "60%",
+    detail: "18 of 30 cards reviewed",
+    tone: "blue",
+    route: "flashcards" as const,
+  },
+  {
+    type: "Quiz",
+    title: "CPT 414 — Data management II",
+    progress: "30%",
+    detail: "Resume · question 9 of 30",
+    tone: "navy",
+    route: "quiz" as const,
+  },
+  {
+    type: "Flashcards",
+    title: "CPT 408 — Software engineering",
+    progress: "100%",
+    detail: "Completed · review again",
+    tone: "blue",
+    route: "flashcards" as const,
+  },
+];
+
+export function Dashboard({ onCourse, onLogout }: { onCourse: (course: Course) => void; onLogout: () => Promise<void> }) {
+  return (
+    <main className="dashboard-shell">
+      <div className="dashboard-topline">
+        <div className="dashboard-brand"><span><Layers3 size={16} /></span> RecappEdu</div>
+        <div className="dashboard-actions"><button className="dashboard-icon" aria-label="View notifications"><Bell size={16} /><i /></button><div className="dashboard-avatar">EF</div><button className="dashboard-logout" onClick={() => void onLogout()}>Log out</button></div>
+      </div>
+
+      <section className="dashboard-greeting">
+        <p className="eyebrow">Your study desk</p>
+        <h1>Welcome back, Ernest</h1>
+        <p>Cyber Security · Computing, FUT Minna</p>
+      </section>
+
+      <section className="metric-grid">
+        <Metric icon={<Flame size={15} />} value="6" label="Day streak" tone="amber" />
+        <Metric icon={<Layers3 size={15} />} value="142" label="Cards reviewed" tone="blue" />
+        <Metric icon={<Check size={15} />} value="78%" label="Avg. quiz score" tone="green" />
+      </section>
+
+      <DashboardSection title="Continue studying" action="See all">
+        <div className="study-set-scroll">{studySets.map((set) => <button className={`study-set ${set.tone}`} key={set.title} onClick={() => go(set.route)}><small>{set.type}</small><strong>{set.title}</strong><span className="set-track"><i style={{ width: set.progress }} /></span><em>{set.detail}</em></button>)}</div>
+      </DashboardSection>
+
+      <DashboardSection title="Your courses" action="Manage">
+        <div className="dashboard-course-grid">{courses.map((course) => <button className="dashboard-course" key={course.code} onClick={() => onCourse(course)}><div className="course-card-head"><span className="dashboard-course-icon"><BookOpen size={15} /></span><small>{course.papers ? `${course.papers} papers` : "No papers"}</small></div><strong>{course.code}</strong><span>{course.title}</span><footer><em>{course.papers ? `${course.papers > 10 ? 3 : 1} sets made` : "0 sets made"}</em><em>{course.papers ? "Active" : "Needs papers"}</em></footer></button>)}<button className="dashboard-add-course" onClick={() => go("hierarchy")}><span><Plus size={15} /></span><strong>Add another course</strong></button></div>
+      </DashboardSection>
+
+      <DashboardSection title="New in your faculty repository" action="See all">
+        <div className="repository-feed"><RepositoryItem title="CPT 419 · 2023/2024 First semester" detail="Mobile Application Development · added by Chidi O." onView={() => go("courses")} /><RepositoryItem title="CPT 412 · 2021/2022 Second semester" detail="Human computer interaction · added by Sarah M." onView={() => onCourse(courses[0])} /></div>
+      </DashboardSection>
+
+      <section className="dashboard-quick-actions"><button onClick={() => go("personal")}><Sparkles size={16} /><span><strong>Create from my PDF</strong><small>Private AI practice set</small></span><ArrowRight size={16} /></button><button onClick={() => go("hierarchy")}><FileText size={16} /><span><strong>Browse course repository</strong><small>Find papers by course</small></span><ArrowRight size={16} /></button></section>
+    </main>
+  );
+}
+
+function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) { return <div className="metric-card"><span className={`metric-icon ${tone}`}>{icon}</span><strong>{value}</strong><small>{label}</small></div>; }
+function DashboardSection({ title, action, children }: { title: string; action: string; children: React.ReactNode }) { return <section className="dashboard-section"><div className="dashboard-section-head"><h2>{title}</h2><button>{action}</button></div>{children}</section>; }
+function RepositoryItem({ title, detail, onView }: { title: string; detail: string; onView: () => void }) { return <div className="repository-item"><span><FileText size={16} /></span><div><strong>{title}</strong><small>{detail}</small></div><button onClick={onView}>View</button></div>; }

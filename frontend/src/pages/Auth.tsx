@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { ArrowRight, Check, LayoutGrid, LockKeyhole, Mail } from "lucide-react";
 import { go } from "../components/Layout";
+import { login, signup } from "../lib/api";
 
-export function AuthPage({ mode }: { mode: "login" | "signup" }) {
+export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; onAuthenticated?: () => void }) {
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const isSignup = mode === "signup";
   return (
     <main className="auth-shell">
@@ -63,16 +66,36 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
               </span>
               <button
                 className="primary-button full"
-                onClick={() => go("home")}
+                onClick={() => go("dashboard")}
               >
                 Go to study desk <ArrowRight size={16} />
               </button>
             </div>
           ) : (
             <form
-              onSubmit={(event) => {
+              onSubmit={async (event) => {
                 event.preventDefault();
-                setSubmitted(true);
+                setError("");
+                setLoading(true);
+                const form = new FormData(event.currentTarget);
+                try {
+                  await (isSignup
+                    ? signup({
+                        email: String(form.get("email")),
+                        password: String(form.get("password")),
+                        displayName: String(form.get("displayName")),
+                      })
+                    : login({
+                        email: String(form.get("email")),
+                        password: String(form.get("password")),
+                      }));
+                      onAuthenticated?.();
+                  setSubmitted(true);
+                } catch (requestError) {
+                  setError(requestError instanceof Error ? requestError.message : "Authentication failed.");
+                } finally {
+                  setLoading(false);
+                }
               }}
             >
               <label>
@@ -80,6 +103,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 <div className="auth-input">
                   <Mail size={16} />
                   <input
+                    name="email"
                     type="email"
                     required
                     placeholder="you@university.edu"
@@ -90,7 +114,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 <label>
                   Full name
                   <div className="auth-input">
-                    <input required placeholder="Your name" />
+                    <input name="displayName" required placeholder="Your name" />
                   </div>
                 </label>
               )}
@@ -99,6 +123,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 <div className="auth-input">
                   <LockKeyhole size={16} />
                   <input
+                    name="password"
                     type="password"
                     required
                     minLength={8}
@@ -116,9 +141,10 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
                 </label>
               )}
               <button className="primary-button full" type="submit">
-                {isSignup ? "Create account" : "Sign in"}{" "}
+                {loading ? "Working..." : isSignup ? "Create account" : "Sign in"}{" "}
                 <ArrowRight size={16} />
               </button>
+              {error && <p className="auth-error" role="alert">{error}</p>}
             </form>
           )}
           <p className="auth-switch">

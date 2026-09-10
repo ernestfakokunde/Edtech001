@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 enum PaperVisibility {
@@ -36,8 +35,9 @@ enum ReviewDecision {
 }
 
 model Profile {
-  id          String   @id // Matches the Supabase Auth user UUID.
-  email       String?  @unique
+  id          String   @id @default(cuid())
+  email       String   @unique
+  passwordHash String
   displayName String?
   isAdmin     Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -45,6 +45,21 @@ model Profile {
 
   papers       Paper[]
   generatedSets GeneratedSet[]
+  auditEvents  AuditEvent[]
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  profileId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([expiresAt])
 }
 
 model University {

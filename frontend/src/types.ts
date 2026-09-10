@@ -1,5 +1,6 @@
 export type Route =
   | "home"
+  | "dashboard"
   | "login"
   | "signup"
   | "personal"
