@@ -1,0 +1,9 @@
+ALTER TABLE "Paper"
+ADD COLUMN "title" TEXT NOT NULL DEFAULT 'Untitled paper',
+ADD COLUMN "description" TEXT NOT NULL DEFAULT 'No description provided',
+ADD COLUMN "level" TEXT NOT NULL DEFAULT 'Unknown';
+
+ALTER TABLE "Paper"
+ALTER COLUMN "title" DROP DEFAULT,
+ALTER COLUMN "description" DROP DEFAULT,
+ALTER COLUMN "level" DROP DEFAULT;

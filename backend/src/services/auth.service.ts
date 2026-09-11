@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
 import { promisify } from 'node:util'
-import { prisma } from '../lib/prisma.js'
+import { prisma, withConnectionRetry } from '../lib/prisma.js'
 
 const scrypt = promisify(scryptCallback)
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30
@@ -31,24 +31,31 @@ async function createSession(profileId: string) {
 }
 
 export async function signUp(input: SignUpInput) {
-  const email = normalizeEmail(input.email)
-  const profile = await prisma.profile.create({ data: { email, passwordHash: await hashPassword(input.password), displayName: input.displayName.trim() } })
-  const token = await createSession(profile.id)
-  return { token, profile }
+  return withConnectionRetry(async () => {
+    const email = normalizeEmail(input.email)
+    const profile = await prisma.profile.create({ data: { email, passwordHash: await hashPassword(input.password), displayName: input.displayName.trim() } })
+    const token = await createSession(profile.id)
+    return { token, profile }
+  })
 }
 
 export async function signIn(input: SignInInput) {
-  const email = normalizeEmail(input.email)
-  const profile = await prisma.profile.findUnique({ where: { email } })
-  if (!profile || !(await verifyPassword(input.password, profile.passwordHash))) throw new Error('Invalid login credentials')
-  const token = await createSession(profile.id)
-  return { token, profile }
+  return withConnectionRetry(async () => {
+    const email = normalizeEmail(input.email)
+    const profile = await prisma.profile.findUnique({ where: { email } })
+    if (!profile || !(await verifyPassword(input.password, profile.passwordHash))) throw new Error('Invalid login credentials')
+    const token = await createSession(profile.id)
+    return { token, profile }
+  })
 }
 
 export async function getProfileBySession(token: string) {
-  const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { profile: true } })
-  if (!session || session.expiresAt <= new Date()) return null
-  return { session, profile: session.profile }
+  return withConnectionRetry(async () => {
+    const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { profile: true } })
+    if (!session || session.expiresAt <= new Date()) return null
+    if (session.profile.suspendedUntil && session.profile.suspendedUntil > new Date()) return null
+    return { session, profile: session.profile }
+  })
 }
 
-export async function deleteSession(token: string) { await prisma.session.deleteMany({ where: { tokenHash: hashToken(token) } }) }
+export async function deleteSession(token: string) { return withConnectionRetry(() => prisma.session.deleteMany({ where: { tokenHash: hashToken(token) } })) }

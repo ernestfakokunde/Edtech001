@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 import { LayoutGrid, Menu } from "lucide-react";
 import type { Route } from "../types";
 
-export function go(route: Route) {
+export function go(route: Route | string) {
   window.location.hash = route;
 }
 
-export function Header({ route }: { route: Route }) {
+export function Header({ route, isAdmin = false }: { route: Route; isAdmin?: boolean }) {
   const isApplicationRoute = route !== "home" && route !== "login" && route !== "signup";
 
   return (
@@ -19,15 +19,16 @@ export function Header({ route }: { route: Route }) {
       </button>
       <nav>
         <button
-          className={route === "courses" || route === "course" ? "active" : ""}
-          onClick={() => go("courses")}
+          className={route === "hierarchy" || route === "material" ? "active" : ""}
+          onClick={() => go("hierarchy")}
         >
           My courses
         </button>
-        <button onClick={() => go("courses")}>Repository</button>
+        <button onClick={() => go("hierarchy")}>Repository</button>
         <button onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>My sets</button>
+        {isAdmin && <button className={route === "admin" ? "active" : ""} onClick={() => go("admin")}>Admin</button>}
       </nav>
-      <button className="avatar" aria-label="Open profile menu">
+      <button className="avatar" aria-label="Open profile" onClick={() => go("profile")}>
         AO
       </button>
       <button className="menu-button" aria-label="Open menu">

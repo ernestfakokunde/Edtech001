@@ -5,14 +5,18 @@ export type Route =
   | "signup"
   | "personal"
   | "hierarchy"
+  | "material"
   | "courses"
   | "course"
   | "generate"
   | "flashcards"
   | "quiz"
-  | "results";
+  | "results"
+  | "profile"
+  | "admin";
 export type Mode = "flashcards" | "quiz";
 export type Course = {
+  id?: string;
   code: string;
   title: string;
   papers: number;
@@ -23,4 +27,7 @@ export type Paper = {
   title: string;
   detail: string;
   status: string;
+  description?: string;
+  level?: string;
+  course?: string;
 };

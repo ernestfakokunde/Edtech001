@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum PaperVisibility {
@@ -35,18 +35,21 @@ enum ReviewDecision {
 }
 
 model Profile {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  passwordHash String
-  displayName String?
-  isAdmin     Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String
+  displayName      String?
+  username         String?   @unique
+  isAdmin          Boolean   @default(false)
+  suspendedUntil   DateTime?
+  suspensionReason String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  papers       Paper[]
+  papers        Paper[]
   generatedSets GeneratedSet[]
-  auditEvents  AuditEvent[]
-  sessions     Session[]
+  auditEvents   AuditEvent[]
+  sessions      Session[]
 }
 
 model Session {
@@ -73,15 +76,15 @@ model University {
 }
 
 model Faculty {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   universityId String
   name         String
   slug         String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  departments  Department[]
+  university  University   @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departments Department[]
 
   @@unique([universityId, slug])
 }
@@ -94,24 +97,24 @@ model Department {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  faculty   Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
-  courses   Course[]
+  faculty Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  courses Course[]
 
   @@unique([facultyId, slug])
 }
 
 model Course {
-  id              String   @id @default(cuid())
-  departmentId    String
-  code            String
-  title           String
+  id               String   @id @default(cuid())
+  departmentId     String
+  code             String
+  title            String
   crossListingCode String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  department      Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  papers          Paper[]
-  generatedSets   GeneratedSet[]
+  department    Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  papers        Paper[]
+  generatedSets GeneratedSet[]
 
   @@unique([departmentId, code])
   @@index([crossListingCode])
@@ -121,6 +124,8 @@ model Paper {
   id          String          @id @default(cuid())
   ownerId     String
   courseId    String
+  description String
+  level       String
   session     String
   year        Int
   semester    Semester
@@ -134,9 +139,9 @@ model Paper {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  owner       Profile         @relation(fields: [ownerId], references: [id])
-  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  questions   Question[]
+  owner     Profile    @relation(fields: [ownerId], references: [id])
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions Question[]
 
   @@index([courseId, status, visibility])
   @@index([ownerId])
@@ -152,24 +157,24 @@ model Question {
   metadata    Json?
   createdAt   DateTime @default(now())
 
-  paper       Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
-  setItems    GeneratedSetItem[]
+  paper    Paper              @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  setItems GeneratedSetItem[]
 
   @@index([paperId])
 }
 
 model GeneratedSet {
-  id          String          @id @default(cuid())
-  userId      String
-  courseId    String
-  type        GeneratedSetType
-  title       String
+  id              String           @id @default(cuid())
+  userId          String
+  courseId        String
+  type            GeneratedSetType
+  title           String
   requestedLength Int
-  createdAt   DateTime        @default(now())
+  createdAt       DateTime         @default(now())
 
-  user        Profile         @relation(fields: [userId], references: [id])
-  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  items       GeneratedSetItem[]
+  user   Profile            @relation(fields: [userId], references: [id])
+  course Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items  GeneratedSetItem[]
 
   @@index([userId, courseId])
 }
@@ -179,24 +184,31 @@ model GeneratedSetItem {
   questionId String
   position   Int
 
-  set        GeneratedSet @relation(fields: [setId], references: [id], onDelete: Cascade)
-  question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  set      GeneratedSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  question Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@id([setId, questionId])
   @@unique([setId, position])
 }
 
 model AuditEvent {
-  id           String   @id @default(cuid())
-  actorId      String?
-  action       String
-  entityType   String
-  entityId     String
-  metadata     Json?
-  createdAt    DateTime @default(now())
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
 
-  actor        Profile?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actor Profile? @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+model studySet {
+  id        String @id @default(cuid())
+  title     String
+  type      String
+  createdAt DateTime @default(now())
 }

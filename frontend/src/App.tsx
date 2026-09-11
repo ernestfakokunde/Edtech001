@@ -5,54 +5,46 @@ import { Home } from "./pages/Home";
 import { AuthPage } from "./pages/Auth";
 import { Dashboard } from "./pages/Dashboard";
 import {
-  CoursePage,
-  CourseSelection,
-  Flashcards,
-  Generate,
   Hierarchy,
+  MaterialDetails,
   PersonalPractice,
-  Quiz,
-  Results,
 } from "./pages/Study";
-import { courses, papers } from "./data";
-import type { Course, Mode, Paper, Route } from "./types";
+import { getRepositoryPaper, type RepositoryPaper } from "./lib/api";
+import type { Route } from "./types";
 import { getCurrentProfile, logout } from "./lib/api";
+import { ProfilePage } from "./pages/Profile";
+import { AdminPage } from "./pages/Admin";
 
 const protectedRoutes: Route[] = [
   "dashboard",
   "personal",
   "hierarchy",
-  "courses",
-  "course",
-  "generate",
-  "flashcards",
-  "quiz",
-  "results",
+  "profile",
+  "admin",
 ];
 
 function App() {
+  const hashRoute = () => window.location.hash.slice(1).split("/")[0] as Route || "home";
   const [route, setRoute] = useState<Route>(
-    (window.location.hash.slice(1) as Route) || "home",
+    hashRoute(),
   );
-  const [selectedCourse, setSelectedCourse] = useState<Course>(courses[0]);
-  const [selectedPaper, setSelectedPaper] = useState<Paper>(papers[0]);
-  const [mode, setMode] = useState<Mode>("flashcards");
-  const [length, setLength] = useState("30");
-  const [isUploaded, setIsUploaded] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState<RepositoryPaper | null>(null);
   const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">("checking");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const onHashChange = () =>
-      setRoute((window.location.hash.slice(1) as Route) || "home");
+      setRoute(hashRoute());
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
   useEffect(() => {
     getCurrentProfile()
-      .then(() => {
+      .then((result) => {
         setAuthStatus("authenticated");
-        if (window.location.hash.slice(1) === "home") go("dashboard");
+        setIsAdmin(result.profile.isAdmin);
+        if (hashRoute() === "home") go("dashboard");
       })
       .catch(() => setAuthStatus("anonymous"));
   }, []);
@@ -63,13 +55,28 @@ function App() {
     }
   }, [authStatus, route]);
 
-  const chooseCourse = (course: Course) => {
-    setSelectedCourse(course);
-    go("course");
+  useEffect(() => {
+    if (authStatus === "authenticated" && route === "admin" && !isAdmin) go("dashboard");
+  }, [authStatus, isAdmin, route]);
+
+  const materialId = route === "material" ? window.location.hash.slice(1).split("/")[1] : undefined;
+
+  useEffect(() => {
+    if (route !== "material") return;
+    if (!materialId) { go("hierarchy"); return; }
+    if (selectedMaterial?.id === materialId) return;
+    getRepositoryPaper(materialId).then((result) => setSelectedMaterial(result.paper)).catch(() => go("hierarchy"));
+  }, [route, materialId, selectedMaterial]);
+
+  useEffect(() => {
+    if (route === "course" || route === "courses") go("hierarchy");
+  }, [route]);
+
+  const chooseMaterial = (paper: RepositoryPaper) => {
+    setSelectedMaterial(paper);
+    go(`material/${encodeURIComponent(paper.id)}`);
   };
-  const beginGeneration = () =>
-    go(mode === "flashcards" ? "flashcards" : "quiz");
-  const showHeader = !["login", "signup", "dashboard", "flashcards", "quiz"].includes(route);
+  const showHeader = !["login", "signup", "dashboard"].includes(route);
   const showFooter = ["home", "hierarchy", "courses"].includes(route);
 
   if (authStatus === "checking" && protectedRoutes.includes(route)) {
@@ -78,55 +85,16 @@ function App() {
 
   return (
     <div className="app-shell">
-      {showHeader && <Header route={route} />}
+      {showHeader && <Header route={route} isAdmin={isAdmin} />}
       {route === "home" && <Home />}
-      {route === "dashboard" && <Dashboard onCourse={chooseCourse} onLogout={async () => { try { await logout(); } finally { setAuthStatus("anonymous"); go("home"); } }} />}
+      {route === "dashboard" && <Dashboard isAdmin={isAdmin} onLogout={async () => { try { await logout(); } finally { setAuthStatus("anonymous"); setIsAdmin(false); go("home"); } }} />}
       {route === "login" && <AuthPage mode="login" onAuthenticated={() => setAuthStatus("authenticated")} />}
       {route === "signup" && <AuthPage mode="signup" onAuthenticated={() => setAuthStatus("authenticated")} />}
       {route === "personal" && <PersonalPractice />}
-      {route === "hierarchy" && <Hierarchy onCourse={chooseCourse} />}
-      {route === "courses" && <CourseSelection onCourse={chooseCourse} />}
-      {route === "course" && (
-        <CoursePage
-          course={selectedCourse}
-          uploaded={isUploaded}
-          onUpload={() => setIsUploaded(true)}
-          onGenerate={(paper) => {
-            setSelectedPaper(paper);
-            go("generate");
-          }}
-        />
-      )}
-      {route === "generate" && (
-        <Generate
-          course={selectedCourse}
-          paper={selectedPaper}
-          mode={mode}
-          length={length}
-          onMode={setMode}
-          onLength={setLength}
-          onGenerate={beginGeneration}
-        />
-      )}
-      {route === "flashcards" && (
-        <Flashcards
-          onExit={() => go("course")}
-          onQuiz={() => {
-            setMode("quiz");
-            go("quiz");
-          }}
-        />
-      )}
-      {route === "quiz" && (
-        <Quiz onExit={() => go("course")} onFinish={() => go("results")} />
-      )}
-      {route === "results" && (
-        <Results
-          course={selectedCourse}
-          onRetake={() => go("quiz")}
-          onBack={() => go("course")}
-        />
-      )}
+      {route === "hierarchy" && <Hierarchy onMaterial={chooseMaterial} />}
+      {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="app-shell auth-loading"><span>Loading material...</span></div>)}
+      {route === "profile" && <ProfilePage />}
+      {route === "admin" && isAdmin && <AdminPage />}
       {showFooter && <Footer />}
     </div>
   );
