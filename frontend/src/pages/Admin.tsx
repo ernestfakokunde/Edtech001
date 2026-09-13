@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
-import { Ban, Check, Clock3, FileText, Search, ShieldCheck, UserRound, Users, X } from "lucide-react";
+import { Activity, Ban, Check, ChevronLeft, ChevronRight, Clock3, FileText, Search, ShieldCheck, UserRound, Users, X } from "lucide-react";
 import { PageFrame } from "../components/Layout";
-import { getAdminActivity, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getUniversities, reviewSubmission, suspendAdminUser, unsuspendAdminUser } from "../lib/api";
-import type { AdminUser, Department, RepositorySubmission, University } from "../lib/api";
+import { getAdminActivity, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getModerationSummary, getUniversities, reviewSubmission, suspendAdminUser, unsuspendAdminUser } from "../lib/api";
+import type { AdminUser, Department, Pagination, RepositorySubmission, University } from "../lib/api";
 
 export function AdminPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
+    const [users, setUsers] = useState<AdminUser[]>([]);
   const [submissions, setSubmissions] = useState<RepositorySubmission[]>([]);
+  const [submissionsPage, setSubmissionsPage] = useState(1);
+  const [submissionsPagination, setSubmissionsPagination] = useState<Pagination>({ page: 1, pageSize: 50, total: 0, pages: 1 });
+  const [submissionStatus, setSubmissionStatus] = useState<"PENDING" | "APPROVED" | "REJECTED">("PENDING");
+  const [submissionSearch, setSubmissionSearch] = useState("");
   const [universities, setUniversities] = useState<University[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedUniversity, setSelectedUniversity] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [search, setSearch] = useState("");
+  const [summary, setSummary] = useState<{ pending: number; approved: number; rejected: number; generatedSets: number; users: number } | null>(null);
   const [activityCount, setActivityCount] = useState(0);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -22,11 +27,18 @@ export function AdminPage() {
     try { setUsers((await getAdminUsers({ search, universityId: selectedUniversity, departmentId: selectedDepartment })).users); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load users."); }
   }
-  async function loadSubmissions() {
-    try { setSubmissions((await getAdminSubmissions()).submissions); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load submissions."); }
+    async function loadSubmissions(overrides: { status?: "PENDING" | "APPROVED" | "REJECTED"; search?: string; page?: number } = {}) {
+    const status = overrides.status ?? submissionStatus
+    const search = overrides.search ?? submissionSearch
+    const page = overrides.page ?? submissionsPage
+    try {
+      const result = await getAdminSubmissions({ status, search, page, pageSize: 50 });
+      setSubmissions(result.submissions);
+      setSubmissionsPagination(result.pagination);
+    }
+        catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load submissions."); }
   }
-  useEffect(() => { void loadUsers(); void loadSubmissions(); Promise.all([getUniversities(), getAdminActivity()]).then(([hierarchy, activity]) => { setUniversities(hierarchy.universities); setActivityCount(activity.activity.length); }).catch((reason: Error) => setError(reason.message)); }, []);
+  useEffect(() => { void loadUsers(); void loadSubmissions({ page: 1 }); Promise.all([getUniversities(), getAdminActivity(), getModerationSummary()]).then(([hierarchy, activity, moderation]) => { setUniversities(hierarchy.universities); setActivityCount(activity.activity.length); setSummary(moderation.summary); }).catch((reason: Error) => setError(reason.message)); }, []);
   useEffect(() => { void loadUsers(); }, [selectedUniversity, selectedDepartment]);
 
   async function chooseUniversity(value: string) {
@@ -53,13 +65,12 @@ export function AdminPage() {
     finally { setReviewing(null); }
   }
 
-  const pending = submissions.filter((submission) => submission.status === "PENDING");
-  return <PageFrame eyebrow="Operations" title="Admin board" subtitle="Review repository contributions and manage platform access.">
+    return <PageFrame eyebrow="Operations" title="Admin board" subtitle="Review repository contributions and manage platform access.">
     <div className="admin-board">
-      <div className="admin-metrics"><Metric icon={<Users size={17} />} label="Users" value={String(users.length)} /><Metric icon={<Clock3 size={17} />} label="Pending review" value={String(pending.length)} /><Metric icon={<FileText size={17} />} label="Recent events" value={String(activityCount)} /></div>
+      <div className="admin-metrics"><Metric icon={<Users size={17} />} label="Users" value={String(summary?.users ?? users.length)} /><Metric icon={<Clock3 size={17} />} label="Pending review" value={String(summary?.pending ?? 0)} /><Metric icon={<ShieldCheck size={17} />} label="Approved" value={String(summary?.approved ?? 0)} /><Metric icon={<Ban size={17} />} label="Rejected" value={String(summary?.rejected ?? 0)} /><Metric icon={<FileText size={17} />} label="AI sets" value={String(summary?.generatedSets ?? 0)} /><Metric icon={<Activity size={17} />} label="Recent events" value={String(activityCount)} /></div>
       {notice && <div className="admin-notice"><Check size={15} /> {notice}</div>}
       {error && <div className="admin-feedback-error">{error}</div>}
-      <section className="admin-panel"><div className="admin-panel-head"><div><p className="eyebrow">Repository moderation</p><h2>Paper submissions</h2></div><span className="admin-status"><ShieldCheck size={14} /> {pending.length} awaiting review</span></div><div className="admin-submission-list">{pending.length === 0 ? <div className="admin-empty"><FileText size={20} /><span>No pending papers.</span></div> : pending.map((submission) => <SubmissionRow key={submission.id} submission={submission} busy={reviewing === submission.id} onReview={review} />)}</div></section>
+      <section className="admin-panel"><div className="admin-panel-head"><div><p className="eyebrow">Repository moderation</p><h2>Paper submissions</h2></div><div className="admin-submission-filters"><select value={submissionStatus} onChange={(event) => { const value = event.target.value as "PENDING" | "APPROVED" | "REJECTED"; setSubmissionStatus(value); setSubmissionsPage(1); void loadSubmissions({ status: value, page: 1 }); }}><option value="PENDING">Pending review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select><label className="admin-search"><Search size={16} /><input value={submissionSearch} onChange={(event) => setSubmissionSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { setSubmissionsPage(1); void loadSubmissions({ search: event.currentTarget.value, page: 1 }); } }} placeholder="Search course or uploader…" /></label><button className="secondary-button" onClick={() => { setSubmissionsPage(1); void loadSubmissions({ page: 1 }); }}>Search</button></div></div><div className="admin-submission-list">{submissions.length === 0 ? <div className="admin-empty"><FileText size={20} /><span>No {submissionStatus.charAt(0).toUpperCase() + submissionStatus.toLowerCase().slice(1)} papers.</span></div> : submissions.map((submission) => <SubmissionRow key={submission.id} submission={submission} busy={reviewing === submission.id} onReview={review} />)}</div>{submissionsPagination.pages > 1 && <div className="admin-pagination"><button className="secondary-button" disabled={submissionsPage <= 1} onClick={() => { const page = submissionsPage - 1; setSubmissionsPage(page); void loadSubmissions({ page }); }}><ChevronLeft size={15} /></button><span className="admin-pagination-label">Page {submissionsPage} of {submissionsPagination.pages}{" "}<span className="admin-submission-total">({submissionsPagination.total} total)</span></span><button className="secondary-button" disabled={submissionsPage >= submissionsPagination.pages} onClick={() => { const page = submissionsPage + 1; setSubmissionsPage(page); void loadSubmissions({ page }); }}><ChevronRight size={15} /></button></div>}</section>
       <section className="admin-panel"><div className="admin-panel-head"><div><p className="eyebrow">People</p><h2>User directory</h2></div><span className="admin-status"><ShieldCheck size={14} /> Moderation ready</span></div><div className="admin-filters"><label className="admin-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void loadUsers(); }} placeholder="Search name, username, or email" /></label><select value={selectedUniversity} onChange={(event) => void chooseUniversity(event.target.value)}><option value="">All universities</option>{universities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)} disabled={!selectedUniversity}><option value="">All departments</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="secondary-button" onClick={() => void loadUsers()}>Search</button></div><div className="admin-user-list">{users.length === 0 ? <div className="admin-empty"><UserRound size={20} /><span>No users match these filters.</span></div> : users.map((user) => <UserRow key={user.id} user={user} onToggle={() => void toggleSuspension(user)} />)}</div></section>
     </div>
     {suspending && <SuspendDialog user={suspending} onCancel={() => setSuspending(null)} onConfirm={confirmSuspension} />}

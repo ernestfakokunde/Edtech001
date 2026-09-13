@@ -1,11 +1,19 @@
 import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma.js'
 
 function routeParam(request: Request, name: string) {
   const value = request.params[name]
   return Array.isArray(value) ? value[0] : value
 }
+
+function parsePage(value: unknown, fallback: number, maximum: number) {
+  const parsed = typeof value === 'string' ? Number(value) : NaN
+  return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, maximum) : fallback
+}
+
+const SUBMISSION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED'] as const
 
 export async function listUsers(request: Request, response: Response) {
   const search = typeof request.query.search === 'string' ? request.query.search.trim() : ''
@@ -62,13 +70,51 @@ export async function listHierarchyActivity(_request: Request, response: Respons
   response.json({ activity })
 }
 
-export async function listRepositorySubmissions(_request: Request, response: Response) {
-  const submissions = await prisma.paper.findMany({
-    where: { status: { in: ['PENDING', 'APPROVED', 'REJECTED'] } },
-    include: { owner: { select: { id: true, email: true, displayName: true, username: true } }, course: true },
-    orderBy: { createdAt: 'desc' },
+export async function listRepositorySubmissions(request: Request, response: Response) {
+  const status = typeof request.query.status === 'string' && SUBMISSION_STATUSES.includes(request.query.status.toUpperCase() as (typeof SUBMISSION_STATUSES)[number])
+    ? (request.query.status.toUpperCase() as (typeof SUBMISSION_STATUSES)[number])
+    : 'PENDING'
+  const search = typeof request.query.search === 'string' ? request.query.search.trim() : undefined
+  const page = parsePage(request.query.page, 1, 100)
+  const pageSize = parsePage(request.query.pageSize, 50, 100)
+  const skip = (page - 1) * pageSize
+
+  const where: Prisma.PaperWhereInput = {
+    status,
+    ...(search
+      ? {
+          OR: [
+            { description: { contains: search, mode: 'insensitive' } },
+            { course: { code: { contains: search, mode: 'insensitive' } } },
+            { course: { title: { contains: search, mode: 'insensitive' } } },
+            { owner: { displayName: { contains: search, mode: 'insensitive' } } },
+            { owner: { username: { contains: search, mode: 'insensitive' } } },
+            { owner: { email: { contains: search, mode: 'insensitive' } } },
+          ],
+        }
+      : {}),
+  }
+
+  const [submissions, total] = await prisma.$transaction([
+    prisma.paper.findMany({ where, include: { owner: { select: { id: true, email: true, displayName: true, username: true } }, course: true }, orderBy: { createdAt: 'desc' }, skip, take: pageSize }),
+    prisma.paper.count({ where }),
+  ])
+
+  response.json({
+    submissions,
+    pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) },
   })
-  response.json({ submissions })
+}
+
+export async function moderationSummary(_request: Request, response: Response) {
+  const [pending, approved, rejected, generatedSets, users] = await prisma.$transaction([
+    prisma.paper.count({ where: { status: 'PENDING' } }),
+    prisma.paper.count({ where: { status: 'APPROVED' } }),
+    prisma.paper.count({ where: { status: 'REJECTED' } }),
+    prisma.generatedSet.count(),
+    prisma.profile.count(),
+  ])
+  response.json({ summary: { pending, approved, rejected, generatedSets, users } })
 }
 
 export async function reviewRepositorySubmission(request: Request, response: Response) {

@@ -1,0 +1,17 @@
+-- AlterTable
+ALTER TABLE "Paper" ADD COLUMN     "isPersonal" BOOLEAN NOT NULL DEFAULT false,
+ALTER COLUMN "session" DROP NOT NULL,
+ALTER COLUMN "year" DROP NOT NULL,
+ALTER COLUMN "semester" DROP NOT NULL,
+ALTER COLUMN "description" DROP NOT NULL,
+ALTER COLUMN "level" DROP NOT NULL;
+
+-- CreateTable
+CREATE TABLE "studySet" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "studySet_pkey" PRIMARY KEY ("id")
+);

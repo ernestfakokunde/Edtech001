@@ -7,6 +7,7 @@ import { authRouter } from './routes/auth.routes.js'
 import { paperRouter } from './routes/paper.routes.js'
 import { profileRouter } from './routes/profile.routes.js'
 import { hierarchyRouter } from './routes/hierarchy.routes.js'
+import { generationRouter } from './routes/generation.routes.js'
 import { requireCsrf } from './middleware/csrf.js'
 
 const app = express()
@@ -36,7 +37,7 @@ app.use('/api', hierarchyRouter)
 app.use('/api/admin', adminRouter)
 
 app.use('/api/papers', paperRouter)
-app.use('/api/generation', (_request, response) => response.status(501).json({ message: 'Generation routes pending implementation' }))
+app.use('/api/generation', generationRouter)
 
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   console.error('[request-error]', error)

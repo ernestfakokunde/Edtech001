@@ -8,8 +8,12 @@ import {
   Hierarchy,
   MaterialDetails,
   PersonalPractice,
+  Flashcards,
+  Quiz,
+  Results,
 } from "./pages/Study";
-import { getRepositoryPaper, type RepositoryPaper } from "./lib/api";
+import { GenerateFlow } from "./pages/Generate";
+import { getRepositoryPaper, type RepositoryPaper, type GeneratedSet } from "./lib/api";
 import type { Route } from "./types";
 import { getCurrentProfile, logout } from "./lib/api";
 import { ProfilePage } from "./pages/Profile";
@@ -19,9 +23,17 @@ const protectedRoutes: Route[] = [
   "dashboard",
   "personal",
   "hierarchy",
+  "generate",
+  "flashcards",
+  "quiz",
+  "results",
   "profile",
   "admin",
 ];
+
+function routeParts() {
+  return window.location.hash.slice(1).split("/");
+}
 
 function App() {
   const hashRoute = () => window.location.hash.slice(1).split("/")[0] as Route || "home";
@@ -29,6 +41,8 @@ function App() {
     hashRoute(),
   );
   const [selectedMaterial, setSelectedMaterial] = useState<RepositoryPaper | null>(null);
+  const [generatedSet, setGeneratedSet] = useState<GeneratedSet | null>(null);
+  const [quizResult, setQuizResult] = useState<{ score: number; total: number } | null>(null);
   const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">("checking");
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -93,9 +107,63 @@ function App() {
       {route === "personal" && <PersonalPractice />}
       {route === "hierarchy" && <Hierarchy onMaterial={chooseMaterial} />}
       {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="app-shell auth-loading"><span>Loading material...</span></div>)}
+      {route === "generate" && (
+        <GenerateFlow
+          courseId={routeParts()[1]}
+          onComplete={(set) => {
+            setGeneratedSet(set);
+            setQuizResult(null);
+            go(set.type === "QUIZ" ? `quiz/${set.id}` : `flashcards/${set.id}`);
+          }}
+        />
+      )}
+      {route === "flashcards" && (generatedSet && generatedSet.type === "FLASHCARD" ? (
+        <Flashcards set={generatedSet} onExit={() => { setGeneratedSet(null); go("dashboard"); }} />
+      ) : (
+        <MissingSet back="generate" />
+      ))}
+      {route === "quiz" && (generatedSet && generatedSet.type === "QUIZ" ? (
+        quizResult ? (
+          <Results
+            set={generatedSet}
+            score={quizResult.score}
+            total={quizResult.total}
+            onRetake={() => { setQuizResult(null); go(`quiz/${generatedSet.id}`); }}
+            onBack={() => { setQuizResult(null); setGeneratedSet(null); go("dashboard"); }}
+          />
+        ) : (
+          <Quiz
+            set={generatedSet}
+            onExit={() => { setQuizResult(null); go("dashboard"); }}
+            onFinish={(score, total) => { setQuizResult({ score, total }); go("results"); }}
+          />
+        )
+      ) : (
+        <MissingSet back="generate" />
+      ))}
+      {route === "results" && (generatedSet && generatedSet.type === "QUIZ" && quizResult ? (
+        <Results
+          set={generatedSet}
+          score={quizResult.score}
+          total={quizResult.total}
+          onRetake={() => { setQuizResult(null); go(`quiz/${generatedSet.id}`); }}
+          onBack={() => { setQuizResult(null); setGeneratedSet(null); go("dashboard"); }}
+        />
+      ) : (
+        <MissingSet back="dashboard" />
+      ))}
       {route === "profile" && <ProfilePage />}
       {route === "admin" && isAdmin && <AdminPage />}
       {showFooter && <Footer />}
+    </div>
+  );
+}
+
+function MissingSet({ back }: { back: Route }) {
+  return (
+    <div className="app-shell auth-loading">
+      <span>This study set is not loaded on this device.</span>
+      <button className="primary-button" onClick={() => go(back)}>Generate a set</button>
     </div>
   );
 }

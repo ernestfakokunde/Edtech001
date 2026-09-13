@@ -1,106 +1,74 @@
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, Pencil, Plus, Save, Trash2, UserRound } from "lucide-react";
+import { BookOpen, Check, GraduationCap, Plus, Save, Trash2, UserRound } from "lucide-react";
 import { PageFrame } from "../components/Layout";
 import {
-  createCourse, createDepartment, createFaculty, createUniversity,
-  deleteDepartment, deleteFaculty, deleteUniversity,
-  getCourses, getCurrentProfile, getDepartments, getFaculties, getUniversities,
-  updateCourse, updateDepartment, updateFaculty, updateProfile, updateUniversity,
-  deleteCourse,
+  addMyCourse, getCurrentProfile, getMyCourses, removeMyCourse, saveMySchool, updateProfile,
 } from "../lib/api";
-import type { ApiCourse, Department, Faculty, University } from "../lib/api";
+import type { MySchool, SavedCourse } from "../lib/api";
+
+// Same per-student cap the backend enforces on POST /api/profile/courses.
+const MAX_SAVED_COURSES = 10;
 
 export function ProfilePage() {
   const [profile, setProfile] = useState({ displayName: "", username: "", email: "" });
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [faculties, setFaculties] = useState<Faculty[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [courses, setCourses] = useState<ApiCourse[]>([]);
-  const [selected, setSelected] = useState({ universityId: "", facultyId: "", departmentId: "" });
-  const [entryName, setEntryName] = useState("");
-  const [courseForm, setCourseForm] = useState({ code: "", title: "", crossListingCode: "" });
+  // The school is entered once here; Generate and the course picker read it
+  // from the backend afterwards, so the hierarchy is never walked again.
+  const [school, setSchool] = useState<MySchool>(null);
+  const [schoolForm, setSchoolForm] = useState({ universityName: "", facultyName: "" });
+  const [courses, setCourses] = useState<SavedCourse[]>([]);
+  const [courseForm, setCourseForm] = useState({ code: "", title: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getUniversities().then((result) => setUniversities(result.universities)).catch((reason: Error) => setError(reason.message));
     getCurrentProfile().then((result) => setProfile({ displayName: result.profile.displayName ?? "", username: result.profile.username ?? "", email: result.profile.email ?? "" })).catch(() => setError("Could not load your profile."));
+    getMyCourses().then((result) => { setSchool(result.school); setSchoolForm(result.school ? { universityName: result.school.universityName, facultyName: result.school.facultyName } : { universityName: "", facultyName: "" }); setCourses(result.courses); }).catch(() => setError("Could not load your school details."));
   }, []);
 
-  async function chooseUniversity(universityId: string) {
-    setSelected({ universityId, facultyId: "", departmentId: "" }); setFaculties([]); setDepartments([]); setCourses([]);
-    if (universityId) setFaculties((await getFaculties(universityId)).faculties);
-  }
-  async function chooseFaculty(facultyId: string) {
-    setSelected((current) => ({ ...current, facultyId, departmentId: "" })); setDepartments([]); setCourses([]);
-    if (facultyId) setDepartments((await getDepartments(facultyId)).departments);
-  }
-  async function chooseDepartment(departmentId: string) {
-    setSelected((current) => ({ ...current, departmentId })); setCourses([]);
-    if (departmentId) setCourses((await getCourses(departmentId)).courses);
-  }
   async function saveProfile() {
     setError(""); setMessage("");
     try { const result = await updateProfile({ displayName: profile.displayName, username: profile.username }); setProfile((current) => ({ ...current, displayName: result.profile.displayName ?? "", username: result.profile.username ?? "" })); setMessage("Profile saved."); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save your profile."); }
   }
-  async function addEntry(level: "university" | "faculty" | "department") {
+  // Both names are resolve-or-create on the backend (by slug), so re-entering
+  // the same university or faculty never duplicates rows.
+  async function saveSchool() {
     setError(""); setMessage("");
+    if (!schoolForm.universityName.trim() || !schoolForm.facultyName.trim()) { setError("Enter your university and faculty names."); return; }
     try {
-      if (level === "university") { const result = await createUniversity(entryName); setUniversities((current) => [...current, result.university].sort((a, b) => a.name.localeCompare(b.name))); await chooseUniversity(result.university.id); }
-      if (level === "faculty" && selected.universityId) { const result = await createFaculty(selected.universityId, entryName); setFaculties((current) => [...current, result.faculty].sort((a, b) => a.name.localeCompare(b.name))); setSelected((current) => ({ ...current, facultyId: result.faculty.id })); }
-      if (level === "department" && selected.facultyId) { const result = await createDepartment(selected.facultyId, entryName); setDepartments((current) => [...current, result.department].sort((a, b) => a.name.localeCompare(b.name))); setSelected((current) => ({ ...current, departmentId: result.department.id })); }
-      setEntryName(""); setMessage("Added to your academic map.");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not add this entry."); }
+      const result = await saveMySchool({ universityName: schoolForm.universityName.trim(), facultyName: schoolForm.facultyName.trim() });
+      setSchool(result.school); setSchoolForm({ universityName: result.school.universityName, facultyName: result.school.facultyName });
+      setMessage("School saved. Courses you add are filed under it automatically.");
+    }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save your school."); }
   }
+  // Adding a course is just a code and a title — the backend files it under the
+  // saved faculty's General department and links (never duplicates) by code.
   async function addCourse() {
     setError(""); setMessage("");
-    try { const result = await createCourse(selected.departmentId, courseForm); setCourses((current) => [...current, result.course].sort((a, b) => a.code.localeCompare(b.code))); setCourseForm({ code: "", title: "", crossListingCode: "" }); setMessage("Course added to your academic map."); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not add this course."); }
-  }
-  function selectedEntry() { return selected.departmentId ? departments.find((item) => item.id === selected.departmentId) : selected.facultyId ? faculties.find((item) => item.id === selected.facultyId) : universities.find((item) => item.id === selected.universityId); }
-  async function renameSelected() {
-    const target = selectedEntry(); if (!target) return;
-    const name = window.prompt("New name", target.name)?.trim(); if (!name || name === target.name) return;
-    setError(""); setMessage("");
+    if (!courseForm.code.trim() || !courseForm.title.trim()) { setError("Enter the course code and title."); return; }
     try {
-      if (selected.departmentId) { const result = await updateDepartment(target.id, name); setDepartments((current) => current.map((item) => item.id === target.id ? result.department : item)); }
-      else if (selected.facultyId) { const result = await updateFaculty(target.id, name); setFaculties((current) => current.map((item) => item.id === target.id ? result.faculty : item)); }
-      else { const result = await updateUniversity(target.id, name); setUniversities((current) => current.map((item) => item.id === target.id ? result.university : item)); }
-      setMessage("Academic entry renamed.");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not rename this entry."); }
+      const result = await addMyCourse({ code: courseForm.code.trim(), title: courseForm.title.trim() });
+      setCourses((current) => (current.some((item) => item.id === result.course.id) ? current : [...current, result.course]));
+      setCourseForm({ code: "", title: "" });
+      setMessage(`${result.course.code} added to your courses.`);
+    }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save the course."); }
   }
-  async function removeSelected() {
-    const target = selectedEntry(); if (!target || !window.confirm(`Delete ${target.name}?`)) return;
+  // Removing only unlinks the course from this profile; the shared Course
+  // entity (with any papers or generated sets) stays in the repository.
+  async function removeCourse(courseId: string) {
     setError(""); setMessage("");
-    try {
-      if (selected.departmentId) { await deleteDepartment(target.id); setDepartments((current) => current.filter((item) => item.id !== target.id)); setSelected((current) => ({ ...current, departmentId: "" })); setCourses([]); }
-      else if (selected.facultyId) { await deleteFaculty(target.id); setFaculties((current) => current.filter((item) => item.id !== target.id)); setSelected((current) => ({ ...current, facultyId: "", departmentId: "" })); setDepartments([]); setCourses([]); }
-      else { await deleteUniversity(target.id); setUniversities((current) => current.filter((item) => item.id !== target.id)); setSelected({ universityId: "", facultyId: "", departmentId: "" }); setFaculties([]); setDepartments([]); setCourses([]); }
-      setMessage("Academic entry deleted.");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not delete this entry."); }
+    try { await removeMyCourse(courseId); setCourses((current) => current.filter((item) => item.id !== courseId)); setMessage("Course removed from your list."); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not remove the course."); }
   }
-  async function renameCourse(course: ApiCourse) {
-    const title = window.prompt("Course title", course.title)?.trim(); if (!title || title === course.title) return;
-    setError(""); setMessage("");
-    try { const result = await updateCourse(course.id, { code: course.code, title, crossListingCode: course.crossListingCode ?? "" }); setCourses((current) => current.map((item) => item.id === course.id ? result.course : item)); setMessage("Course renamed."); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not rename this course."); }
-  }
-  async function removeCourse(course: ApiCourse) {
-    if (!window.confirm(`Delete ${course.code}?`)) return;
-    setError(""); setMessage("");
-    try { await deleteCourse(course.id); setCourses((current) => current.filter((item) => item.id !== course.id)); setMessage("Course deleted."); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not delete this course."); }
-  }
-
-  const selectedTarget = selectedEntry();
-  const addLevel = selected.facultyId ? "department" : selected.universityId ? "faculty" : "university";
-  return <PageFrame title="Your profile" subtitle="Keep your identity and academic map ready for every study session." back="dashboard">
+  return <PageFrame title="Your profile" subtitle="Keep your identity, school, and saved courses ready for every study session." back="dashboard">
     <div className="profile-layout">
       <section className="profile-card profile-identity"><div className="profile-card-heading"><span className="profile-icon"><UserRound size={20} /></span><div><p className="eyebrow">Account</p><h2>Personal details</h2></div></div><label className="field"><span>Display name</span><input value={profile.displayName} onChange={(event) => setProfile({ ...profile, displayName: event.target.value })} placeholder="How should we call you?" /></label><label className="field"><span>Username</span><input value={profile.username} onChange={(event) => setProfile({ ...profile, username: event.target.value })} placeholder="e.g. ernest_ade" /><small>3-24 lowercase letters, numbers, or underscores.</small></label><label className="field"><span>Email</span><input value={profile.email} disabled /></label><button className="primary-button" onClick={() => void saveProfile()}><Save size={16} /> Save profile</button></section>
-      <section className="profile-card academic-card"><div className="profile-card-heading"><span className="profile-icon blue"><Plus size={20} /></span><div><p className="eyebrow">Academic map</p><h2>Add your university path</h2></div></div><p className="profile-help">Add missing entries as you discover them. New entries become available immediately.</p><div className="profile-select-grid"><Select label="University" value={selected.universityId} options={universities} onChange={chooseUniversity} placeholder="Choose university" /><Select label="Faculty" value={selected.facultyId} options={faculties} onChange={chooseFaculty} placeholder="Choose faculty" disabled={!selected.universityId} /><Select label="Department" value={selected.departmentId} options={departments} onChange={chooseDepartment} placeholder="Choose department" disabled={!selected.facultyId} /></div><div className="profile-manage-row">{selectedTarget && <><button className="ghost-button" onClick={() => void renameSelected()}><Pencil size={14} /> Rename selected</button><button className="ghost-button danger" onClick={() => void removeSelected()}><Trash2 size={14} /> Delete selected</button></>}</div><div className="profile-add-row"><input value={entryName} onChange={(event) => setEntryName(event.target.value)} placeholder={`Name of a new ${addLevel}`} /><button className="secondary-button" disabled={!entryName.trim()} onClick={() => void addEntry(addLevel)}><Plus size={15} /> Add {addLevel}</button></div>{selected.departmentId && <div className="course-add-box"><h3>Add a course</h3><div className="course-form-grid"><input value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value })} placeholder="Course code" /><input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Course title" /><input value={courseForm.crossListingCode} onChange={(event) => setCourseForm({ ...courseForm, crossListingCode: event.target.value })} placeholder="Cross-listed code (optional)" /><button className="secondary-button" disabled={!courseForm.code.trim() || !courseForm.title.trim()} onClick={() => void addCourse()}><Plus size={15} /> Add course</button></div>{courses.length > 0 && <div className="profile-course-list">{courses.map((course) => <span key={course.id}><strong>{course.code}</strong> {course.title}<button className="ghost-button" onClick={() => void renameCourse(course)}><Pencil size={12} /></button><button className="ghost-button danger" onClick={() => void removeCourse(course)}><Trash2 size={12} /></button></span>)}</div>}</div>}</section>
+      <section className="profile-card school-card"><div className="profile-card-heading"><span className="profile-icon blue"><GraduationCap size={20} /></span><div><p className="eyebrow">My school</p><h2>University & faculty</h2></div></div><p className="profile-help">Enter these once — every course you add afterwards is filed under them automatically, here and on the Generate screen.</p><label className="field"><span>University</span><input value={schoolForm.universityName} onChange={(event) => setSchoolForm({ ...schoolForm, universityName: event.target.value })} placeholder="e.g. University of Lagos" /></label><label className="field"><span>Faculty</span><input value={schoolForm.facultyName} onChange={(event) => setSchoolForm({ ...schoolForm, facultyName: event.target.value })} placeholder="e.g. Faculty of Science" /></label><button className="primary-button" onClick={() => void saveSchool()}><Save size={16} /> {school ? "Update school" : "Save school"}</button>{school && <small className="profile-saved-note"><Check size={13} /> Saved: {school.universityName} · {school.facultyName}</small>}</section>
+      <section className="profile-card courses-card"><div className="profile-card-heading"><span className="profile-icon blue"><BookOpen size={20} /></span><div><p className="eyebrow">My courses</p><h2>Courses you generate against</h2></div></div><p className="profile-help">Up to {MAX_SAVED_COURSES} courses. They appear automatically when you generate quizzes or flashcards — just a code and a title, no hierarchy needed.</p><div className="course-form-grid two"><input value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" disabled={!school} /><input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Course title e.g. Data Structures" disabled={!school} /></div><div className="profile-course-actions"><button className="secondary-button" disabled={!school || !courseForm.code.trim() || !courseForm.title.trim() || courses.length >= MAX_SAVED_COURSES} onClick={() => void addCourse()}><Plus size={15} /> Add course</button><span className="course-count">{courses.length} of {MAX_SAVED_COURSES}</span></div>{!school && <small className="profile-saved-note pending">Save your university and faculty above first.</small>}{courses.length > 0 && <ul className="my-course-list">{courses.map((course) => <li className="my-course-row" key={course.id}><div><strong>{course.code}</strong><span>{course.title}</span></div><button className="ghost-button danger" aria-label={`Remove ${course.code}`} onClick={() => void removeCourse(course.id)}><Trash2 size={14} /></button></li>)}</ul>}</section>
     </div>{message && <p className="profile-feedback success"><Check size={15} /> {message}</p>}{error && <p className="profile-feedback error">{error}</p>}
   </PageFrame>;
 }
 
-function Select({ label, value, options, onChange, placeholder, disabled = false }: { label: string; value: string; options: { id: string; name: string }[]; onChange: (value: string) => void; placeholder: string; disabled?: boolean }) { return <label className="field"><span>{label}</span><div className="select-wrap"><select value={value} onChange={(event) => void onChange(event.target.value)} disabled={disabled}><option value="">{placeholder}</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select><ChevronDown size={15} /></div></label>; }
+

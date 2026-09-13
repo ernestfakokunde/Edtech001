@@ -1,27 +1,196 @@
-import type { Request , Response } from 'express'
-import { getProfileBySession } from '../services/auth.service.js'
+import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { prisma } from '../lib/prisma.js'
 import { supabase } from '../lib/supabase.js'
+import { env } from '../config/env.js'
+import { fileExtension } from '../utils/file.js'
+import { extractText } from '../utils/extractText.js'
+import { generateStudyItems, AiNotConfiguredError, isAiConfigured, listGenerationProviders, type GeneratedItem } from '../services/ai.service.js'
+
+/**
+ * Best-effort cleanup after any post-upload failure: removes the stored file
+ * (if any) together with the personal Paper row, so we never leave an orphaned
+ * record pointing at a file that feeds an incomplete generation.
+ */
+async function rollbackPersonalPaper(paperId: string, storedPath?: string) {
+  if (storedPath && env.supabaseUrl && env.supabaseServiceRoleKey) {
+    try { await supabase.storage.from(env.supabaseBucket).remove([storedPath]) } catch { /* the DB row is the important part */ }
+  }
+  try { await prisma.paper.delete({ where: { id: paperId } }) } catch { /* row already gone */ }
+}
+
+function setTitle(course: { code: string }, kind: 'FLASHCARD' | 'QUIZ') {
+  const label = kind === 'QUIZ' ? 'Quiz' : 'Flashcards'
+  const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return `${course.code} ${label} · ${date}`
+}
+
+/**
+ * GET /api/generation/providers — which AI providers this server supports and
+ * which have credentials configured right now. The UI uses this to show the
+ * available provider choices (or a "no provider configured" warning).
+ */
+export function listGenerationProvidersController(_request: Request, response: Response) {
+  response.json({ providers: listGenerationProviders() })
+}
 
 export async function generateStudySet(request: Request, response: Response) {
-    const { profile } = request as AuthenticatedRequest
-    const file = (request as AuthenticatedRequest & { file?: Express.Multer.File}).file
+  const { profile } = request as AuthenticatedRequest
+  const file = (request as AuthenticatedRequest & { file?: Express.Multer.File }).file
 
-    if(!file){
-        response.status(400).json({ message: 'No file uploaded.A file is required.' })
-        return
+  if (!file) {
+    response.status(400).json({ message: 'No file uploaded. A file is required.' })
+    return
+  }
+
+  const { courseId, type, length, timePerQuestion, provider } = request.body as Partial<{
+    courseId: string
+    type: 'FLASHCARD' | 'QUIZ'
+    length: string
+    timePerQuestion: string
+    provider: string
+  }>
+
+  if (!courseId || (type !== 'FLASHCARD' && type !== 'QUIZ') || !length) {
+    response.status(400).json({ message: 'courseId, type, and length are required.' })
+    return
+  }
+
+  // A client may pick which configured provider to use; validate the value at
+  // runtime rather than trusting a compile-time union.
+  if (provider !== undefined && (typeof provider !== 'string' || provider.trim() === '')) {
+    response.status(400).json({ message: 'provider must be a non-empty string when given.' })
+    return
+  }
+
+  const parsedLength = Number(length)
+  const parsedTimePerQuestion = timePerQuestion ? Number(timePerQuestion) : undefined
+
+  if (!Number.isInteger(parsedLength) || parsedLength <= 0) {
+    response.status(400).json({ message: 'length must be a positive whole number.' })
+    return
+  }
+
+  if (type === 'QUIZ' && (!parsedTimePerQuestion || ![30, 60].includes(parsedTimePerQuestion))) {
+    response.status(400).json({ message: 'timePerQuestion is required for QUIZ type and must be 30 or 60.' })
+    return
+  }
+
+  const course = await prisma.course.findUnique({ where: { id: courseId } })
+  if (!course) {
+    response.status(404).json({ message: 'Course not found.' })
+    return
+  }
+
+  const paper = await prisma.paper.create({
+    data: {
+      ownerId: profile.id,
+      courseId: course.id,
+      fileUrl: '',
+      isPersonal: true,
+    },
+  })
+
+  const extension = fileExtension(file)
+  if (!extension) {
+    await rollbackPersonalPaper(paper.id)
+    response.status(400).json({ message: 'Only PDF, DOC, or DOCX files are supported.' })
+    return
+  }
+
+  const path = `personal/${profile.id}/${paper.id}.${extension}`
+
+  const { error } = await supabase.storage.from(env.supabaseBucket).upload(path, file.buffer, {
+    contentType: file.mimetype,
+    upsert: false,
+  })
+
+  if (error) {
+    await rollbackPersonalPaper(paper.id)
+    response.status(502).json({ message: `Could not upload file: ${error.message}` })
+    return
+  }
+
+  await prisma.paper.update({ where: { id: paper.id }, data: { fileUrl: path } })
+
+  // 10–11. Extract text from the file (pdf-parse for .pdf, mammoth for .docx).
+  let text: string
+  try {
+    text = await extractText(file, extension)
+  } catch (reason) {
+    console.error('[generate] text extraction failed:', reason)
+    await rollbackPersonalPaper(paper.id, path)
+    response.status(422).json({ message: reason instanceof Error ? reason.message : 'Could not read text from this file. Please try another format.' })
+    return
+  }
+
+  if (text.trim().length < 80) {
+    await rollbackPersonalPaper(paper.id, path)
+    response.status(422).json({ message: 'No readable text was found in this file. Scanned documents and image-only PDFs cannot be processed yet.' })
+    return
+  }
+
+  if (!isAiConfigured()) {
+    console.warn('[generate] no AI provider API key is set; generation is unavailable.')
+    await rollbackPersonalPaper(paper.id, path)
+    response.status(503).json({ message: 'The AI service is not configured on this server. Please try again later.' })
+    return
+  }
+
+  // 12–13. Send the extracted text to the AI, then parse and strictly validate
+  // its JSON response before writing anything to the database. A client may
+  // request a specific provider; the service falls back through the configured
+  // chain when it fails.
+  let generated: GeneratedItem[]
+  try {
+    generated = await generateStudyItems({ text, kind: type, length: parsedLength }, { provider: provider ?? null })
+  } catch (reason) {
+    console.error('[generate] AI generation failed:', reason)
+    await rollbackPersonalPaper(paper.id, path)
+    if (reason instanceof AiNotConfiguredError) {
+      response.status(503).json({ message: reason.message })
+    } else {
+      response.status(502).json({ message: reason instanceof Error ? reason.message : 'The AI could not generate a study set. Please try again.' })
     }
+    return
+  }
 
-    const { courseId, type, length, timePerQuestion } request.body as partial<{
-        courseId: string
-        type: 'FLASHCARD' | 'QUIZ'
-        length: string
-        timePerQuestion: string
-    }>
-
-    if(!courseId || (type !== 'FLASHCARD' && type !== 'QUIZ') || !length){
-        response.status(400).json({ message: 'courseId, type, length are required.' })
-        return
-    }
+  // 14–16. Persist the set in a single transaction: one Question row per item
+  // (linked to the personal Paper), plus the GeneratedSet and its items with
+  // sequential positions (0, 1, 2, …) matching the @@unique([setId, position])
+  // constraint.
+  try {
+    const set = await prisma.generatedSet.create({
+      data: {
+        userId: profile.id,
+        courseId: course.id,
+        type,
+        title: setTitle(course, type),
+        requestedLength: parsedLength,
+        ...(parsedTimePerQuestion ? { timePerQuestion: parsedTimePerQuestion } : {}),
+        items: {
+          create: generated.map((item, position) => ({
+            position,
+            question: {
+              create: {
+                paperId: paper.id,
+                prompt: item.prompt,
+                answer: item.answer,
+                explanation: item.explanation,
+                metadata: item.metadata,
+              },
+            },
+          })),
+        },
+      },
+      include: {
+        items: { orderBy: { position: 'asc' }, include: { question: true } },
+      },
+    })
+    response.status(201).json({ set })
+  } catch (reason) {
+    console.error('[generate] saving the generated set failed:', reason)
+    await rollbackPersonalPaper(paper.id, path)
+    response.status(500).json({ message: 'The study set could not be saved. Please try again.' })
+  }
 }

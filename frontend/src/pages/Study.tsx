@@ -18,7 +18,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { courses, papers, questions } from "../data";
+import { courses, papers } from "../data";
 import { go, PageFrame } from "../components/Layout";
 import {
   getPaperDownloadUrl,
@@ -37,6 +37,7 @@ import {
   type OwnedPaper,
   type UploadedPaper,
   type RepositoryPaper,
+  type GeneratedSet,
 } from "../lib/api";
 import type { Course, Mode, Paper } from "../types";
 
@@ -105,7 +106,7 @@ function MyPapers({ refreshKey }: { refreshKey: number }) {
   async function save(paperId: string) { setBusy(paperId); setError(""); try { const result = await updateMyPaper(paperId, { ...form, year: Number(form.year) }); setPapers((current) => current.map((paper) => paper.id === paperId ? result.paper : paper)); setEditing(null); setMessage("Paper details saved."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save paper details."); } finally { setBusy(""); } }
   async function remove(paperId: string) { if (!window.confirm("Delete this private paper?")) return; setBusy(paperId); setError(""); try { await deleteMyPaper(paperId); setPapers((current) => current.filter((paper) => paper.id !== paperId)); setMessage("Paper deleted."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not delete paper."); } finally { setBusy(""); } }
   async function submit(paperId: string) { setBusy(paperId); setError(""); try { const result = await submitPaper(paperId); setPapers((current) => current.map((paper) => paper.id === paperId ? result.paper : paper)); setMessage("Paper submitted for review."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not submit paper."); } finally { setBusy(""); } }
-  return <section className="my-papers-panel"><div className="repository-upload-heading"><div><p className="eyebrow">Your uploads</p><h2>Paper workflow</h2><p>Track private uploads, submit rejected papers again, or update details before review.</p></div><span className="admin-status">{papers.length} papers</span></div>{loading ? <div className="repository-empty">Loading your papers...</div> : papers.length === 0 ? <div className="repository-empty"><FileText size={20} /><strong>No uploads yet</strong><span>Your private papers will appear here after upload.</span></div> : <div className="my-paper-list">{papers.map((paper) => <article className="my-paper-row" key={paper.id}><div className="paper-info"><strong>{paper.course.code} · {paper.course.title}</strong><span>{paper.level} · {paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</span><small>{paper.description}</small></div><span className={`badge ${paper.status === "APPROVED" ? "active" : paper.status === "REJECTED" ? "rejected" : "empty"}`}>{paper.status}</span><div className="my-paper-actions">{(paper.status === "DRAFT" || paper.status === "REJECTED") && <><button className="ghost-button" disabled={busy === paper.id} onClick={() => startEdit(paper)}><Pencil size={14} /> Edit</button><button className="ghost-button" disabled={busy === paper.id} onClick={() => void remove(paper.id)}><Trash2 size={14} /> Delete</button><button className="primary-button" disabled={busy === paper.id} onClick={() => void submit(paper.id)}><Send size={14} /> Submit</button></>}</div>{editing === paper.id && <div className="my-paper-edit"><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /><div className="paper-edit-fields"><input value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })} placeholder="Level" /><input value={form.session} onChange={(event) => setForm({ ...form, session: event.target.value })} placeholder="Session" /><input type="number" value={form.year} onChange={(event) => setForm({ ...form, year: event.target.value })} placeholder="Year" /><select value={form.semester} onChange={(event) => setForm({ ...form, semester: event.target.value as "FIRST" | "SECOND" })}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></div><button className="primary-button" disabled={busy === paper.id} onClick={() => void save(paper.id)}><Check size={14} /> Save changes</button><button className="ghost-button" onClick={() => setEditing(null)}>Cancel</button></div>}</article>)}</div>}{message && <small className="upload-form-success">{message}</small>}{error && <small className="upload-form-error">{error}</small>}</section>;
+  return <section className="my-papers-panel"><div className="repository-upload-heading"><div><p className="eyebrow">Your uploads</p><h2>Paper workflow</h2><p>Track private uploads, submit rejected papers again, or update details before review.</p></div><span className="admin-status">{papers.length} papers</span></div>{loading ? <div className="repository-empty">Loading your papers...</div> : papers.length === 0 ? <div className="repository-empty"><FileText size={20} /><strong>No uploads yet</strong><span>Your private papers will appear here after upload.</span></div> : <div className="my-paper-list">{papers.map((paper) => <article className="my-paper-row" key={paper.id}><div className="paper-info"><strong>{paper.course.code} · {paper.course.title}</strong><span>{paper.level} · {paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</span><small>{paper.description}</small></div><span className={`badge ${paper.status === "APPROVED" ? "active" : paper.status === "REJECTED" ? "rejected" : "empty"}`}>{paper.status}</span><div className="my-paper-actions"><button className="ghost-button" onClick={() => go(`generate/${paper.course.id}`)}><Sparkles size={14} /> Create practice set</button>{(paper.status === "DRAFT" || paper.status === "REJECTED") && <><button className="ghost-button" disabled={busy === paper.id} onClick={() => startEdit(paper)}><Pencil size={14} /> Edit</button><button className="ghost-button" disabled={busy === paper.id} onClick={() => void remove(paper.id)}><Trash2 size={14} /> Delete</button><button className="primary-button" disabled={busy === paper.id} onClick={() => void submit(paper.id)}><Send size={14} /> Submit</button></>}</div>{editing === paper.id && <div className="my-paper-edit"><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /><div className="paper-edit-fields"><input value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })} placeholder="Level" /><input value={form.session} onChange={(event) => setForm({ ...form, session: event.target.value })} placeholder="Session" /><input type="number" value={form.year} onChange={(event) => setForm({ ...form, year: event.target.value })} placeholder="Year" /><select value={form.semester} onChange={(event) => setForm({ ...form, semester: event.target.value as "FIRST" | "SECOND" })}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></div><button className="primary-button" disabled={busy === paper.id} onClick={() => void save(paper.id)}><Check size={14} /> Save changes</button><button className="ghost-button" onClick={() => setEditing(null)}>Cancel</button></div>}</article>)}</div>}{message && <small className="upload-form-success">{message}</small>}{error && <small className="upload-form-error">{error}</small>}</section>;
 }
 
 export function MaterialDetails({ paper }: { paper: RepositoryPaper }) {
@@ -114,7 +115,7 @@ export function MaterialDetails({ paper }: { paper: RepositoryPaper }) {
     try { const result = await getPaperDownloadUrl(paper.id); window.open(result.url, "_blank", "noopener,noreferrer"); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Could not download this material."); }
   }
-  return <PageFrame eyebrow="Repository material" title={`${paper.course.code} · ${paper.course.title}`} subtitle="Material details and download"><div className="material-details"><div className="material-details-icon"><FileText size={26} /></div><dl><div><dt>Level</dt><dd>{paper.level}</dd></div><div><dt>Academic session</dt><dd>{paper.year}/{paper.session}</dd></div><div><dt>Semester</dt><dd>{paper.semester === "FIRST" ? "First" : "Second"} semester</dd></div><div><dt>Description</dt><dd>{paper.description}</dd></div></dl><button className="primary-button" onClick={() => void download()}><FileText size={15} /> Download material</button>{error && <small className="upload-form-error">{error}</small>}</div></PageFrame>;
+  return <PageFrame eyebrow="Repository material" title={`${paper.course.code} · ${paper.course.title}`} subtitle="Material details and download"><div className="material-details"><div className="material-details-icon"><FileText size={26} /></div><dl><div><dt>Level</dt><dd>{paper.level}</dd></div><div><dt>Academic session</dt><dd>{paper.year}/{paper.session}</dd></div><div><dt>Semester</dt><dd>{paper.semester === "FIRST" ? "First" : "Second"} semester</dd></div><div><dt>Description</dt><dd>{paper.description}</dd></div></dl><div className="material-actions"><button className="primary-button" onClick={() => void download()}><FileText size={15} /> Download material</button><button className="ghost-button" onClick={() => go(`generate/${paper.course.id}`)}><Sparkles size={15} /> Create practice set</button></div>{error && <small className="upload-form-error">{error}</small>}</div></PageFrame>;
 }
 
 function RepositoryUpload({ onUploaded }: { onUploaded: () => void }) {
@@ -439,29 +440,36 @@ function PlayerFrame({
   );
 }
 export function Flashcards({
+  set,
   onExit,
   onQuiz,
 }: {
+  set: GeneratedSet;
   onExit: () => void;
-  onQuiz: () => void;
+  onQuiz?: () => void;
 }) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const card = questions[index];
+  const total = set.items.length;
+  const card = total > 0 ? set.items[index]?.question : undefined;
   return (
-    <PlayerFrame count={`Card ${index + 1} of 30`} onExit={onExit}>
-      <button className="flashcard" onClick={() => setFlipped(!flipped)}>
-        <span className="card-tag">{flipped ? "Answer" : "Question"}</span>
-        <strong>{flipped ? card.answer : card.question}</strong>
-        <small>
-          <RotateCcw size={14} /> Tap to{" "}
-          {flipped ? "see question" : "reveal answer"}
-        </small>
-      </button>
+    <PlayerFrame count={`Card ${Math.min(index + 1, Math.max(total, 1))} of ${total}`} onExit={onExit}>
+      {card ? (
+        <button className="flashcard" onClick={() => setFlipped(!flipped)}>
+          <span className="card-tag">{flipped ? "Answer" : "Question"}</span>
+          <strong>{flipped ? card.answer : card.prompt}</strong>
+          {flipped && card.explanation && <p className="card-explanation">{card.explanation}</p>}
+          <small>
+            <RotateCcw size={14} /> Tap to {flipped ? "see question" : "reveal answer"}
+          </small>
+        </button>
+      ) : (
+        <div className="flashcard-empty">This set has no cards yet.</div>
+      )}
       <div className="player-actions">
         <button
           className="icon-button"
-          disabled={index === 0}
+          disabled={index === 0 || total === 0}
           onClick={() => {
             setIndex(index - 1);
             setFlipped(false);
@@ -469,122 +477,146 @@ export function Flashcards({
         >
           <ArrowLeft size={17} />
         </button>
-        <button
-          className="secondary-button"
-          onClick={() => setFlipped(!flipped)}
-        >
+        <button className="secondary-button" disabled={total === 0} onClick={() => setFlipped(!flipped)}>
           <FlipHorizontal2 size={15} /> Flip card
         </button>
         <button
           className="icon-button"
+          disabled={index === total - 1 || total === 0}
           onClick={() => {
-            setIndex((index + 1) % questions.length);
+            setIndex(index + 1);
             setFlipped(false);
           }}
         >
           <ArrowRight size={17} />
         </button>
       </div>
-      <button className="switch-player" onClick={onQuiz}>
-        Try this as a quiz <ArrowRight size={14} />
-      </button>
+      {onQuiz && (
+        <button className="switch-player" onClick={onQuiz}>
+          Try this as a quiz <ArrowRight size={14} />
+        </button>
+      )}
     </PlayerFrame>
   );
 }
 export function Quiz({
+  set,
   onExit,
   onFinish,
 }: {
+  set: GeneratedSet;
   onExit: () => void;
-  onFinish: () => void;
+  onFinish: (score: number, total: number) => void;
 }) {
+  const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(set.timePerQuestion ?? 30);
+  const total = set.items.length;
+  const item = set.items[index]?.question;
+  const options = Array.isArray(item?.metadata?.options) ? item.metadata.options : [];
+  const seconds = set.timePerQuestion ?? 30;
+
+  useEffect(() => {
+    setTimeLeft(seconds);
+    setSelected(null);
+    setRevealed(false);
+    const timer = window.setInterval(() => setTimeLeft((current) => Math.max(0, current - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [index, seconds]);
+
+  useEffect(() => {
+    if (timeLeft === 0 && !revealed) setRevealed(true);
+  }, [timeLeft, revealed]);
+
+  function choose(option: string) {
+    if (revealed || !item) return;
+    setSelected(option);
+    setRevealed(true);
+    if (option === item.answer) setScore((current) => current + 1);
+  }
+
+  function next() {
+    if (index === total - 1) {
+      onFinish(score, total);
+      return;
+    }
+    setIndex((current) => current + 1);
+  }
+
   return (
-    <PlayerFrame count="Question 7 of 30" onExit={onExit}>
+    <PlayerFrame count={`Question ${Math.min(index + 1, Math.max(total, 1))} of ${total}`} onExit={onExit}>
       <div className="quiz-meta">
-        <span>CPT 412 · Human computer interaction</span>
+        <span>{set.title}</span>
         <span>
-          <Clock3 size={14} /> 14:22
+          <Clock3 size={14} /> {timeLeft}s
         </span>
       </div>
-      <p className="question-tag">Question 7</p>
-      <h2 className="question">
-        Which usability heuristic is violated when a system gives no feedback
-        after a user submits a form?
-      </h2>
+      <p className="question-tag">Question {index + 1}</p>
+      <h2 className="question">{item?.prompt}</h2>
       <div className="answers">
-        {[
-          "Consistency and standards",
-          "Visibility of system status",
-          "Error prevention",
-          "Recognition over recall",
-        ].map((answer, index) => (
-          <button
-            className={selected === answer ? "selected" : ""}
-            key={answer}
-            onClick={() => setSelected(answer)}
-          >
-            <span>{String.fromCharCode(65 + index)}</span>
-            {answer}
-          </button>
-        ))}
+        {options.map((answer, optionIndex) => {
+          const state = !revealed
+            ? selected === answer ? "selected" : ""
+            : answer === item?.answer ? "correct" : selected === answer ? "wrong" : "";
+          return (
+            <button className={state} key={answer} onClick={() => choose(answer)} disabled={revealed}>
+              <span>{String.fromCharCode(65 + optionIndex)}</span>
+              {answer}
+            </button>
+          );
+        })}
       </div>
+      {revealed && item?.explanation && <div className="quiz-explanation">{item.explanation}</div>}
       <div className="quiz-footer">
-        <button className="skip">Skip question</button>
-        <button className="primary-button" onClick={onFinish}>
-          Next <ArrowRight size={15} />
+        <button className="skip" onClick={next}>Skip question</button>
+        <button className="primary-button" onClick={next}>
+          {index === total - 1 ? "Finish" : "Next"} <ArrowRight size={15} />
         </button>
       </div>
     </PlayerFrame>
   );
 }
 export function Results({
-  course,
+  set,
+  score,
+  total,
   onRetake,
   onBack,
 }: {
-  course: Course;
+  set: GeneratedSet;
+  score: number;
+  total: number;
   onRetake: () => void;
   onBack: () => void;
 }) {
+  const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+  const missed = Math.max(total - score, 0);
+  const pass = percent >= 50;
   return (
-    <PageFrame
-      title="Quiz complete"
-      subtitle={`${course.code} · ${course.title}`}
-      back="course"
-    >
+    <PageFrame title="Quiz complete" subtitle={set.title} back="dashboard">
       <div className="results-hero">
         <div className="score-ring">
-          <strong>80%</strong>
+          <strong>{percent}%</strong>
         </div>
-        <span>Strong pass</span>
+        <span>{pass ? "Strong pass" : "Keep practising"}</span>
         <small>
-          Nice work. Your weakest areas are ready for another round.
+          {pass ? "Nice work. Review the ones you missed and go again." : "A few more rounds will get you there — check the questions you missed."}
         </small>
       </div>
       <div className="result-stats">
         <div>
-          <strong>24</strong>
+          <strong>{score}</strong>
           <span>Correct</span>
         </div>
         <div>
-          <strong className="red">6</strong>
+          <strong className={missed ? "red" : ""}>{missed}</strong>
           <span>Missed</span>
         </div>
         <div>
-          <strong>14:22</strong>
-          <span>Time taken</span>
-        </div>
-      </div>
-      <label>Review missed questions</label>
-      <div className="review-list">
-        <div>
-          <X size={13} /> Which usability heuristic is violated when a system
-          gives no feedback...
-        </div>
-        <div>
-          <X size={13} /> What distinguishes formative from summative usability
-          testing?
+          <strong>{set.timePerQuestion ?? 30}s</strong>
+          <span>Per question</span>
         </div>
       </div>
       <div className="result-actions">
@@ -592,7 +624,7 @@ export function Results({
           Retake quiz
         </button>
         <button className="primary-button" onClick={onBack}>
-          Back to course
+          Back to dashboard
         </button>
       </div>
     </PageFrame>

@@ -43,13 +43,19 @@ model Profile {
   isAdmin          Boolean   @default(false)
   suspendedUntil   DateTime?
   suspensionReason String?
+  universityId     String?
+  facultyId        String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  university University? @relation(fields: [universityId], references: [id], onDelete: SetNull)
+  faculty    Faculty?    @relation(fields: [facultyId], references: [id], onDelete: SetNull)
 
   papers        Paper[]
   generatedSets GeneratedSet[]
   auditEvents   AuditEvent[]
   sessions      Session[]
+  savedCourses  ProfileCourse[]
 }
 
 model Session {
@@ -73,6 +79,7 @@ model University {
   updatedAt DateTime @updatedAt
 
   faculties Faculty[]
+  profiles  Profile[]
 }
 
 model Faculty {
@@ -85,6 +92,7 @@ model Faculty {
 
   university  University   @relation(fields: [universityId], references: [id], onDelete: Cascade)
   departments Department[]
+  profiles    Profile[]
 
   @@unique([universityId, slug])
 }
@@ -112,24 +120,41 @@ model Course {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  department    Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  department    Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   papers        Paper[]
   generatedSets GeneratedSet[]
+  savedBy       ProfileCourse[]
 
   @@unique([departmentId, code])
   @@index([crossListingCode])
+}
+
+/// Courses a student saved on their profile for quick personal uploads and
+/// generation. The link is user-scoped (max 10 enforced in the controller);
+/// removing it never deletes the shared Course entity itself.
+model ProfileCourse {
+  profileId String
+  courseId  String
+  createdAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, courseId])
+  @@index([courseId])
 }
 
 model Paper {
   id          String          @id @default(cuid())
   ownerId     String
   courseId    String
-  description String
-  level       String
-  session     String
-  year        Int
-  semester    Semester
+  description String?
+  level       String?
+  session     String?
+  year        Int?
+  semester    Semester?
   fileUrl     String
+  isPersonal  Boolean         @default(false)
   visibility  PaperVisibility @default(PRIVATE)
   status      PaperStatus     @default(DRAFT)
   extractedAt DateTime?
@@ -164,13 +189,14 @@ model Question {
 }
 
 model GeneratedSet {
-  id              String           @id @default(cuid())
-  userId          String
-  courseId        String
-  type            GeneratedSetType
-  title           String
-  requestedLength Int
-  createdAt       DateTime         @default(now())
+  id               String           @id @default(cuid())
+  userId           String
+  courseId         String
+  type             GeneratedSetType
+  title            String
+  requestedLength  Int
+  timePerQuestion  Int?
+  createdAt        DateTime         @default(now())
 
   user   Profile            @relation(fields: [userId], references: [id])
   course Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)

@@ -36,7 +36,7 @@ export function Dashboard({ onLogout, isAdmin }: { onLogout: () => Promise<void>
         <div className="dashboard-course-grid"><div className="dashboard-empty"><BookOpen size={20} /><strong>No course added yet</strong><span>Open the repository to find a paper or upload one.</span></div><button className="dashboard-add-course" onClick={() => go("hierarchy")}><span><Plus size={15} /></span><strong>Browse or upload a material</strong></button></div>
       </DashboardSection>
 
-      <section className="dashboard-quick-actions"><button onClick={() => go("personal")}><Sparkles size={16} /><span><strong>Create from my PDF</strong><small>Private AI practice set</small></span><ArrowRight size={16} /></button><button onClick={() => go("hierarchy")}><FileText size={16} /><span><strong>Browse course repository</strong><small>Find papers by course</small></span><ArrowRight size={16} /></button></section>
+      <section className="dashboard-quick-actions"><button onClick={() => go("generate")}><Sparkles size={16} /><span><strong>Create from my PDF</strong><small>Private AI practice set</small></span><ArrowRight size={16} /></button><button onClick={() => go("hierarchy")}><FileText size={16} /><span><strong>Browse course repository</strong><small>Find papers by course</small></span><ArrowRight size={16} /></button></section>
     </main>
   );
 }

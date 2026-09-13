@@ -3,18 +3,11 @@ import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { env } from '../config/env.js'
 import { prisma } from '../lib/prisma.js'
 import { supabase } from '../lib/supabase.js'
+import { resolveCourse } from '../utils/course.js'
+import { fileExtension } from '../utils/file.js'
 
 function getProfile(request: Request) {
   return (request as AuthenticatedRequest).profile
-}
-
-function slugify(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
-
-function fileExtension(file: Express.Multer.File) {
-  const extension = file.originalname.toLowerCase().split('.').pop()
-  return extension === 'pdf' || extension === 'doc' || extension === 'docx' ? extension : null
 }
 
 function storagePath(course: { department: { faculty: { university: { slug: string }; slug: string }; slug: string }; code: string }, paperId: string, extension: string) {
@@ -38,12 +31,7 @@ export async function uploadPaper(request: Request, response: Response) {
   if ((!courseId && !hasTypedCourse) || !description?.trim() || !level?.trim() || !session || !Number.isInteger(parsedYear) || parsedYear < 1900 || !['FIRST', 'SECOND'].includes(semester ?? '')) { response.status(400).json({ message: 'University, faculty, course name, course code, description, level, session, year, and semester are required.' }); return }
   if (!env.supabaseUrl || !env.supabaseServiceRoleKey) { response.status(503).json({ message: 'Supabase Storage is not configured.' }); return }
 
-  const course = courseId ? await prisma.course.findUnique({ where: { id: courseId }, include: { department: { include: { faculty: { include: { university: true } } } } } }) : await prisma.$transaction(async (transaction) => {
-    const university = await transaction.university.upsert({ where: { slug: slugify(universityName!) }, update: { name: universityName!.trim() }, create: { name: universityName!.trim(), slug: slugify(universityName!) } })
-    const faculty = await transaction.faculty.upsert({ where: { universityId_slug: { universityId: university.id, slug: slugify(facultyName!) } }, update: { name: facultyName!.trim() }, create: { universityId: university.id, name: facultyName!.trim(), slug: slugify(facultyName!) } })
-    const department = await transaction.department.upsert({ where: { facultyId_slug: { facultyId: faculty.id, slug: 'general' } }, update: {}, create: { facultyId: faculty.id, name: 'General', slug: 'general' } })
-    return transaction.course.upsert({ where: { departmentId_code: { departmentId: department.id, code: courseCode!.trim().toUpperCase() } }, update: { title: courseTitle!.trim() }, create: { departmentId: department.id, code: courseCode!.trim().toUpperCase(), title: courseTitle!.trim() }, include: { department: { include: { faculty: { include: { university: true } } } } } })
-  }, { maxWait: 10000, timeout: 15000 })
+  const course = await resolveCourse({ courseId, universityName, facultyName, courseCode, courseTitle })
   if (!course) { response.status(404).json({ message: 'Course not found.' }); return }
 
   const paper = await prisma.paper.create({

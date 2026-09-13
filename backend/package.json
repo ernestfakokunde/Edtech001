@@ -16,11 +16,14 @@
   "dependencies": {
     "@prisma/client": "^6.16.0",
     "@supabase/supabase-js": "^2.116.0",
+    "@types/pdf-parse": "^1.1.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
-    "multer": "^2.3.0"
+    "mammoth": "^1.12.3",
+    "multer": "^2.3.0",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
