@@ -1,6 +1,216 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
 @import "tailwindcss";
 
+/* ===========================================================================
+   Design tokens — Tailwind v4 CSS-first theme (`@theme`, not tailwind.config.js)
+   Phase 2 of the styling refactor. Every value below was measured from
+   src/App.css (Phase 1 inventory: docs/phase-1-css-inventory.md) and is listed
+   with the number of declarations it replaces.
+
+   Two rules govern this file:
+     1. NOTHING here may change rendered output. Values are copied verbatim in
+        px/hex. Tailwind's own defaults are NOT reused for anything the app
+        already uses, because v4's palette/scale are oklch/rem based and do not
+        equal the v3 hexes / px values this design was authored with.
+     2. Repeated values get names; one-off values stay one-off (they are listed
+        as exceptions in the Phase 1 report and stay as literal values in JSX).
+
+   `--spacing: 1px` is the one global decision: the design uses ~1px spacing
+   granularity (500 length declarations, 278 of them not multiples of 4px), so
+   the numeric spacing scale is redefined so the number IS the pixel value:
+       p-9 = 9px, gap-14 = 14px, mt-34 = 34px, -ml-4 = -4px
+   This makes every measured length expressible without arbitrary values.
+   NOTE: it applies to all numeric spacing utilities (p/m/gap/inset/w/h/size/
+   translate). Nothing in the app used Tailwind utilities before Phase 2, so
+   no existing class changes meaning.
+   =========================================================================== */
+@theme {
+  /* ── Spacing: number === px (see note above) ─────────────────────────── */
+  --spacing: 1px;
+
+  /* ── Font families ───────────────────────────────────────────────────── */
+  --font-inter: Inter, sans-serif;                     /* 2 font shorthands */
+  --font-grotesk: "Space Grotesk", sans-serif;         /* 27 + 9 + 4 shorthand + 1 font-family */
+
+  /* ── Font sizes (px; numeric name === px value) ───────────────────────── */
+  --text-10: 10px;   /* 30 */
+  --text-11: 11px;   /* 47 */
+  --text-12: 12px;   /* 40 */
+  --text-13: 13px;   /* 18 */
+  --text-14: 14px;   /*  4 */
+  --text-15: 15px;   /*  6 */
+  --text-16: 16px;   /*  3 */
+  --text-17: 17px;   /*  4 */
+  --text-18: 18px;   /*  3 */
+  --text-19: 19px;   /*  5 */
+  --text-21: 21px;   /*  4 */
+  --text-23: 23px;   /*  3 */
+  /* one-off sizes (22, 24, 25, 27, 28, 31, 34, 35, 37, 38px, 4 clamps) stay literals */
+
+  /* ── Line heights (unitless ratios; name = ratio x 100) ──────────────── */
+  /* leading-145 === line-height: 1.45 */
+  --leading-100: 1;      /*  2 */
+  --leading-140: 1.4;    /*  2 */
+  --leading-145: 1.45;   /*  6 */
+  --leading-150: 1.5;    /*  7 */
+  --leading-155: 1.55;   /*  5 */
+  --leading-160: 1.6;    /*  7 */
+  --leading-170: 1.7;    /*  2 */
+  /* one-off ratios (0.98, 1.1, 1.65) stay literals */
+
+  /* ── Border radii (px; numeric name === px value) ────────────────────── */
+  --radius-8: 8px;       /*  5 */
+  --radius-9: 9px;       /* 14  most-used radius in the app */
+  --radius-10: 10px;     /* 12 */
+  --radius-11: 11px;     /*  5 */
+  --radius-12: 12px;     /*  8 */
+  --radius-13: 13px;     /*  7 */
+  --radius-14: 14px;     /*  7 */
+  --radius-15: 15px;     /*  4 */
+  --radius-16: 16px;     /*  4 */
+  --radius-17: 17px;     /*  5 */
+  --radius-18: 18px;     /*  3 */
+  --radius-20: 20px;     /*  3 */
+  --radius-99: 99px;     /*  4  pill on badges/chips */
+  --radius-999: 999px;   /*  5  pill on bars/large chips */
+  /* `border-radius: 50%` (8 uses) MUST stay 50%, never `rounded-full`
+     (rounded-full is `calc(infinity * 1px)`, which draws an ellipse on
+     non-square boxes where 50% draws a circle). */
+  --radius-half: 50%;    /*  8 */
+  /* 25px (1 use, .hero-panel) and `inherit` (1 use) are not tokens */
+
+  /* ── Colours — brand ──────────────────────────────────────────────────
+     Named by ROLE, never by hue, so a future rebrand is a one-line change.
+     `--color-white` intentionally restates Tailwind's white (#fff) so the
+     token set stays self-contained for the many `background: #fff` surfaces. */
+  --color-brand: #1d4ed8;      /* 5 literal + var(--blue) x69 */
+  --color-brand-deep: #1e3a8a; /* 5  points badges, quiz explanation */
+  --color-ink: #0f172a;        /* 2 literal + var(--ink) x26 */
+  --color-muted: #64748b;      /* 2 literal + var(--muted) x61 */
+  --color-line: #e7edf6;       /* 2 literal + var(--line) x49 — borders */
+  --color-wash: #f8faff;       /* 1 + var(--wash) x2 — app background */
+  --color-pale: #eff6ff;       /* 7 + var(--pale) x18 — tinted surface */
+  --color-surface: #fff;       /* 61 — cards, buttons, inputs */
+  --color-white: #fff;         /* 61 — see note above */
+
+  /* ─ Colours — neutral / misc ────────────────────────────────────────── */
+  --color-slate-icon: #94a3b8;      /* 22  muted icons, scrollbar, empty states */
+  --color-outline: #93c5fd;         /* 21  dashed/hover borders, focus rings */
+  --color-focus-ring: #dbeafe;      /* 20  box-shadow focus rings */
+  --color-line-soft: #dbe5f3;       /*  1  .profile-add-row */
+  --color-ghost-surface: #f8fbff;   /* 12  dashed buttons, empty panels */
+  --color-ghost-border: #bfdbfe;    /* 11  matching borders + icon colour */
+  --color-panel: #f1f5fb;           /*  2  .path-section, loader steps */
+  --color-heading: #172033;         /*  1  index.css :root base colour */
+
+  /* ── Colours — success / warning / danger ────────────────────────────
+     Two green families coexist: a light/mint family for confirmations and a
+     deep family for text. They are NOT interchangeable, so they are
+     tokenised separately on purpose.                                       */
+  --color-success-surface: #f0fdf4; /* 4  success backgrounds */
+  --color-success-border: #bbf7d0;  /* 3  success borders */
+  --color-success-text: #166534;    /* 2  success text */
+  --color-success-deep: #047857;    /* 6  "saved" text */
+  --color-success-alt: #4b7b5a;     /* 1  .auth-success span (distinct hue) */
+  --color-success-soft: #ecfdf5;    /* 2  metric-icon.green, admin notice */
+  --color-success-icon: #059669;    /* 1  .metric-icon.green */
+  --color-teal: #0f766e;            /* 1  .profile-icon */
+  --color-teal-surface: #ccfbf1;    /* 1  .profile-icon */
+  --color-success-check: #22c55e;   /* 2  correct answer + its badge */
+  --color-success-check-border: #16a34a; /* 1 */
+  --color-danger: #b91c1c;          /* 9  error text */
+  --color-danger-strong: #dc2626;   /* 1 */
+  --color-danger-alt: #ef4444;      /* 3  wrong-answer state */
+  --color-danger-surface: #fef2f2;  /* 3 */
+  --color-danger-border: #fecaca;   /* 2 */
+  --color-danger-deep: #991b1b;     /* 1 */
+  --color-warning: #b45309;         /* 3  pending / warning text */
+  --color-warning-surface: #fef3c7; /* 1  metric-icon.amber */
+  --color-warning-icon: #d97706;    /* 1  metric-icon.amber */
+  --color-nav-surface: #f1f5f9;     /* 3  neutral chips */
+  --color-nav-border: #e2e8f0;      /* 1 */
+  --color-panel-line: #eef2f7;      /* 1 */
+  --color-disabled-surface: #f8fafc;/* 3  disabled inputs */
+  --color-slate-600: #334155;       /* 3  navy gradient, explanation text */
+  --color-slate-500: #475569;       /* 1  .admin-role */
+  --color-slate-300: #cbd5e1;       /* 1  .course-option svg */
+  --color-online: #4ade80;          /* 1  .status-dot:before */
+  --color-link-course: #2563eb;     /* 1  .profile-course-list */
+
+  /* ── Colours — gradients / translucent overlays (verbatim) ───────────── */
+  --color-hero-from: #173c9e;       /* .hero-panel 145deg */
+  --color-hero-via: #477ce0;        /* .hero-panel mid stop */
+  --color-backdrop: #0f172a66;      /* .admin-dialog-backdrop */
+  --color-overlay-line: #ffffff2b;  /* 2  .panel-stat / .panel-footer borders */
+  --color-overlay-fill: #ffffff33;  /* 1  .set-track */
+  --color-overlay-ring: #ffffff35;  /* 1  .progress-ring */
+
+  /* ── Shadows (verbatim; names reflect measured elevation/role) ────────
+     Names are shape-descriptive because Tailwind's own `shadow-sm/md/lg/xl`
+     carry different values; those defaults are unused. */
+  --shadow-focus: 0 0 0 3px #dbeafe;              /* 7 */
+  --shadow-card: 0 14px 30px #1d4ed80b;           /* 2  resting card */
+  --shadow-raised: 0 22px 40px #0f172a12;         /* 2  loader / results hero */
+  --shadow-selected: 0 8px 18px #1d4ed826;        /* 2  selected chip */
+  --shadow-ghost-card: 0 12px 25px #1d4ed80a;     /* 1  repository paper card */
+  --shadow-brand-sm: 0 8px 18px #1d4ed833;        /* 1  wordmark */
+  --shadow-brand-md: 0 10px 22px #1d4ed82b;       /* 1  primary button */
+  --shadow-brand-lg: 0 14px 26px #1d4ed83d;       /* 1  primary button hover */
+  --shadow-brand-xl: 0 16px 28px #1d4ed812;       /* 1  path-grid button hover */
+  --shadow-brand-hero: 0 28px 50px #1d4ed83b;     /* 1  hero panel */
+  --shadow-dialog: 0 25px 60px #0f172a33;         /* 1  modal */
+  --shadow-mode-hover: 0 12px 24px #1d4ed812;     /* 1 */
+  --shadow-results: 0 18px 34px #0f172a0d;        /* 1 */
+  --shadow-flashcard: 0 20px 36px #0f172a10;      /* 1 */
+  --shadow-flashcard-hover: 0 24px 42px #0f172a16;/* 1 */
+  /* `box-shadow: none` (2 uses) → Tailwind `shadow-none`; not a token. */
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive breakpoints — `@custom-variant`, NOT numeric `--breakpoint-*`.
+   `--breakpoint-*` tokens drive Tailwind's `sm:`/`md:` prefixes, which are
+   MIN-width queries; all 8 queries in App.css are MAX-width, so those tokens
+   would not express them at all. Tailwind's built-in `max-sm:` variant is also
+   wrong here: it compiles to `@media (width < 680px)` (strictly less-than),
+   whereas the app uses `@media (max-width: 680px)` (inclusive) — a real 1px
+   difference at the boundary. These five variants reproduce the authored
+   queries byte-for-byte, so `max-760:grid-cols-1` is exactly equivalent to
+   being inside `@media (max-width: 760px) { ... }`.
+
+   Thresholds in use (from App.css, with occurrence counts):
+       680px x1   760px x4   860px x1   1020px x1   1160px x1
+   --------------------------------------------------------------------------- */
+@custom-variant max-1160 {
+  @media (max-width: 1160px) {
+    @slot;
+  }
+}
+@custom-variant max-1020 {
+  @media (max-width: 1020px) {
+    @slot;
+  }
+}
+@custom-variant max-860 {
+  @media (max-width: 860px) {
+    @slot;
+  }
+}
+@custom-variant max-760 {
+  @media (max-width: 760px) {
+    @slot;
+  }
+}
+@custom-variant max-680 {
+  @media (max-width: 680px) {
+    @slot;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Existing custom properties are preserved verbatim: ~245 declarations in
+   App.css still consume `var(--blue|--ink|--muted|--line|--wash|--pale)`.
+   They are removed in Phase 5, once nothing references them.
+   --------------------------------------------------------------------------- */
 :root {
   font-family: Inter, sans-serif;
   color: #172033;
