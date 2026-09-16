@@ -8,10 +8,23 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const isSignup = mode === "signup";
+
+  /* Layout tokens used more than once inside this component.
+     `rounded-half` (50%) would be used instead of `rounded-full` on non-square
+     boxes — Tailwind's `rounded-full` resolves to calc(infinity * 1px), which
+     draws an ellipse where the original CSS drew a circle. */
+  const fieldBox = "min-h-46 flex items-center gap-9 px-13 border border-line rounded-10 bg-surface focus-within:border-outline focus-within:shadow-focus";
+  const label = "grid gap-7 text-muted text-11 font-bold";
+  /* Replaces `.auth-input input`. `font-normal` is load-bearing: the original
+     `font: 13px Inter` shorthand reset font-weight to normal, which utility
+     classes do not do implicitly (the weight would otherwise be inherited). */
+  const fieldInput = "w-full border-0 outline-0 text-ink font-inter font-normal text-13";
+  const primaryCta = "primary-button full";
+
   return (
-    <main className="auth-shell">
-      <section className="auth-aside">
-        <button className="wordmark auth-wordmark" onClick={() => go("home")}>
+    <main className="max-w-none min-h-screen grid grid-cols-2 max-1020:grid-cols-1 bg-surface">
+      <section className="py-36 px-[clamp(30px,7vw,100px)] max-1020:min-h-0 max-1020:py-30 max-1020:px-26 flex flex-col justify-between bg-pale">
+        <button className="wordmark self-start" onClick={() => go("home")}>
           <span>
             <LayoutGrid size={16} />
           </span>{" "}
@@ -19,53 +32,53 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
         </button>
         <div>
           <p className="eyebrow">A calmer way to revise</p>
-          <h1>Make every paper count.</h1>
-          <p>
+          <h1 className="max-w-480 mb-20 text-[clamp(44px,5vw,70px)] leading-100">Make every paper count.</h1>
+          <p className="max-w-430 text-muted text-15 leading-170">
             Keep your own PDFs private, or learn from the papers your course
             community has already shared.
           </p>
-          <div className="auth-points">
-            <span>
+          <div className="grid gap-14 mt-34 text-brand-deep text-12 font-semibold">
+            <span className="flex gap-8 items-center">
               <Check size={15} /> AI-generated flashcards and quizzes
             </span>
-            <span>
+            <span className="flex gap-8 items-center">
               <Check size={15} /> Your private study workspace
             </span>
-            <span>
+            <span className="flex gap-8 items-center">
               <Check size={15} /> Course repositories that grow with you
             </span>
           </div>
         </div>
       </section>
-      <section className="auth-panel">
-        <div className="auth-card">
-          <button className="back-link" onClick={() => go("home")}>
+      <section className="grid place-items-center p-30">
+        <div className="w-[min(100%,410px)]">
+          <button className="back-link mb-46" onClick={() => go("home")}>
             Back to home
           </button>
           <p className="eyebrow">
             {isSignup ? "Create your workspace" : "Welcome back"}
           </p>
-          <h2>
+          <h2 className="mb-10 text-[31px] leading-[1.1]">
             {isSignup
               ? "Start practising with purpose."
               : "Pick up where you left off."}
           </h2>
-          <p className="auth-subtitle">
+          <p className="mb-28 text-muted text-13 leading-155">
             {isSignup
               ? "One account for your own papers and every course repository."
               : "Sign in to continue to your study desk."}
           </p>
           {submitted ? (
-            <div className="auth-success">
+            <div className="grid gap-10 p-22 border border-success-border rounded-13 text-success-text bg-success-surface text-12">
               <Check size={20} />
               <strong>
                 {isSignup ? "Your workspace is ready." : "You are signed in."}
               </strong>
-              <span>
+              <span className="text-success-alt leading-150">
                 Take a look around and choose how you want to practise.
               </span>
               <button
-                className="primary-button full"
+                className={`${primaryCta} mt-8`}
                 onClick={() => go("dashboard")}
               >
                 Go to study desk <ArrowRight size={16} />
@@ -73,6 +86,7 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
             </div>
           ) : (
             <form
+              className="grid gap-17"
               onSubmit={async (event) => {
                 event.preventDefault();
                 setError("");
@@ -98,11 +112,12 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
                 }
               }}
             >
-              <label>
+              <label className={label}>
                 Email address
-                <div className="auth-input">
-                  <Mail size={16} />
+                <div className={fieldBox}>
+                  <Mail size={16} className="text-slate-icon" />
                   <input
+                    className={fieldInput}
                     name="email"
                     type="email"
                     required
@@ -111,18 +126,24 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
                 </div>
               </label>
               {isSignup && (
-                <label>
+                <label className={label}>
                   Full name
-                  <div className="auth-input">
-                    <input name="displayName" required placeholder="Your name" />
+                  <div className={fieldBox}>
+                    <input
+                      className={fieldInput}
+                      name="displayName"
+                      required
+                      placeholder="Your name"
+                    />
                   </div>
                 </label>
               )}
-              <label>
+              <label className={label}>
                 Password
-                <div className="auth-input">
-                  <LockKeyhole size={16} />
+                <div className={fieldBox}>
+                  <LockKeyhole size={16} className="text-slate-icon" />
                   <input
+                    className={fieldInput}
                     name="password"
                     type="password"
                     required
@@ -132,24 +153,24 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
                 </div>
               </label>
               {isSignup && (
-                <label className="checkbox-row">
-                  <input type="checkbox" required />{" "}
+                <label className="flex items-start gap-8 text-muted text-11 font-normal leading-140">
+                  <input className="mt-2 accent-brand" type="checkbox" required />{" "}
                   <span>
                     I agree to keep shared course material respectful and
                     academic.
                   </span>
                 </label>
               )}
-              <button className="primary-button full" type="submit">
+              <button className={primaryCta} type="submit">
                 {loading ? "Working..." : isSignup ? "Create account" : "Sign in"}{" "}
                 <ArrowRight size={16} />
               </button>
-              {error && <p className="auth-error" role="alert">{error}</p>}
+              {error && <p className="m-0 text-danger text-11 leading-145" role="alert">{error}</p>}
             </form>
           )}
-          <p className="auth-switch">
+          <p className="mt-27 text-slate-icon text-11 text-center">
             {isSignup ? "Already have an account?" : "New to RecappEdu?"}{" "}
-            <button onClick={() => go(isSignup ? "login" : "signup")}>
+            <button className="text-brand font-bold" onClick={() => go(isSignup ? "login" : "signup")}>
               {isSignup ? "Sign in" : "Create an account"}
             </button>
           </p>

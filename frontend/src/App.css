@@ -1,3 +1,12 @@
+/* App.css — legacy stylesheet, now wrapped in `@layer components`.
+   Layer order is declared in index.css. While unlayered, every rule here
+   outranked Tailwind utilities (unlayered beats layered), so no utility could
+   ever override a legacy class. Wrapping it in `components` keeps the cascade
+   App.css had (its rules still beat Tailwind's base/preflight, so heading
+   sizes etc. are unaffected) while letting utilities win where a component has
+   been converted. Rules are removed from here only as their consumer is
+   converted — see docs/phase-3-auth-pilot.md. */
+@layer components {
 :root {
   --blue: #1d4ed8;
   --ink: #0f172a;
@@ -133,155 +142,21 @@
   box-shadow: none;
   transform: none;
 }
-.auth-shell {
-  max-width: none;
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  background: #fff;
-}
-.auth-aside {
-  padding: 36px clamp(30px, 7vw, 100px);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background: #eff6ff;
-}
-.auth-wordmark {
-  align-self: flex-start;
-}
-.auth-aside h1 {
-  max-width: 480px;
-  margin-bottom: 20px;
-  font-size: clamp(44px, 5vw, 70px);
-  line-height: 1;
-}
-.auth-aside > div > p:not(.eyebrow) {
-  max-width: 430px;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.7;
-}
-.auth-points {
-  display: grid;
-  gap: 14px;
-  margin-top: 34px;
-  color: #1e3a8a;
-  font-size: 12px;
-  font-weight: 600;
-}
-.auth-points span {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.auth-panel {
-  display: grid;
-  place-items: center;
-  padding: 30px;
-}
-.auth-card {
-  width: min(100%, 410px);
-}
-.auth-card .back-link {
-  margin-bottom: 46px;
-}
-.auth-card h2 {
-  margin-bottom: 10px;
-  font-size: 31px;
-  line-height: 1.1;
-}
-.auth-subtitle {
-  margin-bottom: 28px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-.auth-card form {
-  display: grid;
-  gap: 17px;
-}
-.auth-card label {
-  display: grid;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-.auth-input {
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0 13px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-}
-.auth-input:focus-within {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px #dbeafe;
-}
-.auth-input svg {
-  color: #94a3b8;
-}
-.auth-input input {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  color: var(--ink);
-  font: 13px Inter;
-}
-.checkbox-row {
-  display: flex !important;
-  align-items: flex-start;
-  gap: 8px !important;
-  font-weight: 400 !important;
-  line-height: 1.4;
-}
-.checkbox-row input {
-  margin-top: 2px;
-  accent-color: var(--blue);
-}
-.auth-switch {
-  margin-top: 27px;
-  color: #94a3b8;
-  font-size: 11px;
-  text-align: center;
-}
-.auth-switch button {
-  color: var(--blue);
-  font-weight: 700;
-}
-.auth-success {
-  display: grid;
-  gap: 10px;
-  padding: 22px;
-  border: 1px solid #bbf7d0;
-  border-radius: 13px;
-  color: #166534;
-  background: #f0fdf4;
-  font-size: 12px;
-}
-.auth-success span {
-  color: #4b7b5a;
-  line-height: 1.5;
-}
-.auth-success .primary-button {
-  margin-top: 8px;
-}
-.auth-error {
-  margin: 0;
-  color: #b91c1c;
-  font-size: 11px;
-  line-height: 1.45;
-}
-button {
-  border: 0;
-  cursor: pointer;
-  color: inherit;
-  background: none;
-}
+/* ---------------------------------------------------------------------------
+   The `.auth-*` block that previously lived here was converted to Tailwind
+   utilities in Phase 3 — see docs/phase-3-auth-pilot.md and pages/Auth.tsx.
+   Deleted rules (all verified Auth.tsx-exclusive before removal):
+     .auth-shell .auth-aside .auth-wordmark .auth-aside h1
+     .auth-aside > div > p:not(.eyebrow) .auth-points .auth-points span
+     .auth-panel .auth-card .auth-card .back-link .auth-card h2 .auth-subtitle
+     .auth-card form .auth-card label .auth-input .auth-input:focus-within
+     .auth-input svg .auth-input input .checkbox-row .checkbox-row input
+     .auth-switch .auth-switch button .auth-success .auth-success span
+     .auth-success .primary-button .auth-error
+   The global `button` reset also left here — moved to `@layer base` in
+   index.css (same declarations), because unlayered CSS outranks Tailwind's
+   `@layer utilities` and would otherwise neutralise utility classes.
+   --------------------------------------------------------------------------- */
 .app-shell {
   min-height: 100vh;
   color: var(--ink);
@@ -1622,8 +1497,8 @@ select {
     gap: 38px;
   }
   .hero-copy h1 { font-size: clamp(36px, 5.4vw, 58px); }
-  .auth-shell { grid-template-columns: 1fr; }
-  .auth-aside { min-height: 0; padding: 30px 26px; }
+  /* .auth-shell / .auth-aside responsive overrides were converted to `max-1020:`
+     utilities on the corresponding elements in pages/Auth.tsx (Phase 3). */
   .steps { grid-template-columns: 1fr; gap: 30px; }
 }
 
@@ -1654,4 +1529,5 @@ select {
   .hero-grid { padding: 40px 0 56px; }
   .path-section, .how-section { padding: 60px 22px; }
   footer { flex-direction: column; align-items: flex-start; gap: 9px; }
+}
 }
