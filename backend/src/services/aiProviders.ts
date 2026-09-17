@@ -154,12 +154,13 @@ async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey
  * any custom endpoint (DeepSeek, Mistral, OpenRouter, LM Studio, …).
  */
 async function completeOpenAiCompatible(
+  providerLabel: string,
   config: Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
   system: string,
   userText: string,
 ): Promise<{ text: string; model: string }> {
   const baseUrl = config.baseUrl.replace(/\/+$/, '')
-  const data = await postJson('AI request', `${baseUrl}/chat/completions`, {
+  const data = await postJson(providerLabel, `${baseUrl}/chat/completions`, {
     authorization: `Bearer ${config.apiKey}`,
   }, {
     model: config.model,
@@ -180,7 +181,7 @@ async function completeOpenAiCompatible(
   }
 
   const text = firstMessageContent()
-  if (!text.trim()) throw new AiProviderTransportError('AI request', 'the model returned no text')
+  if (!text.trim()) throw new AiProviderTransportError(providerLabel, 'the model returned no text')
   return { text, model: config.model }
 }
 
@@ -279,14 +280,24 @@ export function getConfiguredProviders(): AiProvider[] {
     configured.push(makeProvider({
       id: 'openai',
       config: providers.openai,
-      complete: (config, system, userText) => completeOpenAiCompatible(config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>, system, userText),
+      complete: (config, system, userText) => completeOpenAiCompatible(
+        providers.openai.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
+      ),
     }))
   }
   if (providers.grok.apiKey) {
     configured.push(makeProvider({
       id: 'grok',
       config: providers.grok,
-      complete: (config, system, userText) => completeOpenAiCompatible(config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>, system, userText),
+      complete: (config, system, userText) => completeOpenAiCompatible(
+        providers.grok.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
+      ),
     }))
   }
   if (providers.gemini.apiKey) {
@@ -296,7 +307,12 @@ export function getConfiguredProviders(): AiProvider[] {
     configured.push(makeProvider({
       id: 'custom',
       config: providers.custom,
-      complete: (config, system, userText) => completeOpenAiCompatible(config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>, system, userText),
+      complete: (config, system, userText) => completeOpenAiCompatible(
+        providers.custom.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
+      ),
     }))
   }
 

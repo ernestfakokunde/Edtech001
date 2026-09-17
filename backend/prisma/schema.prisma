@@ -29,30 +29,48 @@ enum GeneratedSetType {
   FLASHCARD
 }
 
+enum AccountTier {
+  FREE
+  PREMIUM
+}
+
 enum ReviewDecision {
   APPROVED
   REJECTED
 }
 
 model Profile {
-  id               String    @id @default(cuid())
-  email            String    @unique
+  id               String      @id @default(cuid())
+  email            String      @unique
   passwordHash     String
   displayName      String?
-  username         String?   @unique
-  isAdmin          Boolean   @default(false)
+  username         String?     @unique
+  isAdmin          Boolean     @default(false)
+  tier             AccountTier @default(FREE)
+  xp               Int         @default(0)
+  premiumUntil     DateTime?
+  referralCode     String?     @unique
+  referredById     String?
   suspendedUntil   DateTime?
   suspensionReason String?
   universityId     String?
   facultyId        String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   university University? @relation(fields: [universityId], references: [id], onDelete: SetNull)
   faculty    Faculty?    @relation(fields: [facultyId], references: [id], onDelete: SetNull)
 
+  referredBy Profile?             @relation("Referral", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals  Profile[]            @relation("Referral")
+  claims     UserClaimedMission[]
+
+  redeemedCodes     CodeRedemption[] @relation("CodeRedemptions")
+  createdPromoCodes PromoCode[]      @relation("PromoCodeCreator")
+
   papers        Paper[]
   generatedSets GeneratedSet[]
+  quizAttempts  QuizAttempt[]
   auditEvents   AuditEvent[]
   sessions      Session[]
   savedCourses  ProfileCourse[]
@@ -189,20 +207,22 @@ model Question {
 }
 
 model GeneratedSet {
-  id               String           @id @default(cuid())
-  userId           String
-  courseId         String
-  type             GeneratedSetType
-  title            String
-  requestedLength  Int
-  timePerQuestion  Int?
-  createdAt        DateTime         @default(now())
+  id              String           @id @default(cuid())
+  userId          String
+  courseId        String
+  type            GeneratedSetType
+  title           String
+  requestedLength Int
+  timePerQuestion Int?
+  createdAt       DateTime         @default(now())
 
-  user   Profile            @relation(fields: [userId], references: [id])
-  course Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  items  GeneratedSetItem[]
+  user     Profile            @relation(fields: [userId], references: [id])
+  course   Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items    GeneratedSetItem[]
+  attempts QuizAttempt[]
 
   @@index([userId, courseId])
+  @@index([userId, createdAt])
 }
 
 model GeneratedSetItem {
@@ -215,6 +235,26 @@ model GeneratedSetItem {
 
   @@id([setId, questionId])
   @@unique([setId, position])
+}
+
+/// One finished quiz run. Stored so the student can open a "past results"
+/// history page even after refresh / on another device. Score + total are
+/// kept alongside the percentage for flexible display; answers detail stays
+/// client-side only.
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  setId     String
+  score     Int
+  total     Int
+  percent   Int
+  createdAt DateTime @default(now())
+
+  user Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  set  GeneratedSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([setId])
 }
 
 model AuditEvent {
@@ -232,9 +272,74 @@ model AuditEvent {
   @@index([createdAt])
 }
 
+/// A challenge the main admin creates (title, description, XP reward). Students
+/// claim active missions once each and the XP lands on their profile — points
+/// fuel the FREE → PREMIUM roadmap later.
+model Mission {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  xpReward    Int      @default(10)
+  isActive    Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  claims UserClaimedMission[]
+}
+
+model UserClaimedMission {
+  profileId String
+  missionId String
+  claimedAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, missionId])
+  @@index([missionId])
+}
+
 model studySet {
-  id        String @id @default(cuid())
+  id        String   @id @default(cuid())
   title     String
   type      String
   createdAt DateTime @default(now())
+}
+
+/// A shareable code the admin creates ("free Pro for a week", XP bonuses, …).
+/// Students redeem it once on their profile; premiumDays extends premiumUntil
+/// (stacking from the later of now / their current expiry), xpBonus lands
+/// immediately. Uses + expiry are optional caps the admin controls.
+model PromoCode {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  description    String?
+  premiumDays    Int       @default(0)
+  xpBonus        Int       @default(0)
+  maxRedemptions Int?
+  expiresAt      DateTime?
+  isActive       Boolean   @default(true)
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  createdBy   Profile?         @relation("PromoCodeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  redemptions CodeRedemption[]
+
+  @@index([isActive])
+}
+
+/// One student redeeming one promo code (unique pair = once per code each).
+model CodeRedemption {
+  id        String   @id @default(cuid())
+  codeId    String
+  profileId String
+  createdAt DateTime @default(now())
+
+  code    PromoCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  profile Profile   @relation("CodeRedemptions", fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([codeId, profileId])
+  @@index([profileId])
 }

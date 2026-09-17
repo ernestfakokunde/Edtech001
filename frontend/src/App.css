@@ -5,7 +5,7 @@
    App.css had (its rules still beat Tailwind's base/preflight, so heading
    sizes etc. are unaffected) while letting utilities win where a component has
    been converted. Rules are removed from here only as their consumer is
-   converted — see docs/phase-3-auth-pilot.md. */
+   converted — see docs/phase-3-auth-pilot.md and docs/phase-4-layout.md. */
 @layer components {
 :root {
   --blue: #1d4ed8;
@@ -16,22 +16,22 @@
   --pale: #eff6ff;
 }
 .path-section {
-  max-width: 1480px;
+  max-width: 1120px;
   margin-inline: auto;
-  padding: 90px clamp(28px, 6vw, 70px);
+  padding: 56px clamp(20px, 4vw, 40px);
   background: #f1f5fb;
 }
 .path-section .section-heading h2 {
-  margin-bottom: 35px;
+  margin-bottom: 24px;
 }
 .path-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
 }
 .path-grid button {
-  min-height: 220px;
-  padding: 27px;
+  min-height: 180px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -145,17 +145,9 @@
 /* ---------------------------------------------------------------------------
    The `.auth-*` block that previously lived here was converted to Tailwind
    utilities in Phase 3 — see docs/phase-3-auth-pilot.md and pages/Auth.tsx.
-   Deleted rules (all verified Auth.tsx-exclusive before removal):
-     .auth-shell .auth-aside .auth-wordmark .auth-aside h1
-     .auth-aside > div > p:not(.eyebrow) .auth-points .auth-points span
-     .auth-panel .auth-card .auth-card .back-link .auth-card h2 .auth-subtitle
-     .auth-card form .auth-card label .auth-input .auth-input:focus-within
-     .auth-input svg .auth-input input .checkbox-row .checkbox-row input
-     .auth-switch .auth-switch button .auth-success .auth-success span
-     .auth-success .primary-button .auth-error
-   The global `button` reset also left here — moved to `@layer base` in
-   index.css (same declarations), because unlayered CSS outranks Tailwind's
-   `@layer utilities` and would otherwise neutralise utility classes.
+   The global `button` reset also lives in `@layer base` in index.css now (same
+   declarations), because unlayered CSS outranks Tailwind's `@layer utilities`
+   and would otherwise neutralise utility classes.
    --------------------------------------------------------------------------- */
 .app-shell {
   min-height: 100vh;
@@ -170,16 +162,13 @@
   color: var(--muted);
   font-size: 13px;
 }
-/* ---------------------------------------------------------------------------
-   Phase 4: `.topbar`, `.topbar nav`, `.topbar nav button`, `.menu-button`,
-   `.page-heading`, `.page-subtitle`, `.screen-wrap h1` and `footer` — together
-   with their 1160/860/680 overrides — were consumed only by
-   components/Layout.tsx and are now Tailwind utilities there. Deleted here.
-   See docs/phase-4-layout.md.
+/* Phase 4: `.topbar`, `.topbar nav`, `.topbar nav button` (+ `:hover`/`.active`),
+   `.menu-button`, `.page-heading`, `.page-subtitle`, `.screen-wrap h1` and
+   `footer` were consumed only by components/Layout.tsx and are now Tailwind
+   utilities there — see docs/phase-4-layout.md.
    Deliberately NOT deleted (still shared with unconverted pages):
    `.wordmark` and `.back-link` (Auth.tsx), `.avatar` (Admin/Dashboard),
-   `.eyebrow` and `.screen-wrap`.
-   --------------------------------------------------------------------------- */
+   `.eyebrow` and `.screen-wrap`. */
 .wordmark {
   display: flex;
   align-items: center;
@@ -517,8 +506,9 @@ select {
   font: inherit;
 }
 .search-field.large {
-  min-height: 49px;
-  margin-bottom: 17px;
+  min-height: 44px;
+  max-width: 460px;
+  margin-bottom: 14px;
 }
 .option-list,
 .course-list,
@@ -1016,6 +1006,40 @@ select {
 .admin-action { color: #b91c1c; font-size: 10px; font-weight: 700; }
 .admin-action.restore { color: #047857; }
 .admin-empty { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 32px; color: var(--muted); font-size: 12px; }
+.admin-activity-list { display: grid; border-top: 1px solid var(--line); }
+.admin-activity-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 11px; }
+.admin-activity-row > span { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; color: var(--blue); border-radius: 50%; background: var(--pale); }
+.admin-activity-row p { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-activity-row p strong { font-weight: 700; }
+.admin-activity-row time { color: #94a3b8; font-size: 10px; white-space: nowrap; }
+button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; white-space: nowrap; }
+
+/* ── Missions + promo codes (admin) & promo redeem (profile) ── */
+.admin-panel-help { margin: -10px 0 14px; color: var(--muted); font-size: 12px; }
+.admin-mission-create { display: grid; grid-template-columns: 2fr 2fr 90px auto; gap: 10px; margin-bottom: 16px; }
+.admin-promo-create { display: grid; grid-template-columns: 240px 1fr auto; gap: 10px 12px; align-items: center; margin-bottom: 16px; }
+.admin-promo-create .admin-promo-code-input { font-family: ui-monospace, monospace; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.admin-promo-caps { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(90px, 150px)) minmax(140px, 180px); gap: 10px; }
+.admin-promo-caps label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; }
+.admin-mission-list, .admin-promo-list { display: grid; gap: 10px; }
+.admin-mission-row, .admin-promo-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.admin-mission-row.inactive, .admin-promo-row.inactive { opacity: 0.55; }
+.admin-mission-row .mission-main { min-width: 0; }
+.admin-promo-main { display: grid; gap: 2px; min-width: 0; }
+.admin-promo-main code { font: 700 13px ui-monospace, monospace; letter-spacing: 0.08em; }
+.admin-promo-main > span { font-size: 12px; }
+.admin-promo-main small { color: var(--muted); font-size: 11px; }
+.admin-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.profile-tier-chip.pro { background: #fef3c7; color: #92400e; }
+.redeem-row { display: flex; gap: 10px; align-items: center; }
+.redeem-row input { flex: 1; font-family: ui-monospace, monospace; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+@media (max-width: 760px) {
+  .admin-mission-create { grid-template-columns: 1fr 1fr; }
+  .admin-promo-create { grid-template-columns: 1fr; }
+  .admin-promo-caps { grid-template-columns: 1fr 1fr; }
+  .admin-promo-row, .admin-mission-row { align-items: flex-start; flex-direction: column; }
+  .admin-row-actions { justify-content: flex-start; }
+}
 .admin-notice, .admin-feedback-error { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 10px; font-size: 11px; }
 .admin-notice { color: #047857; background: #ecfdf5; }
 .admin-feedback-error { color: #b91c1c; background: #fef2f2; }
@@ -1063,36 +1087,36 @@ select {
 .admin-dialog textarea { min-height: 75px; resize: vertical; }
 .admin-dialog-close { position: absolute; top: 17px; right: 17px; color: var(--muted); }
 .admin-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
-.repository-browser { display: grid; gap: 18px; }
-.repository-upload-panel { padding: 22px; border: 1px solid #dbeafe; border-radius: 15px; background: #f8fbff; }
+.repository-browser { display: grid; gap: 14px; }
+.repository-upload-panel { padding: 20px; border: 1px solid #dbeafe; border-radius: 14px; background: #f8fbff; max-width: 860px; }
 .repository-upload-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .repository-upload-heading h2 { margin: 2px 0 6px; font: 700 19px "Space Grotesk", sans-serif; }
 .upload-form-success { color: #047857; }
 .upload-form-error { color: #b91c1c; }
-.repository-filters { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
-.repository-filters .search-field { flex: 1 1 320px; }
-.repository-filters select { flex: 0 0 auto; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: #fff; font-size: 12px; }
-.repository-paper-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
-.repository-paper-card { min-width: 0; padding: 19px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 12px 25px #1d4ed80a; }
-.repository-paper-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-.repository-paper-card h3 { margin: 0 0 7px; font: 700 17px "Space Grotesk", sans-serif; }
+.repository-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: 860px; }
+.repository-filters .search-field { flex: 1 1 220px; max-width: 340px; min-height: 40px; }
+.repository-filters select { flex: 0 1 150px; min-width: 130px; max-width: 170px; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: #fff; font-size: 11px; }
+.repository-paper-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; max-width: 860px; }
+.repository-paper-card { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: #fff; box-shadow: 0 12px 25px #1d4ed80a; }
+.repository-paper-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.repository-paper-card h3 { margin: 0 0 6px; font: 700 15px "Space Grotesk", sans-serif; }
 .repository-paper-card > strong { color: var(--blue); font-size: 11px; }
-.repository-paper-card p { min-height: 42px; margin: 12px 0 17px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.repository-paper-card p { min-height: 0; margin: 10px 0 12px; color: var(--muted); font-size: 11px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .repository-paper-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #94a3b8; font-size: 10px; }
 .repository-paper-meta .outline-button { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .repository-paper-card[role="button"] { cursor: pointer; }
 .repository-paper-card[role="button"]:focus { outline: 3px solid #bfdbfe; outline-offset: 2px; }
-.material-details { display: grid; gap: 22px; max-width: 620px; padding: 26px; border: 1px solid var(--line); border-radius: 15px; background: #fff; }
+.material-details { display: grid; gap: 18px; max-width: 560px; padding: 20px; border: 1px solid var(--line); border-radius: 13px; background: #fff; }
 .material-details-icon { width: 52px; height: 52px; display: grid; place-items: center; color: var(--blue); border-radius: 12px; background: var(--pale); }
 .material-details dl { display: grid; gap: 14px; margin: 0; }
 .material-details dl > div { display: grid; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid #eef2f7; }
 .material-details dt { color: #94a3b8; font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .material-details dd { margin: 0; color: var(--ink); font-size: 13px; line-height: 1.5; }
-.repository-empty { display: grid; place-items: center; gap: 7px; min-height: 180px; padding: 20px; color: var(--muted); border: 1px dashed #bfdbfe; border-radius: 14px; background: #f8fbff; font-size: 12px; text-align: center; }
+.repository-empty { display: grid; place-items: center; gap: 6px; min-height: 140px; max-width: 860px; padding: 18px; color: var(--muted); border: 1px dashed #bfdbfe; border-radius: 12px; background: #f8fbff; font-size: 12px; text-align: center; }
 .repository-empty strong { color: var(--ink); font: 700 15px "Space Grotesk", sans-serif; }
-.repository-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; color: var(--muted); font-size: 11px; }
+.repository-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; max-width: 860px; color: var(--muted); font-size: 11px; }
 .repository-pagination > div { display: flex; align-items: center; gap: 9px; }
-.my-papers-panel { display: grid; gap: 16px; padding: 22px; border: 1px solid #dbeafe; border-radius: 15px; background: #f8fbff; }
+.my-papers-panel { display: grid; gap: 14px; padding: 20px; border: 1px solid #dbeafe; border-radius: 13px; background: #f8fbff; max-width: 860px; }
 .my-paper-list { display: grid; gap: 10px; }
 .my-paper-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .my-paper-row .paper-info { display: grid; gap: 4px; min-width: 0; }
@@ -1444,34 +1468,151 @@ select {
 @media (max-width: 1020px) {
   .hero-grid {
     grid-template-columns: 1fr;
-    padding: 58px 0 72px;
-    gap: 38px;
+    padding: 48px 0 56px;
+    gap: 28px;
   }
-  .hero-copy h1 { font-size: clamp(36px, 5.4vw, 58px); }
-  /* .auth-shell / .auth-aside responsive overrides were converted to `max-1020:`
-     utilities on the corresponding elements in pages/Auth.tsx (Phase 3). */
-  .steps { grid-template-columns: 1fr; gap: 30px; }
+  .hero-copy h1 { font-size: clamp(30px, 5vw, 44px); }
+  .auth-shell { grid-template-columns: 1fr; }
+  .auth-aside { min-height: 0; padding: 24px 20px; }
+  .steps { grid-template-columns: 1fr; gap: 22px; }
 }
 
 @media (max-width: 860px) {
-  .screen-wrap { padding: 44px clamp(16px, 4vw, 24px) 76px; }
-  .dashboard-shell { padding: 32px clamp(16px, 4vw, 24px) 64px; }
-  .repository-filters { grid-template-columns: 1fr; }
+  .screen-wrap { padding: 32px clamp(16px, 4vw, 24px) 56px; }
+  .dashboard-shell { padding: 28px clamp(16px, 4vw, 24px) 48px; }
+  .repository-filters .search-field { max-width: none; }
+  .repository-filters select { flex: 1 1 140px; max-width: none; }
   .choice-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 680px) {
   .wordmark { font-size: 16px; }
-  .screen-wrap, .player-wrap { padding: 34px 16px 66px; }
-  .back-link { margin-bottom: 24px; }
-  .flashcard { min-height: 260px; padding: 24px 18px; }
+  .flashcard { min-height: 240px; padding: 20px 16px; }
   .card-explanation { max-width: 100%; }
-  .question { font-size: 19px; }
-  .answers button { min-height: 48px; padding: 11px 13px; }
-  .results-hero { padding: 30px 18px; }
+  .question { font-size: 18px; }
+  .answers button { min-height: 46px; padding: 10px 12px; }
+  .results-hero { padding: 24px 16px; }
   .result-stats { gap: 9px; }
-  .hero-copy h1 { font-size: 38px; }
-  .hero-grid { padding: 40px 0 56px; }
-  .path-section, .how-section { padding: 60px 22px; }
+  .hero-copy h1 { font-size: 32px; }
+  .hero-grid { padding: 36px 0 44px; }
+  .path-section, .how-section { padding: 44px 20px; }
 }
+
+/* ── Past results history ────────────────────────────────────────── */
+.history-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.history-summary > div { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; text-align: center; }
+.history-summary strong { display: block; font: 700 20px "Space Grotesk", sans-serif; }
+.history-summary span { color: var(--muted); font-size: 11px; }
+.history-list { display: grid; gap: 10px; }
+.history-card { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.history-card > div { min-width: 0; flex: 1 1 200px; }
+.history-card strong { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-card small { color: var(--muted); font-size: 11px; }
+.history-badge { min-width: 52px; text-align: center; padding: 6px 10px; border-radius: 999px; font: 700 13px "Space Grotesk", sans-serif; background: var(--pale); color: var(--blue); }
+.history-badge.good { background: #f0fdf4; color: #15803d; }
+.history-badge.poor { background: #fef2f2; color: #b91c1c; }
+.history-empty { padding: 28px 20px; text-align: center; border: 1px dashed #bfdbfe; border-radius: 14px; background: #f8fbff; color: var(--muted); font-size: 12px; }
+.history-empty strong { display: block; color: var(--ink); font-size: 15px; margin-bottom: 6px; }
+
+/* ── Restored feature styles ─────────────────────────────────────────────
+   Classes used by pages/Admin.tsx, Profile.tsx, Study.tsx and Generate.tsx.
+   Their rules had never been committed, so they did not survive the tree reset
+   that also dropped the feature code; they are re-authored here against the
+   same tokens (--blue/--ink/--muted/--line/--pale) and type scale as the rest
+   of this sheet so the pages match the design they were built for. */
+
+/* Submit-for-review confirmation dialog (Study.tsx) */
+.confirm-backdrop { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: 20px; background: #0f172a66; }
+.confirm-dialog { position: relative; width: min(100%, 440px); padding: 26px; border-radius: 17px; background: #fff; box-shadow: 0 25px 60px #0f172a33; }
+.confirm-dialog h2 { margin: 6px 0 9px; font: 700 22px "Space Grotesk", sans-serif; }
+.confirm-dialog > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.confirm-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+
+/* Repository tabs (Study.tsx) */
+.tabs { display: flex; gap: 6px; padding: 5px; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.tabs button { padding: 8px 14px; border-radius: 8px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.tabs button.active, .tabs button:hover { color: var(--blue); background: var(--pale); }
+
+/* Paper rows, icons and actions */
+.paper-icon { width: 34px; height: 34px; display: grid; place-items: center; flex-shrink: 0; color: var(--blue); border-radius: 10px; background: var(--pale); }
+.paper-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.paper-action-message { color: var(--muted); font-size: 11px; }
+.progress-placeholder { display: grid; place-items: center; gap: 7px; padding: 30px; color: var(--muted); border: 1px dashed #bfdbfe; border-radius: 14px; background: #f8fbff; font-size: 12px; text-align: center; }
+.progress-placeholder strong { color: var(--ink); font: 700 15px "Space Grotesk", sans-serif; }
+
+/* Upload form helpers */
+.upload-form-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 6px; }
+.upload-notice { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 11px 14px; color: #047857; background: #ecfdf5; border-radius: 10px; font-size: 11px; }
+.typed-upload-fields { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); justify-content: start; }
+
+/* Admin board shell */
+.admin-shell { display: grid; gap: 18px; }
+.admin-users-total { color: #94a3b8; }
+
+/* Profile: identity card + XP strip + icon tones */
+.profile-identity, .school-card, .missions-card, .redeem-card, .referral-card { min-width: 0; }
+.profile-xp-strip { display: flex; align-items: center; gap: 7px; margin: 14px 0 18px; padding: 10px 13px; color: var(--blue); border: 1px solid #dbeafe; border-radius: 11px; background: #f8fbff; font-size: 11px; }
+.profile-xp-strip strong { color: var(--ink); font: 700 13px "Space Grotesk", sans-serif; }
+.profile-xp-strip span { color: var(--muted); }
+.profile-icon.green { color: #047857; background: #ecfdf5; }
+.profile-icon.gold { color: #b45309; background: #fef3c7; }
+.profile-icon.red { color: #b91c1c; background: #fef2f2; }
+
+/* Referral / invite card */
+.referral-code-row { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 12px; }
+.referral-code-row code { flex: 1 1 180px; padding: 10px 13px; color: var(--blue); border: 1px dashed #93c5fd; border-radius: 10px; background: #f8fbff; font: 700 14px ui-monospace, monospace; letter-spacing: 0.1em; text-align: center; }
+
+/* Missions card (profile) */
+.mission-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.mission-row { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.mission-row.claimed { border-color: #bbf7d0; background: #f0fdf4; }
+.mission-icon { width: 34px; height: 34px; display: grid; place-items: center; flex-shrink: 0; color: var(--blue); border-radius: 10px; background: var(--pale); }
+.mission-row .mission-main { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.mission-row .mission-main strong { color: var(--ink); font-size: 13px; }
+.mission-row .mission-main span { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.mission-row .mission-main small { color: var(--blue); font-size: 10px; font-weight: 700; }
+.mission-claimed { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; color: #047857; background: #ecfdf5; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+/* Danger zone */
+.danger-card { border-color: #fecaca; background: #fffafa; }
+.danger-card .profile-card-heading h2 { color: #b91c1c; }
+.danger-card input { border-color: #fecaca; }
+
+/* Free-plan quiz quota banner (Generate.tsx) */
+.quota-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 11px 13px; color: var(--blue); border: 1px solid #dbeafe; border-radius: 11px; background: #f8fbff; font-size: 11px; }
+.quota-banner.exhausted { color: #b45309; border-color: #fde68a; background: #fffbeb; }
+
+/* ── Global moderation: comfortable middle sizes ─────────────────── */
+.screen-wrap { max-width: 1020px; margin-inline: auto; padding: 44px clamp(20px, 4vw, 40px) 64px; }
+.player-wrap { max-width: 800px; padding: 30px clamp(18px, 3vw, 32px) 52px; }
+.dashboard-shell { max-width: 1060px; padding: 34px clamp(18px, 3vw, 32px) 60px; }
+.dashboard-greeting h1 { font-size: clamp(24px, 3vw, 32px); }
+.metric-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.metric-card { padding: 14px; }
+.metric-card strong { font-size: 20px; }
+.hero-grid { max-width: 1060px; padding: 52px 0 60px; gap: 30px; }
+.hero-copy h1 { font-size: clamp(32px, 4.2vw, 50px); max-width: 560px; }
+.hero-copy .lede { font-size: 15px; max-width: 480px; }
+.hero-panel { max-width: 370px; padding: 20px; }
+.how-section { max-width: 1060px; padding: 52px clamp(20px, 4vw, 40px); }
+.steps { gap: 18px; }
+.steps > div { padding: 20px; }
+.steps span { font-size: 26px; }
+.flashcard { min-height: 300px; padding: 28px 24px; }
+.question { font-size: 21px; }
+.answers button { min-height: 50px; }
+.results-hero { padding: 28px 20px; gap: 10px; }
+.score-ring { width: 120px; height: 120px; border-width: 8px; }
+.score-ring strong { font-size: 28px; }
+.generate-upload { min-height: 110px; padding: 18px; }
+.profile-layout { max-width: 1020px; gap: 16px; }
+.profile-card { padding: 20px; border-radius: 14px; }
+.paper-upload-fields { grid-template-columns: repeat(auto-fit, minmax(150px, 200px)); justify-content: start; }
+.repository-filters { max-width: 860px; }
+.repository-upload-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 240px)); justify-content: start; }
+.admin-metrics { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.player-top { max-width: 800px; }
+.result-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.result-actions .primary-button, .result-actions .secondary-button { flex: 1 1 180px; }
 }
+

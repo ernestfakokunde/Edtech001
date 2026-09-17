@@ -12,6 +12,7 @@ export type Route =
   | "flashcards"
   | "quiz"
   | "results"
+  | "history"
   | "profile"
   | "admin";
 export type Mode = "flashcards" | "quiz";

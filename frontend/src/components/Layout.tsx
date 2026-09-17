@@ -13,7 +13,7 @@ export function go(route: Route | string) {
    shared with unconverted pages deliberately stay as CSS: `.wordmark` and
    `.back-link` (Auth.tsx), `.avatar` (Admin/Dashboard), `.eyebrow` (most
    pages) and `.screen-wrap` (Generate.tsx). See docs/phase-4-layout.md. */
-const navButton = "py-30 px-0 text-muted text-13 border-b-2 border-transparent hover:text-ink hover:border-brand max-860:py-24";
+const navButton = "py-30 px-0 text-muted text-13 border-b-2 border-transparent hover:text-ink hover:border-brand max-860:py-20";
 const navButtonActive = "text-ink border-brand";
 
 export function Header({ route, isAdmin = false }: { route: Route; isAdmin?: boolean }) {
@@ -22,7 +22,7 @@ export function Header({ route, isAdmin = false }: { route: Route; isAdmin?: boo
   const adminActive = route === "admin";
 
   return (
-    <header className="sticky top-0 z-30 w-full h-76 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] max-860:h-64 max-680:h-58 flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash">
+    <header className="sticky top-0 z-30 w-full h-64 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash">
       <button className="wordmark" onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>
         <span>
           <LayoutGrid size={16} />
@@ -77,9 +77,9 @@ export function PageFrame({
           Back
         </button>
       )}
-      <div className="mb-29 max-680:mb-22">
+      <div className="mb-29 max-680:mb-18">
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-        <h1 className="m-0 mb-8 text-[clamp(28px,3.2vw,38px)] max-680:text-[27px]">{title}</h1>
+        <h1 className="m-0 mb-8 text-[clamp(26px,3.4vw,34px)]">{title}</h1>
         {subtitle && <p className="text-muted text-13 leading-160">{subtitle}</p>}
       </div>
       {children}

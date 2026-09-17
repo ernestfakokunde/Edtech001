@@ -34,6 +34,117 @@ export function listGenerationProvidersController(_request: Request, response: R
   response.json({ providers: listGenerationProviders() })
 }
 
+const FREE_DAILY_QUIZ_LIMIT = 5
+
+function startOfUtcDay() {
+  const now = new Date()
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+}
+
+/**
+ * Daily quota for quiz generations. Free accounts get a fixed number of quiz
+ * runs a day; PREMIUM (payment integration comes later) is unlimited. This is
+ * deliberately UTC-day based so the count resets predictably.
+ */
+/** Premium = the paying tier, or an active promo-code window (premiumUntil). */
+function effectiveTier(profile: { tier: 'FREE' | 'PREMIUM'; premiumUntil: Date | null }): 'FREE' | 'PREMIUM' {
+  if (profile.tier === 'PREMIUM') return 'PREMIUM'
+  return profile.premiumUntil && profile.premiumUntil > new Date() ? 'PREMIUM' : 'FREE'
+}
+
+export async function generationQuotaController(request: Request, response: Response) {
+  const { profile } = request as AuthenticatedRequest
+  const quota = await getGenerationQuota(profile.id, effectiveTier(profile))
+  response.json(quota)
+}
+
+export async function getGenerationQuota(userId: string, tier: 'FREE' | 'PREMIUM') {
+  const limit = tier === 'PREMIUM' ? null : FREE_DAILY_QUIZ_LIMIT
+  const used = tier === 'PREMIUM' ? 0 : await prisma.generatedSet.count({ where: { userId, type: 'QUIZ', createdAt: { gte: startOfUtcDay() } } })
+  return {
+    tier,
+    limit,
+    used,
+    remaining: limit === null ? null : Math.max(0, limit - used),
+    resetsAt: new Date(startOfUtcDay().getTime() + 86400000).toISOString(),
+  }
+}
+
+/**
+ * POST /api/generation/:setId/attempts — record one finished quiz run so the
+ * student can open a past-results history later (any device). The set must
+ * belong to the caller and be a QUIZ; score/total are validated integers and
+ * percent is derived server-side.
+ */
+export async function recordQuizAttempt(request: Request, response: Response) {
+  const { profile } = request as AuthenticatedRequest
+  const setId = Array.isArray(request.params.setId) ? request.params.setId[0] : request.params.setId
+  const { score, total } = request.body as Partial<{ score: number; total: number }>
+  if (!setId) { response.status(400).json({ message: 'A study set id is required.' }); return }
+  if (!Number.isInteger(score) || !Number.isInteger(total) || (score ?? 0) < 0 || (total ?? 0) <= 0 || (score as number) > (total as number)) {
+    response.status(400).json({ message: 'score and total must be whole numbers with 0 <= score <= total.' })
+    return
+  }
+  const set = await prisma.generatedSet.findFirst({ where: { id: setId, userId: profile.id } })
+  if (!set) { response.status(404).json({ message: 'Study set not found.' }); return }
+  if (set.type !== 'QUIZ') { response.status(400).json({ message: 'Only quiz sets can have attempts recorded.' }); return }
+  const percent = Math.round(((score as number) / (total as number)) * 100)
+  const attempt = await prisma.quizAttempt.create({ data: { userId: profile.id, setId, score: score as number, total: total as number, percent } })
+  response.status(201).json({ attempt })
+}
+
+/**
+ * GET /api/generation/attempts — the caller's past quiz results, newest first,
+ * with the set title + course code for display. Supports ?page=&pageSize=.
+ */
+export async function listQuizAttempts(request: Request, response: Response) {
+  const { profile } = request as AuthenticatedRequest
+  const rawPage = typeof request.query.page === 'string' ? Number(request.query.page) : NaN
+  const rawSize = typeof request.query.pageSize === 'string' ? Number(request.query.pageSize) : NaN
+  const page = Number.isInteger(rawPage) && rawPage > 0 ? Math.min(rawPage, 100000) : 1
+  const pageSize = Number.isInteger(rawSize) && rawSize > 0 ? Math.min(rawSize, 100) : 20
+  const where = { userId: profile.id }
+  const [attempts, total] = await Promise.all([
+    prisma.quizAttempt.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: { set: { select: { id: true, title: true, timePerQuestion: true, course: { select: { code: true, title: true } } } } },
+    }),
+    prisma.quizAttempt.count({ where }),
+  ])
+  const stats = await prisma.quizAttempt.aggregate({ where, _avg: { percent: true }, _max: { percent: true }, _count: { id: true } })
+  response.json({
+    attempts,
+    pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) },
+    stats: {
+      attempts: stats._count.id,
+      average: stats._avg.percent == null ? 0 : Math.round(stats._avg.percent),
+      best: stats._max.percent ?? 0,
+    },
+  })
+}
+
+/**
+ * DELETE /api/generation/attempts/:attemptId — remove one past result.
+ * DELETE /api/generation/attempts — clear the whole history.
+ */
+export async function deleteQuizAttempt(request: Request, response: Response) {
+  const { profile } = request as AuthenticatedRequest
+  const attemptId = Array.isArray(request.params.attemptId) ? request.params.attemptId[0] : request.params.attemptId
+  const existing = await prisma.quizAttempt.findFirst({ where: { id: attemptId, userId: profile.id }, select: { id: true } })
+  if (!existing) { response.status(404).json({ message: 'That result was not found.' }); return }
+  await prisma.quizAttempt.delete({ where: { id: existing.id } })
+  response.status(204).send()
+}
+
+export async function clearQuizAttempts(request: Request, response: Response) {
+  const { profile } = request as AuthenticatedRequest
+  await prisma.quizAttempt.deleteMany({ where: { userId: profile.id } })
+  response.status(204).send()
+}
+
 export async function generateStudySet(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
   const file = (request as AuthenticatedRequest & { file?: Express.Multer.File }).file
@@ -74,6 +185,16 @@ export async function generateStudySet(request: Request, response: Response) {
   if (type === 'QUIZ' && (!parsedTimePerQuestion || ![30, 60].includes(parsedTimePerQuestion))) {
     response.status(400).json({ message: 'timePerQuestion is required for QUIZ type and must be 30 or 60.' })
     return
+  }
+
+  // Daily free quota for quizzes: FREE accounts get a set number per day,
+  // PREMIUM accounts (payments arrive later) are unlimited.
+  if (type === 'QUIZ' && effectiveTier(profile) !== 'PREMIUM') {
+    const quota = await getGenerationQuota(profile.id, effectiveTier(profile))
+    if (quota.remaining === 0) {
+      response.status(429).json({ message: `You have used all ${quota.limit} free quiz generations for today. Come back tomorrow or upgrade to PREMIUM for unlimited quizzes.`, quota })
+      return
+    }
   }
 
   const course = await prisma.course.findUnique({ where: { id: courseId } })

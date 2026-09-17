@@ -5,14 +5,19 @@ import {
   Check,
   FileText,
   Flame,
+  History,
   Layers3,
   Plus,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { go } from "../components/Layout";
+import { getQuizStats } from "../lib/results";
 
 export function Dashboard({ onLogout, isAdmin }: { onLogout: () => Promise<void>; isAdmin: boolean }) {
+  const [stats, setStats] = useState({ attempts: 0, average: 0, best: 0, streak: 0 });
+  useEffect(() => { setStats(getQuizStats()); }, []);
   return (
     <main className="dashboard-shell">
       <div className="dashboard-topline">
@@ -27,16 +32,16 @@ export function Dashboard({ onLogout, isAdmin }: { onLogout: () => Promise<void>
       </section>
 
       <section className="metric-grid">
-        <Metric icon={<Flame size={15} />} value="6" label="Day streak" tone="amber" />
-        <Metric icon={<Layers3 size={15} />} value="142" label="Cards reviewed" tone="blue" />
-        <Metric icon={<Check size={15} />} value="78%" label="Avg. quiz score" tone="green" />
+        <Metric icon={<Flame size={15} />} value={String(stats.streak)} label="Day streak" tone="amber" />
+        <Metric icon={<Layers3 size={15} />} value={String(stats.attempts)} label="Quizzes taken" tone="blue" />
+        <Metric icon={<Check size={15} />} value={stats.attempts ? `${stats.average}%` : "—"} label="Avg. quiz score" tone="green" />
       </section>
 
       <DashboardSection title="Your courses" action="Manage">
         <div className="dashboard-course-grid"><div className="dashboard-empty"><BookOpen size={20} /><strong>No course added yet</strong><span>Open the repository to find a paper or upload one.</span></div><button className="dashboard-add-course" onClick={() => go("hierarchy")}><span><Plus size={15} /></span><strong>Browse or upload a material</strong></button></div>
       </DashboardSection>
 
-      <section className="dashboard-quick-actions"><button onClick={() => go("generate")}><Sparkles size={16} /><span><strong>Create from my PDF</strong><small>Private AI practice set</small></span><ArrowRight size={16} /></button><button onClick={() => go("hierarchy")}><FileText size={16} /><span><strong>Browse course repository</strong><small>Find papers by course</small></span><ArrowRight size={16} /></button></section>
+      <section className="dashboard-quick-actions"><button onClick={() => go("generate")}><Sparkles size={16} /><span><strong>Create from my PDF</strong><small>Private AI practice set</small></span><ArrowRight size={16} /></button><button onClick={() => go("hierarchy")}><FileText size={16} /><span><strong>Browse course repository</strong><small>Find papers by course</small></span><ArrowRight size={16} /></button><button onClick={() => go("history")}><History size={16} /><span><strong>Past quiz results</strong><small>{stats.attempts ? `${stats.attempts} saved · best ${stats.best}%` : "Scores appear here"}</small></span><ArrowRight size={16} /></button></section>
     </main>
   );
 }

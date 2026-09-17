@@ -8,9 +8,9 @@ function isDuplicateEmail(error: unknown) { return error instanceof Prisma.Prism
 function isDatabaseError(error: unknown) { return error instanceof Prisma.PrismaClientInitializationError || (error instanceof Error && /P100[1-3]|P1017|Can't reach database server|connection.*(?:failed|closed|timed out)|\btimed out/i.test(error.message)) }
 
 export async function signup(request: Request, response: Response) {
-  const { email, password, displayName } = request.body as Partial<{ email: string; password: string; displayName: string }>
+  const { email, password, displayName, referralCode } = request.body as Partial<{ email: string; password: string; displayName: string; referralCode?: string }>
   if (!email || !password || !displayName || password.length < 8) { response.status(400).json({ message: 'displayName, email, and a password of at least 8 characters are required.' }); return }
-  try { const result = await signUp({ email, password, displayName }); response.cookie('recappedu_session', result.token, cookieOptions); response.status(201).json({ profile: result.profile }) } catch (error) { if (isDuplicateEmail(error)) { response.status(409).json({ message: 'An account with that email already exists.' }); return } response.status(500).json({ message: 'Could not create your account.' }) }
+  try { const result = await signUp({ email, password, displayName, referralCode }); response.cookie('recappedu_session', result.token, cookieOptions); response.status(201).json({ profile: result.profile }) } catch (error) { if (isDuplicateEmail(error)) { response.status(409).json({ message: 'An account with that email already exists.' }); return } response.status(500).json({ message: 'Could not create your account.' }) }
 }
 
 export async function login(request: Request, response: Response) {

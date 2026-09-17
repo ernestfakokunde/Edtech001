@@ -32,7 +32,7 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
         </button>
         <div>
           <p className="eyebrow">A calmer way to revise</p>
-          <h1 className="max-w-480 mb-20 text-[clamp(44px,5vw,70px)] leading-100">Make every paper count.</h1>
+          <h1 className="max-w-480 mb-20 text-[clamp(32px,4vw,48px)] leading-100">Make every paper count.</h1>
           <p className="max-w-430 text-muted text-15 leading-170">
             Keep your own PDFs private, or learn from the papers your course
             community has already shared.

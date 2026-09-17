@@ -27,7 +27,7 @@ async function getCsrfToken(): Promise<string> {
 }
 
 export type AuthResponse = {
-  profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean }
+  profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean; tier?: "FREE" | "PREMIUM"; xp?: number; referralCode?: string | null; premiumUntil?: string | null }
 }
 
 export type University = { id: string; name: string; slug: string }
@@ -39,7 +39,7 @@ export type ApiCourse = { id: string; code: string; title: string; departmentId:
 export type SavedCourse = { id: string; code: string; title: string }
 export type MySchool = { universityName: string; facultyName: string } | null
 export type MyCoursesResponse = { school: MySchool; courses: SavedCourse[] }
-export type AdminUser = { id: string; email: string; displayName: string | null; username: string | null; isAdmin: boolean; suspendedUntil: string | null; suspensionReason: string | null; createdAt: string; _count: { generatedSets: number; papers: number } }
+export type AdminUser = { id: string; email: string; displayName: string | null; username: string | null; isAdmin: boolean; tier: "FREE" | "PREMIUM"; xp: number; referralCode: string | null; suspendedUntil: string | null; suspensionReason: string | null; createdAt: string; _count: { generatedSets: number; papers: number } }
 export type RepositorySubmission = { id: string; description: string; level: string; session: string; year: number; semester: "FIRST" | "SECOND"; status: string; course: { code: string; title: string }; owner: { displayName: string | null; email: string } }
 export type RepositoryPaper = { id: string; description: string; level: string; session: string; year: number; semester: "FIRST" | "SECOND"; status: string; course: { id: string; code: string; title: string }; owner: { displayName: string | null; username: string | null } }
 export type UploadedPaper = { id: string; description: string; level: string; session: string; year: number; semester: "FIRST" | "SECOND"; status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED"; visibility: "PRIVATE" | "PUBLIC" }
@@ -57,6 +57,28 @@ export type GeneratedSet = { id: string; userId: string; courseId: string; type:
 // AI providers usable for generation. `configured` mirrors the backend: an
 // API key is set for it, so it can serve POST /api/generation right now.
 export type GenerationProvider = { id: string; label: string; configured: boolean }
+
+// One finished quiz run, as returned by GET /api/generation/attempts.
+export type QuizAttempt = {
+  id: string; userId: string; setId: string; score: number; total: number; percent: number; createdAt: string;
+  set: { id: string; title: string; timePerQuestion: number | null; course: { code: string; title: string } };
+}
+export type QuizAttemptStats = { attempts: number; average: number; best: number }
+
+// Missions: students claim active ones for XP (visible on their profile).
+export type ProfileMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; claimedAt: string | null }
+export type AdminMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; createdAt: string; claimCount: number }
+
+// Daily quiz-generation quota. `limit: null` means unlimited (PREMIUM).
+export type GenerationQuota = { tier: "FREE" | "PREMIUM"; limit: number | null; used: number; remaining: number | null; resetsAt: string }
+
+export type ReferralInfo = { referralCode: string | null; tier: "FREE" | "PREMIUM"; xp: number; invites: number }
+
+export type ActivityEntry = {
+  id: string; action: string; entityType: string; createdAt: string;
+  actor: { id: string; email: string; displayName: string | null; username: string | null } | null;
+  metadata?: { deletedEmail?: string; deletedName?: string | null; deletedUsername?: string | null; title?: string; xpReward?: number } | null
+}
 
 async function request<T>(path: string, options: RequestInit, retried = false): Promise<T> {
   const method = options.method ?? 'GET'
@@ -83,7 +105,33 @@ async function request<T>(path: string, options: RequestInit, retried = false): 
   return body
 }
 
-export function signup(input: { email: string; password: string; displayName: string }) {
+// Session profile cache: /api/auth/me is called on every app load. To avoid
+// hammering the server each login/reload we keep the identity in localStorage
+// for a short TTL and only revalidate when it's stale (or after sign in/out).
+const PROFILE_CACHE_KEY = 'recappedu_profile_cache_v1'
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000
+
+function readProfileCache(): AuthResponse | null {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY)
+    if (!raw) return null
+    const cached = JSON.parse(raw) as { profile: AuthResponse['profile']; expiresAt: number }
+    if (!cached?.profile || !cached.expiresAt || cached.expiresAt <= Date.now()) return null
+    return { profile: cached.profile }
+  } catch { return null }
+}
+
+function writeProfileCache(response: AuthResponse) {
+  if (typeof localStorage === 'undefined') return
+  try { localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({ profile: response.profile, expiresAt: Date.now() + PROFILE_CACHE_TTL_MS })) } catch { /* non-fatal */ }
+}
+
+export function invalidateProfileCache() {
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(PROFILE_CACHE_KEY)
+}
+
+export function signup(input: { email: string; password: string; displayName: string; referralCode?: string }) {
   return request<AuthResponse>('/api/auth/signup', { method: 'POST', body: JSON.stringify(input) })
 }
 
@@ -91,8 +139,12 @@ export function login(input: { email: string; password: string }) {
   return request<AuthResponse>('/api/auth/login', { method: 'POST', body: JSON.stringify(input) })
 }
 
-export function getCurrentProfile() {
-  return request<AuthResponse>('/api/auth/me', { method: 'GET' })
+export async function getCurrentProfile() {
+  const cached = readProfileCache()
+  if (cached) return cached
+  const fresh = await request<AuthResponse>('/api/auth/me', { method: 'GET' })
+  writeProfileCache(fresh)
+  return fresh
 }
 
 export function updateProfile(input: { displayName: string; username: string }) {
@@ -131,14 +183,14 @@ export function deleteDepartment(id: string) { return request<void>(`/api/hierar
 export function updateCourse(id: string, input: { code: string; title: string; crossListingCode?: string }) { return request<{ course: ApiCourse }>(`/api/hierarchy/courses/${id}`, { method: 'PATCH', body: JSON.stringify(input) }) }
 export function deleteCourse(id: string) { return request<void>(`/api/hierarchy/courses/${id}`, { method: 'DELETE' }) }
 
-export function getAdminUsers(filters: { search?: string; universityId?: string; departmentId?: string }) {
+export function getAdminUsers(filters: { search?: string; universityId?: string; departmentId?: string; role?: 'all' | 'admin'; recent?: 'all' | '24h' | '7d' | '30d' | '90d'; page?: number; pageSize?: number }) {
   const params = new URLSearchParams()
-  Object.entries(filters).forEach(([key, value]) => value && params.set(key, value))
-  return request<{ users: AdminUser[] }>(`/api/admin/users?${params.toString()}`, { method: 'GET' })
+  Object.entries(filters).forEach(([key, value]) => value !== undefined && value !== '' && params.set(key, String(value)))
+  return request<{ users: AdminUser[]; pagination: Pagination }>(`/api/admin/users?${params.toString()}`, { method: 'GET' })
 }
 export function suspendAdminUser(userId: string, input: { until: string; reason: string }) { return request<{ user: Pick<AdminUser, 'id' | 'suspendedUntil' | 'suspensionReason'> }>(`/api/admin/users/${userId}/suspend`, { method: 'PATCH', body: JSON.stringify(input) }) }
 export function unsuspendAdminUser(userId: string) { return request<{ user: Pick<AdminUser, 'id' | 'suspendedUntil' | 'suspensionReason'> }>(`/api/admin/users/${userId}/unsuspend`, { method: 'PATCH', body: JSON.stringify({}) }) }
-export function getAdminActivity() { return request<{ activity: { id: string; action: string; entityType: string; createdAt: string; actor: { displayName: string | null; username: string | null } | null }[] }>('/api/admin/activity', { method: 'GET' }) }
+export function getAdminActivity(page = 1, pageSize = 25) { return request<{ activity: ActivityEntry[]; pagination: Pagination }>(`/api/admin/activity?page=${page}&pageSize=${pageSize}`, { method: 'GET' }) }
 export function getAdminSubmissions(filters: { status?: 'PENDING' | 'APPROVED' | 'REJECTED'; search?: string; page?: number; pageSize?: number } = {}) {
   const params = new URLSearchParams()
   Object.entries(filters).forEach(([key, value]) => value !== undefined && value !== '' && params.set(key, String(value)))
@@ -202,6 +254,23 @@ export function getGenerationProviders() {
   return request<{ providers: GenerationProvider[]; primary: string }>('/api/generation/providers', { method: 'GET' })
 }
 
+// Quiz history: record one finished run (server derives percent), list past
+// runs newest-first, or delete one / clear all. Every page also reads the
+// localStorage copy in lib/results.ts so history works even when the backend
+// row is unavailable.
+export function recordQuizAttempt(setId: string, input: { score: number; total: number }) {
+  return request<{ attempt: QuizAttempt }>(`/api/generation/${encodeURIComponent(setId)}/attempts`, { method: 'POST', body: JSON.stringify(input) })
+}
+export function getQuizAttempts(page = 1, pageSize = 50) {
+  return request<{ attempts: QuizAttempt[]; pagination: Pagination; stats: QuizAttemptStats }>(`/api/generation/attempts?page=${page}&pageSize=${pageSize}`, { method: 'GET' })
+}
+export function deleteQuizAttempt(attemptId: string) {
+  return request<void>(`/api/generation/attempts/${encodeURIComponent(attemptId)}`, { method: 'DELETE' })
+}
+export function clearQuizAttempts() {
+  return request<void>('/api/generation/attempts', { method: 'DELETE' })
+}
+
 export async function logout() {
   let response = await fetch(`${API_URL}/api/auth/logout`, {
     method: 'POST',
@@ -217,4 +286,63 @@ export async function logout() {
     })
   }
   if (!response.ok) throw new Error('Could not sign out.')
+  invalidateProfileCache()
+}
+
+// ── Referral + missions (student side) ──────────────────────────────────────
+export function getReferralInfo() {
+  return request<{ referral: ReferralInfo }>('/api/profile/referral', { method: 'GET' })
+}
+export function getMyMissions() {
+  return request<{ xp: number; tier: "FREE" | "PREMIUM"; missions: ProfileMission[] }>('/api/profile/missions', { method: 'GET' })
+}
+export function claimMission(missionId: string) {
+  return request<{ xp: number; xpEarned: number; missionId: string }>(`/api/profile/missions/${encodeURIComponent(missionId)}/claim`, { method: 'POST', body: JSON.stringify({}) })
+}
+export function getMyXp() {
+  return request<{ xp: number; tier: "FREE" | "PREMIUM"; premiumUntil?: string | null }>('/api/profile/xp', { method: 'GET' })
+}
+export function deleteAccount(confirmText: string) {
+  return request<void>('/api/profile', { method: 'DELETE', body: JSON.stringify({ confirmText }) })
+}
+
+// ── Generation quota ────────────────────────────────────────────────────────
+export function getGenerationQuota() {
+  return request<GenerationQuota>('/api/generation/quota', { method: 'GET' })
+}
+
+// ── Admin: missions ─────────────────────────────────────────────────────────
+export function getAdminMissions() {
+  return request<{ missions: AdminMission[] }>('/api/admin/missions', { method: 'GET' })
+}
+export function createAdminMission(input: { title: string; description?: string; xpReward: number }) {
+  return request<{ mission: AdminMission }>('/api/admin/missions', { method: 'POST', body: JSON.stringify(input) })
+}
+export function updateAdminMission(missionId: string, input: Partial<{ title: string; description: string | null; xpReward: number; isActive: boolean }>) {
+  return request<{ mission: AdminMission }>(`/api/admin/missions/${encodeURIComponent(missionId)}`, { method: 'PATCH', body: JSON.stringify(input) })
+}
+export function deleteAdminMission(missionId: string) {
+  return request<void>(`/api/admin/missions/${encodeURIComponent(missionId)}`, { method: 'DELETE' })
+}
+
+// ── Admin: promo codes (issue free Pro days / bonus XP) ─────────────────────
+export type AdminPromoCode = { id: string; code: string; description: string | null; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean; createdAt: string; redemptionCount: number; createdBy: string | null }
+
+export function getAdminPromoCodes() {
+  return request<{ codes: AdminPromoCode[] }>('/api/admin/promo-codes', { method: 'GET' })
+}
+export function createAdminPromoCode(input: { code: string; description?: string; premiumDays: number; xpBonus: number; maxRedemptions?: number | null; expiresAt?: string | null }) {
+  return request<{ promo: AdminPromoCode }>('/api/admin/promo-codes', { method: 'POST', body: JSON.stringify(input) })
+}
+export function updateAdminPromoCode(codeId: string, input: Partial<{ description: string | null; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean }>) {
+  return request<{ promo: AdminPromoCode }>(`/api/admin/promo-codes/${encodeURIComponent(codeId)}`, { method: 'PATCH', body: JSON.stringify(input) })
+}
+export function deleteAdminPromoCode(codeId: string) {
+  return request<void>(`/api/admin/promo-codes/${encodeURIComponent(codeId)}`, { method: 'DELETE' })
+}
+
+// Student side: redeem a promo code from the profile page.
+export type RedeemResult = { redeemed: boolean; code: string; premiumDays: number; xpBonus: number; premiumUntil: string | null; xp: number }
+export function redeemPromoCode(code: string) {
+  return request<RedeemResult>('/api/profile/redeem', { method: 'POST', body: JSON.stringify({ code }) })
 }

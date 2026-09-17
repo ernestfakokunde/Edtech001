@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { prisma } from '../lib/prisma.js'
+import { supabase } from '../lib/supabase.js'
+import { env } from '../config/env.js'
 import { slugify } from '../utils/course.js'
 
 /**
@@ -176,4 +178,150 @@ export async function removeMyCourse(request: Request, response: Response) {
   } catch {
     response.status(404).json({ message: 'That course is not in your saved list.' })
   }
+}
+
+/**
+ * GET /api/profile/referral — the student's invite code + how many friends
+ * have joined with it. The code itself is generated on signup.
+ */
+export async function getReferralInfo(request: Request, response: Response) {
+  const me = getProfile(request).id
+  const profile = await prisma.profile.findUnique({
+    where: { id: me },
+    select: { referralCode: true, tier: true, xp: true },
+  })
+  if (!profile) { response.status(404).json({ message: 'Profile not found.' }); return }
+  const invites = await prisma.profile.count({ where: { referredById: me } })
+  response.json({ referral: { referralCode: profile.referralCode, tier: profile.tier, xp: profile.xp, invites } })
+}
+
+/**
+ * GET /api/profile/missions — every mission the student can see plus which ones
+ * they have already claimed and their current XP. Active missions are claimable;
+ * inactive ones stay visible (they were claimed) but are not offered.
+ */
+export async function listMissions(request: Request, response: Response) {
+  const me = getProfile(request).id
+  const [profile, missions, claims] = await Promise.all([
+    prisma.profile.findUnique({ where: { id: me }, select: { xp: true, tier: true } }),
+    prisma.mission.findMany({ orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }] }),
+    prisma.userClaimedMission.findMany({ where: { profileId: me }, select: { missionId: true, claimedAt: true } }),
+  ])
+  const claimed = new Map(claims.map((claim) => [claim.missionId, claim.claimedAt]))
+  response.json({
+    xp: profile?.xp ?? 0,
+    tier: profile?.tier ?? 'FREE',
+    missions: missions.map((mission) => ({
+      id: mission.id,
+      title: mission.title,
+      description: mission.description,
+      xpReward: mission.xpReward,
+      isActive: mission.isActive,
+      claimedAt: claimed.get(mission.id) ?? null,
+    })),
+  })
+}
+
+/**
+ * POST /api/profile/missions/:missionId/claim — claim an active mission once.
+ * XP is added to the profile and the miss/claimed link is recorded.
+ */
+export async function claimMission(request: Request, response: Response) {
+  const me = getProfile(request).id
+  const missionId = Array.isArray(request.params.missionId) ? request.params.missionId[0] : request.params.missionId
+  try {
+    const mission = await prisma.mission.findUnique({ where: { id: missionId } })
+    if (!mission || !mission.isActive) { response.status(404).json({ message: 'That mission is not available right now.' }); return }
+    const existing = await prisma.userClaimedMission.findUnique({ where: { profileId_missionId: { profileId: me, missionId } } })
+    if (existing) { response.status(409).json({ message: 'You already claimed this mission.' }); return }
+    await prisma.userClaimedMission.create({ data: { profileId: me, missionId } })
+    const profile = await prisma.profile.update({ where: { id: me }, data: { xp: { increment: mission.xpReward } }, select: { xp: true } })
+    await prisma.auditEvent.create({ data: { actorId: me, action: 'MISSION_CLAIMED', entityType: 'Mission', entityId: missionId, metadata: { xpEarned: mission.xpReward } } })
+    response.status(201).json({ xp: profile.xp, xpEarned: mission.xpReward, missionId })
+  } catch { response.status(500).json({ message: 'Could not claim that mission.' }) }
+}
+
+/**
+ * DELETE /api/profile — permanent account deletion. The student must confirm by
+ * sending `confirmText: "delete"`. Before the row is removed an audit event is
+ * written that keeps their full name, email and username — those are dropped
+ * from the Profile row itself, so the log is the only permanent record.
+ */
+export async function deleteAccount(request: Request, response: Response) {
+  const profile = (request as AuthenticatedRequest).profile
+  const confirmText = typeof request.body?.confirmText === 'string' ? request.body.confirmText.trim().toLowerCase() : ''
+  if (confirmText !== 'delete') { response.status(400).json({ message: 'Type “delete” to confirm you want to permanently remove your account.' }); return }
+
+  // Snapshot for the audit trail before anything is removed.
+  const auditDetails = { deletedEmail: profile.email, deletedName: profile.displayName, deletedUsername: profile.username, deletedTier: profile.tier, referralCode: profile.referralCode, reason: 'User requested account deletion' }
+  await prisma.auditEvent.create({ data: { actorId: profile.id, action: 'USER_DELETED', entityType: 'Profile', entityId: profile.id, metadata: auditDetails } })
+
+  // Papers are not merged into the profile delete (owner is required), so the
+  // owned rows (and their stored files when storage is configured) are removed.
+  try {
+    const owned = await prisma.paper.findMany({ where: { ownerId: profile.id }, select: { id: true, fileUrl: true } })
+    for (const paper of owned) {
+      if (paper.fileUrl) {
+        try { await supabase.storage.from(env.supabaseBucket).remove([paper.fileUrl]) } catch { /* file cleanup is best-effort */ }
+      }
+    }
+    await prisma.paper.deleteMany({ where: { ownerId: profile.id } })
+    await prisma.generatedSet.deleteMany({ where: { userId: profile.id } })
+    await prisma.profile.delete({ where: { id: profile.id } })
+  } catch {
+    response.status(500).json({ message: 'Could not delete your account right now. Please try again later.' })
+    return
+  }
+  response.clearCookie('recappedu_session')
+  response.status(204).send()
+}
+
+/**
+ * GET /api/profile/xp — a tiny helper used by the profile header so the UI can
+ * show current XP without pulling the full missions list.
+ */
+/**
+ * POST /api/profile/redeem — a student redeems a promo code they were given.
+ * Active codes with uses left grant premium days (stacked on top of the later
+ * of now / their current premium window) and/or bonus XP — once per student.
+ */
+export async function redeemPromoCode(request: Request, response: Response) {
+  const me = getProfile(request).id
+  const code = cleanInput(request.body?.code).toUpperCase().replace(/[^A-Z0-9_-]/g, '')
+  if (!code) { response.status(400).json({ message: 'Enter the code you were given.' }); return }
+
+  const promo = await prisma.promoCode.findUnique({ where: { code }, include: { _count: { select: { redemptions: true } } } })
+  if (!promo || !promo.isActive) { response.status(404).json({ message: 'That code is not valid.' }); return }
+  if (promo.expiresAt && promo.expiresAt <= new Date()) { response.status(410).json({ message: 'That code has expired.' }); return }
+  if (promo.maxRedemptions !== null && promo._count.redemptions >= promo.maxRedemptions) { response.status(410).json({ message: 'That code has run out of uses.' }); return }
+  const already = await prisma.codeRedemption.findUnique({ where: { codeId_profileId: { codeId: promo.id, profileId: me } } })
+  if (already) { response.status(409).json({ message: 'You have already redeemed this code.' }); return }
+
+  try {
+    const result = await prisma.$transaction(
+      async (transaction) => {
+        const current = await transaction.profile.findUnique({ where: { id: me }, select: { premiumUntil: true, xp: true } })
+        if (!current) throw new Error('PROFILE_MISSING')
+        const base = current.premiumUntil && current.premiumUntil > new Date() ? current.premiumUntil : new Date()
+        const premiumUntil = promo.premiumDays > 0 ? new Date(base.getTime() + promo.premiumDays * 86400000) : current.premiumUntil
+        const updated = await transaction.profile.update({
+          where: { id: me },
+          data: { premiumUntil, xp: promo.xpBonus > 0 ? { increment: promo.xpBonus } : undefined },
+          select: { premiumUntil: true, xp: true },
+        })
+        await transaction.codeRedemption.create({ data: { codeId: promo.id, profileId: me } })
+        return { premiumUntil: updated.premiumUntil, xp: updated.xp }
+      },
+      { maxWait: 10000, timeout: 15000 },
+    )
+    await prisma.auditEvent.create({ data: { actorId: me, action: 'PROMO_CODE_REDEEMED', entityType: 'PromoCode', entityId: promo.id, metadata: { code: promo.code, premiumDays: promo.premiumDays, xpBonus: promo.xpBonus } } })
+    response.json({ redeemed: true, code: promo.code, premiumDays: promo.premiumDays, xpBonus: promo.xpBonus, premiumUntil: result.premiumUntil, xp: result.xp })
+  } catch {
+    response.status(500).json({ message: 'Could not redeem that code right now.' })
+  }
+}
+
+export async function getXp(request: Request, response: Response) {
+  const me = await prisma.profile.findUnique({ where: { id: getProfile(request).id }, select: { xp: true, tier: true, premiumUntil: true } })
+  response.json({ xp: me?.xp ?? 0, tier: me?.tier ?? 'FREE', premiumUntil: me?.premiumUntil ?? null })
 }

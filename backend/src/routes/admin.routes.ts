@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { listActivity, listHierarchyActivity, listRepositorySubmissions, listUsers, moderationSummary, reviewRepositorySubmission, suspendUser, unsuspendUser } from '../controllers/admin.controller.js'
+import { createMission, createPromoCode, deleteMission, deletePromoCode, listActivity, listHierarchyActivity, listMissions, listPromoCodes, listRepositorySubmissions, listUsers, moderationSummary, reviewRepositorySubmission, suspendUser, unsuspendUser, updateMission, updatePromoCode } from '../controllers/admin.controller.js'
 import { requireAdmin, requireAuth } from '../middleware/auth.js'
 
 export const adminRouter = Router()
@@ -13,3 +13,11 @@ adminRouter.patch('/repository-submissions/:paperId', reviewRepositorySubmission
 adminRouter.get('/moderation/summary', moderationSummary)
 adminRouter.get('/activity', listActivity)
 adminRouter.get('/hierarchy-activity', listHierarchyActivity)
+adminRouter.get('/missions', listMissions)
+adminRouter.post('/missions', createMission)
+adminRouter.patch('/missions/:missionId', updateMission)
+adminRouter.delete('/missions/:missionId', deleteMission)
+adminRouter.get('/promo-codes', listPromoCodes)
+adminRouter.post('/promo-codes', createPromoCode)
+adminRouter.patch('/promo-codes/:codeId', updatePromoCode)
+adminRouter.delete('/promo-codes/:codeId', deletePromoCode)

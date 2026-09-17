@@ -16,11 +16,13 @@ import {
   addMyCourse,
   generateStudySet,
   getGenerationProviders,
+  getGenerationQuota,
   getMyCourses,
   getMyPapers,
   getRepositoryPapers,
   type GeneratedSet,
   type GenerationProvider,
+  type GenerationQuota,
   type MySchool,
 } from "../lib/api";
 import type { Mode } from "../types";
@@ -67,6 +69,8 @@ export function GenerateFlow({
   // picked; only shown when the server has more than one configured.
   const [generationProviders, setGenerationProviders] = useState<GenerationProvider[]>([]);
   const [provider, setProvider] = useState("");
+  // Daily quiz quota for FREE accounts (PREMIUM = unlimited).
+  const [quota, setQuota] = useState<GenerationQuota>({ tier: "FREE", limit: null, used: 0, remaining: null, resetsAt: "" });
 
   const providerLabel = generationProviders.find((entry) => entry.id === provider)?.label ?? "AI";
 
@@ -91,7 +95,9 @@ export function GenerateFlow({
       if (repo.status === "fulfilled") found.push(...repo.value.papers.map((paper) => paper.course));
       const unique = [...new Map(found.map((item) => [item.id, item])).values()];
       const providers = await getGenerationProviders().catch(() => null);
+      const quotaValue = await getGenerationQuota().catch(() => null);
       if (!alive) return;
+      if (quotaValue) setQuota(quotaValue);
       setCourseOptions(unique);
       if (providers) {
         const available = providers.providers.filter((entry) => entry.configured);
@@ -158,6 +164,7 @@ export function GenerateFlow({
         ...(mode === "quiz" ? { timePerQuestion } : {}),
       });
       onComplete(set);
+      if (mode === "quiz") setQuota((current) => ({ ...current, used: current.used + 1, remaining: current.remaining === null ? null : Math.max(0, current.remaining - 1) }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not generate the study set.");
       setBusy(false);
@@ -332,11 +339,18 @@ return (
         </div>
       )}
 
+      {mode === "quiz" && quota.limit !== null && (
+        <div className={`quota-banner ${quota.remaining === 0 ? "exhausted" : ""}`}>
+          <Clock3 size={14} />
+          <span>Free plan: {quota.remaining ?? 0} of {quota.limit} quiz generations left today{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}. Premium users get unlimited quizzes.</span>
+        </div>
+      )}
+
       {error && <small className="upload-form-error">{error}</small>}
 
       <button
         className="primary-button full"
-        disabled={!course || !selectedFile}
+        disabled={!course || !selectedFile || (mode === "quiz" && quota.limit !== null && (quota.remaining ?? 0) === 0)}
         onClick={() => void submit()}
       >
         <Sparkles size={16} /> Create {mode === "quiz" ? "quiz" : "flashcards"}

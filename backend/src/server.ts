@@ -9,6 +9,8 @@ import { profileRouter } from './routes/profile.routes.js'
 import { hierarchyRouter } from './routes/hierarchy.routes.js'
 import { generationRouter } from './routes/generation.routes.js'
 import { requireCsrf } from './middleware/csrf.js'
+import { prisma } from './lib/prisma.js'
+import { persistPermanentAdmin, RECAPP_ADMIN_EMAIL } from './services/auth.service.js'
 
 const app = express()
 
@@ -47,4 +49,10 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
 
 app.listen(env.port, () => {
   console.log(`RecappEdu API listening on http://localhost:${env.port}`)
+  // Make sure the main admin account always has admin rights, even if a prior
+  // edit or a partial migration dropped the flag.
+  prisma.profile
+    .findUnique({ where: { email: RECAPP_ADMIN_EMAIL }, select: { id: true } })
+    .then((admin) => { if (admin) return persistPermanentAdmin(admin.id) })
+    .catch(() => { /* non-fatal */ })
 })

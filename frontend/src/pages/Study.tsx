@@ -100,13 +100,14 @@ function MyPapers({ refreshKey }: { refreshKey: number }) {
   const [form, setForm] = useState({ description: "", level: "", session: "", year: "", semester: "FIRST" as "FIRST" | "SECOND" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [confirmSubmit, setConfirmSubmit] = useState<string | null>(null);
   async function load() { setLoading(true); try { setPapers((await getMyPapers()).papers); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load your papers."); } finally { setLoading(false); } }
   useEffect(() => { void load(); }, [refreshKey]);
   function startEdit(paper: OwnedPaper) { setEditing(paper.id); setForm({ description: paper.description, level: paper.level, session: paper.session, year: String(paper.year), semester: paper.semester }); setMessage(""); setError(""); }
   async function save(paperId: string) { setBusy(paperId); setError(""); try { const result = await updateMyPaper(paperId, { ...form, year: Number(form.year) }); setPapers((current) => current.map((paper) => paper.id === paperId ? result.paper : paper)); setEditing(null); setMessage("Paper details saved."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not save paper details."); } finally { setBusy(""); } }
   async function remove(paperId: string) { if (!window.confirm("Delete this private paper?")) return; setBusy(paperId); setError(""); try { await deleteMyPaper(paperId); setPapers((current) => current.filter((paper) => paper.id !== paperId)); setMessage("Paper deleted."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not delete paper."); } finally { setBusy(""); } }
-  async function submit(paperId: string) { setBusy(paperId); setError(""); try { const result = await submitPaper(paperId); setPapers((current) => current.map((paper) => paper.id === paperId ? result.paper : paper)); setMessage("Paper submitted for review."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not submit paper."); } finally { setBusy(""); } }
-  return <section className="my-papers-panel"><div className="repository-upload-heading"><div><p className="eyebrow">Your uploads</p><h2>Paper workflow</h2><p>Track private uploads, submit rejected papers again, or update details before review.</p></div><span className="admin-status">{papers.length} papers</span></div>{loading ? <div className="repository-empty">Loading your papers...</div> : papers.length === 0 ? <div className="repository-empty"><FileText size={20} /><strong>No uploads yet</strong><span>Your private papers will appear here after upload.</span></div> : <div className="my-paper-list">{papers.map((paper) => <article className="my-paper-row" key={paper.id}><div className="paper-info"><strong>{paper.course.code} · {paper.course.title}</strong><span>{paper.level} · {paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</span><small>{paper.description}</small></div><span className={`badge ${paper.status === "APPROVED" ? "active" : paper.status === "REJECTED" ? "rejected" : "empty"}`}>{paper.status}</span><div className="my-paper-actions"><button className="ghost-button" onClick={() => go(`generate/${paper.course.id}`)}><Sparkles size={14} /> Create practice set</button>{(paper.status === "DRAFT" || paper.status === "REJECTED") && <><button className="ghost-button" disabled={busy === paper.id} onClick={() => startEdit(paper)}><Pencil size={14} /> Edit</button><button className="ghost-button" disabled={busy === paper.id} onClick={() => void remove(paper.id)}><Trash2 size={14} /> Delete</button><button className="primary-button" disabled={busy === paper.id} onClick={() => void submit(paper.id)}><Send size={14} /> Submit</button></>}</div>{editing === paper.id && <div className="my-paper-edit"><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /><div className="paper-edit-fields"><input value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })} placeholder="Level" /><input value={form.session} onChange={(event) => setForm({ ...form, session: event.target.value })} placeholder="Session" /><input type="number" value={form.year} onChange={(event) => setForm({ ...form, year: event.target.value })} placeholder="Year" /><select value={form.semester} onChange={(event) => setForm({ ...form, semester: event.target.value as "FIRST" | "SECOND" })}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></div><button className="primary-button" disabled={busy === paper.id} onClick={() => void save(paper.id)}><Check size={14} /> Save changes</button><button className="ghost-button" onClick={() => setEditing(null)}>Cancel</button></div>}</article>)}</div>}{message && <small className="upload-form-success">{message}</small>}{error && <small className="upload-form-error">{error}</small>}</section>;
+  async function submit(paperId: string) { setConfirmSubmit(null); setBusy(paperId); setError(""); try { const result = await submitPaper(paperId); setPapers((current) => current.map((paper) => paper.id === paperId ? result.paper : paper)); setMessage("Paper submitted for review."); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not submit paper."); } finally { setBusy(""); } }
+  return <section className="my-papers-panel">{confirmSubmit && <SubmitConfirmDialog onCancel={() => setConfirmSubmit(null)} onConfirm={() => { if (confirmSubmit) void submit(confirmSubmit); }} />}<div className="repository-upload-heading"><div><p className="eyebrow">Your uploads</p><h2>Paper workflow</h2><p>Track private uploads, submit rejected papers again, or update details before review.</p></div><span className="admin-status">{papers.length} papers</span></div>{loading ? <div className="repository-empty">Loading your papers...</div> : papers.length === 0 ? <div className="repository-empty"><FileText size={20} /><strong>No uploads yet</strong><span>Your private papers will appear here after upload.</span></div> : <div className="my-paper-list">{papers.map((paper) => <article className="my-paper-row" key={paper.id}><div className="paper-info"><strong>{paper.course.code} · {paper.course.title}</strong><span>{paper.level} · {paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</span><small>{paper.description}</small></div><span className={`badge ${paper.status === "APPROVED" ? "active" : paper.status === "REJECTED" ? "rejected" : "empty"}`}>{paper.status}</span><div className="my-paper-actions"><button className="ghost-button" onClick={() => go(`generate/${paper.course.id}`)}><Sparkles size={14} /> Create practice set</button>{(paper.status === "DRAFT" || paper.status === "REJECTED") && <><button className="ghost-button" disabled={busy === paper.id} onClick={() => startEdit(paper)}><Pencil size={14} /> Edit</button><button className="ghost-button" disabled={busy === paper.id} onClick={() => void remove(paper.id)}><Trash2 size={14} /> Delete</button><button className="primary-button" disabled={busy === paper.id} onClick={() => setConfirmSubmit(paper.id)}><Send size={14} /> Submit</button></>}</div>{editing === paper.id && <div className="my-paper-edit"><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /><div className="paper-edit-fields"><input value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })} placeholder="Level" /><input value={form.session} onChange={(event) => setForm({ ...form, session: event.target.value })} placeholder="Session" /><input type="number" value={form.year} onChange={(event) => setForm({ ...form, year: event.target.value })} placeholder="Year" /><select value={form.semester} onChange={(event) => setForm({ ...form, semester: event.target.value as "FIRST" | "SECOND" })}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></div><button className="primary-button" disabled={busy === paper.id} onClick={() => void save(paper.id)}><Check size={14} /> Save changes</button><button className="ghost-button" onClick={() => setEditing(null)}>Cancel</button></div>}</article>)}</div>}{message && <small className="upload-form-success">{message}</small>}{error && <small className="upload-form-error">{error}</small>}</section>;
 }
 
 export function MaterialDetails({ paper }: { paper: RepositoryPaper }) {
@@ -124,6 +125,7 @@ function RepositoryUpload({ onUploaded }: { onUploaded: () => void }) {
   const [form, setForm] = useState({ universityName: "", facultyName: "", courseTitle: "", courseCode: "", description: "", level: "", session: "", year: "", semester: "FIRST" as "FIRST" | "SECOND" });
   const [uploadedPaper, setUploadedPaper] = useState<UploadedPaper | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -151,6 +153,7 @@ function RepositoryUpload({ onUploaded }: { onUploaded: () => void }) {
 
   async function submit() {
     if (!uploadedPaper) return;
+    setConfirming(false);
     setBusy(true);
     setError("");
     try {
@@ -166,6 +169,7 @@ function RepositoryUpload({ onUploaded }: { onUploaded: () => void }) {
 
   return (
     <section className="repository-upload-panel">
+      {confirming && <SubmitConfirmDialog onCancel={() => setConfirming(false)} onConfirm={() => void submit()} />}
       <div className="repository-upload-heading">
         <div><p className="eyebrow">Contribute to the repository</p><h2>Have a past paper?</h2><p>Upload a PDF or Word document and submit it for review. Approved papers become visible to other students.</p></div>
         <button className="primary-button" onClick={() => setOpen(!open)}><Upload size={15} /> {open ? "Close upload form" : "Upload a paper"}</button>
@@ -187,7 +191,7 @@ function RepositoryUpload({ onUploaded }: { onUploaded: () => void }) {
           <label className="field"><span>Semester</span><select value={form.semester} onChange={(event) => updateField("semester", event.target.value as "FIRST" | "SECOND")}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></label>
         </div>
         <label className="field"><span>Description</span><textarea value={form.description} onChange={(event) => updateField("description", event.target.value)} placeholder="Describe the paper for students searching the repository." /></label>
-        <div className="upload-form-actions"><button className="primary-button" disabled={busy || Boolean(uploadedPaper) || !selectedFile || !form.universityName.trim() || !form.facultyName.trim() || !form.courseTitle.trim() || !form.courseCode.trim() || !form.description.trim() || !form.level || !form.session.trim() || !form.year} onClick={() => void upload()}><Upload size={15} /> {busy ? "Uploading..." : "Upload PDF"}</button>{uploadedPaper && <button className="ghost-button" disabled={busy || uploadedPaper.status === "PENDING"} onClick={() => void submit()}><Send size={14} /> {uploadedPaper.status === "PENDING" ? "Pending review" : "Submit for review"}</button>}</div>
+        <div className="upload-form-actions"><button className="primary-button" disabled={busy || Boolean(uploadedPaper) || !selectedFile || !form.universityName.trim() || !form.facultyName.trim() || !form.courseTitle.trim() || !form.courseCode.trim() || !form.description.trim() || !form.level || !form.session.trim() || !form.year} onClick={() => void upload()}><Upload size={15} /> {busy ? "Uploading..." : "Upload PDF"}</button>{uploadedPaper && <button className="ghost-button" disabled={busy || confirming || uploadedPaper.status === "PENDING"} onClick={() => setConfirming(true)}><Send size={14} /> {uploadedPaper.status === "PENDING" ? "Pending review" : "Submit for review"}</button>}</div>
         {message && <small className="upload-form-success">{message}</small>}
         {error && <small className="upload-form-error">{error}</small>}
       </div>}
@@ -256,11 +260,19 @@ export function CoursePage({
 }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedPaper, setUploadedPaper] = useState<UploadedPaper | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [uploadForm, setUploadForm] = useState({ title: "", description: "", level: "", session: "", year: "", semester: "FIRST" as "FIRST" | "SECOND" });
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
   const [uploadError, setUploadError] = useState("");
+  async function submitForReview(paperId: string) {
+    setConfirming(false);
+    setSubmitting(true);
+    try { const result = await submitPaper(paperId); setUploadedPaper(result.paper); setUploadMessage("Submitted for admin review."); }
+    catch (reason) { setUploadError(reason instanceof Error ? reason.message : "Could not submit paper."); }
+    finally { setSubmitting(false); }
+  }
   const list = uploadedPaper
     ? [
         papers[0],
@@ -280,6 +292,7 @@ export function CoursePage({
       subtitle={`${course.papers} papers in the shared repository · ${uploaded ? 4 : 3} uploaded by you`}
       back="dashboard"
     >
+      {confirming && uploadedPaper && <SubmitConfirmDialog onCancel={() => setConfirming(false)} onConfirm={() => void submitForReview(uploadedPaper.id)} />}
       <div className="tabs">
         <button className="active">Repository & uploads</button>
         <button>My generated sets</button>
@@ -304,7 +317,7 @@ export function CoursePage({
             <div className="paper-actions">
                 <PaperActions paperId={paper.id} />
               {paper.id === uploadedPaper?.id && paper.status === "Private" ? (
-                <button className="ghost-button" disabled={submitting} onClick={() => { setSubmitting(true); void submitPaper(paper.id).then((result) => { setUploadedPaper(result.paper); setUploadMessage("Submitted for admin review."); }).catch((reason) => setUploadError(reason instanceof Error ? reason.message : "Could not submit paper.")).finally(() => setSubmitting(false)); }}>
+                <button className="ghost-button" disabled={submitting || confirming} onClick={() => setConfirming(true)}>
                   <Send size={14} /> {submitting ? "Submitting..." : "Submit for review"}
                 </button>
               ) : (
@@ -323,6 +336,21 @@ function PaperActions({ paperId }: { paperId: string }) {
   async function download() { try { const result = await getPaperDownloadUrl(paperId); window.open(result.url, "_blank", "noopener,noreferrer"); } catch (error) { setMessage(error instanceof Error ? error.message : "Could not open PDF."); } }
   async function share() { try { const result = await getPaperDownloadUrl(paperId); if (navigator.share) await navigator.share({ title: "RecappEdu paper", url: result.url }); else { await navigator.clipboard.writeText(result.url); setMessage("PDF link copied."); } } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) setMessage(error instanceof Error ? error.message : "Could not share PDF."); } }
   return <div className="paper-actions"><button className="outline-button" onClick={() => void download()}>Download PDF</button><button className="ghost-button" onClick={() => void share()}><Share2 size={14} /> Share</button>{message && <small className="paper-action-message">{message}</small>}</div>;
+}
+function SubmitConfirmDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="confirm-backdrop">
+      <div className="confirm-dialog">
+        <p className="eyebrow">Before you submit</p>
+        <h2>Make this paper public?</h2>
+        <p>Once approved, this PDF will be visible to every student in the repository with your name linked to it. Approved papers stay public, so read your details carefully before submitting.</p>
+        <div className="confirm-dialog-actions">
+          <button className="secondary-button" onClick={onCancel}>Not yet</button>
+          <button className="primary-button" onClick={onConfirm}>Yes, submit for review</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function Generate({

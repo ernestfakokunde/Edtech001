@@ -13,11 +13,13 @@ import {
   Results,
 } from "./pages/Study";
 import { GenerateFlow } from "./pages/Generate";
-import { getRepositoryPaper, type RepositoryPaper, type GeneratedSet } from "./lib/api";
+import { getRepositoryPaper, recordQuizAttempt, type RepositoryPaper, type GeneratedSet } from "./lib/api";
 import type { Route } from "./types";
 import { getCurrentProfile, logout } from "./lib/api";
+import { saveQuizResult } from "./lib/results";
 import { ProfilePage } from "./pages/Profile";
 import { AdminPage } from "./pages/Admin";
+import { ResultsHistory } from "./pages/History";
 
 const protectedRoutes: Route[] = [
   "dashboard",
@@ -27,6 +29,7 @@ const protectedRoutes: Route[] = [
   "flashcards",
   "quiz",
   "results",
+  "history",
   "profile",
   "admin",
 ];
@@ -129,13 +132,28 @@ function App() {
             score={quizResult.score}
             total={quizResult.total}
             onRetake={() => { setQuizResult(null); go(`quiz/${generatedSet.id}`); }}
-            onBack={() => { setQuizResult(null); setGeneratedSet(null); go("dashboard"); }}
+            onBack={() => { setQuizResult(null); setGeneratedSet(null); go("history"); }}
           />
         ) : (
           <Quiz
             set={generatedSet}
             onExit={() => { setQuizResult(null); go("dashboard"); }}
-            onFinish={(score, total) => { setQuizResult({ score, total }); go("results"); }}
+            onFinish={(score, total) => {
+              /* Persist the run locally (offline-safe; this is what the dashboard
+                 + history page read) and mirror it to the server, which also
+                 feeds the admin activity log. Best-effort: a failed POST must
+                 never block the results screen. */
+              setQuizResult({ score, total });
+              saveQuizResult({
+                setId: generatedSet.id,
+                title: generatedSet.title,
+                score,
+                total,
+                timePerQuestion: generatedSet.timePerQuestion,
+              });
+              void recordQuizAttempt(generatedSet.id, { score, total }).catch(() => undefined);
+              go("results");
+            }}
           />
         )
       ) : (
@@ -147,11 +165,12 @@ function App() {
           score={quizResult.score}
           total={quizResult.total}
           onRetake={() => { setQuizResult(null); go(`quiz/${generatedSet.id}`); }}
-          onBack={() => { setQuizResult(null); setGeneratedSet(null); go("dashboard"); }}
+          onBack={() => { setQuizResult(null); setGeneratedSet(null); go("history"); }}
         />
       ) : (
         <MissingSet back="dashboard" />
       ))}
+      {route === "history" && <ResultsHistory />}
       {route === "profile" && <ProfilePage />}
       {route === "admin" && isAdmin && <AdminPage />}
       {showFooter && <Footer />}
