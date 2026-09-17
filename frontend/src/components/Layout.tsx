@@ -6,32 +6,51 @@ export function go(route: Route | string) {
   window.location.hash = route;
 }
 
+/* Phase 4 conversion — the `.topbar`, `.topbar nav`, `.topbar nav button`,
+   `.menu-button`, `.page-heading`, `.page-subtitle`, `.screen-wrap h1` and
+   `footer` rules (plus their 1160/860/680 overrides) were Layout.tsx-exclusive,
+   so they are utilities here and have been deleted from App.css. Classes still
+   shared with unconverted pages deliberately stay as CSS: `.wordmark` and
+   `.back-link` (Auth.tsx), `.avatar` (Admin/Dashboard), `.eyebrow` (most
+   pages) and `.screen-wrap` (Generate.tsx). See docs/phase-4-layout.md. */
+const navButton = "py-30 px-0 text-muted text-13 border-b-2 border-transparent hover:text-ink hover:border-brand max-860:py-24";
+const navButtonActive = "text-ink border-brand";
+
 export function Header({ route, isAdmin = false }: { route: Route; isAdmin?: boolean }) {
   const isApplicationRoute = route !== "home" && route !== "login" && route !== "signup";
+  const myCoursesActive = route === "hierarchy" || route === "material";
+  const adminActive = route === "admin";
 
   return (
-    <header className="topbar">
+    <header className="sticky top-0 z-30 w-full h-76 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] max-860:h-64 max-680:h-58 flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash">
       <button className="wordmark" onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>
         <span>
           <LayoutGrid size={16} />
         </span>{" "}
         RecappEdu
       </button>
-      <nav>
+      <nav className="flex gap-30 ml-auto mr-34 max-1160:gap-18 max-680:gap-8 max-680:overflow-x-auto">
         <button
-          className={route === "hierarchy" || route === "material" ? "active" : ""}
+          className={`${navButton} ${myCoursesActive ? navButtonActive : ""}`}
           onClick={() => go("hierarchy")}
         >
           My courses
         </button>
-        <button onClick={() => go("hierarchy")}>Repository</button>
-        <button onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>My sets</button>
-        {isAdmin && <button className={route === "admin" ? "active" : ""} onClick={() => go("admin")}>Admin</button>}
+        <button className={navButton} onClick={() => go("hierarchy")}>Repository</button>
+        <button className={navButton} onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>My sets</button>
+        {isAdmin && (
+          <button
+            className={`${navButton} ${adminActive ? navButtonActive : ""}`}
+            onClick={() => go("admin")}
+          >
+            Admin
+          </button>
+        )}
       </nav>
       <button className="avatar" aria-label="Open profile" onClick={() => go("profile")}>
         AO
       </button>
-      <button className="menu-button" aria-label="Open menu">
+      <button className="hidden" aria-label="Open menu">
         <Menu size={20} />
       </button>
     </header>
@@ -58,10 +77,10 @@ export function PageFrame({
           Back
         </button>
       )}
-      <div className="page-heading">
+      <div className="mb-29 max-680:mb-22">
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-        <h1>{title}</h1>
-        {subtitle && <p className="page-subtitle">{subtitle}</p>}
+        <h1 className="m-0 mb-8 text-[clamp(28px,3.2vw,38px)] max-680:text-[27px]">{title}</h1>
+        {subtitle && <p className="text-muted text-13 leading-160">{subtitle}</p>}
       </div>
       {children}
     </main>
@@ -70,7 +89,7 @@ export function PageFrame({
 
 export function Footer() {
   return (
-    <footer>
+    <footer className="w-full pt-26 pb-35 px-[clamp(16px,4vw,44px)] flex justify-between text-slate-icon text-11 border-t border-line max-680:flex-col max-680:items-start max-680:gap-9">
       <span>© 2026 RecappEdu</span>
       <span>Structured practice, one course at a time.</span>
     </footer>
