@@ -81,6 +81,12 @@ export async function signUp(input: SignUpInput) {
       },
     })
 
+    // Record the signup so the admin activity feed can surface the latest
+    // registrations alongside referrals and moderation actions.
+    await prisma.auditEvent.create({
+      data: { actorId: profile.id, action: 'SIGNUP', entityType: 'Profile', entityId: profile.id, metadata: { email } },
+    })
+
     // If the student joined through an invite, link them to the referrer and
     // credit the referrer with bonus XP. Both steps are best-effort: an invalid
     // code is ignored rather than blocking signup.

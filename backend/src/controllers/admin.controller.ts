@@ -86,6 +86,25 @@ export async function unsuspendUser(request: Request, response: Response) {
   } catch { response.status(404).json({ message: 'User not found.' }) }
 }
 
+/**
+ * POST /api/admin/users/promote — grant admin rights to an account that is
+ * already registered. All the acting admin needs is the email.
+ */
+export async function promoteToAdmin(request: Request, response: Response) {
+  const actor = (request as AuthenticatedRequest).profile
+  const { email } = request.body as { email?: string }
+  const target = typeof email === 'string' ? email.trim().toLowerCase() : ''
+  if (!target || !target.includes('@')) { response.status(400).json({ message: 'Enter the email of a registered account.' }); return }
+  const profile = await prisma.profile.findUnique({ where: { email: target }, select: { id: true, email: true, displayName: true, isAdmin: true } })
+  if (!profile) { response.status(404).json({ message: 'No account is registered with that email yet.' }); return }
+  if (profile.isAdmin) { response.json({ user: profile, message: 'That account is already an admin.' }); return }
+  const updated = await prisma.profile.update({ where: { id: profile.id }, data: { isAdmin: true }, select: { id: true, email: true, displayName: true, isAdmin: true } })
+  await prisma.auditEvent.create({
+    data: { actorId: actor.id, action: 'ADMIN_PROMOTED', entityType: 'Profile', entityId: profile.id, metadata: { promotedEmail: updated.email } },
+  })
+  response.json({ user: updated })
+}
+
 export async function listHierarchyActivity(_request: Request, response: Response) {
   const activity = await prisma.auditEvent.findMany({
     where: { entityType: { in: ['University', 'Faculty', 'Department', 'Course'] } },
@@ -156,18 +175,42 @@ export async function reviewRepositorySubmission(request: Request, response: Res
   } catch { response.status(404).json({ message: 'Paper submission not found.' }) }
 }
 
+/**
+ * GET /api/admin/activity — the audit feed. Hard-capped at 15 rows per page so
+ * it stays scannable, with two filters: `type` matches an action family by
+ * prefix (SIGNUP, REFERRAL, USER, MISSION, PROMO, ADMIN…) and `search` matches
+ * the acting user's name or email.
+ */
 export async function listActivity(request: Request, response: Response) {
   const page = parsePage(request.query.page, 1, 100000)
-  const pageSize = parsePage(request.query.pageSize, 25, 100)
+  const pageSize = parsePage(request.query.pageSize, 15, 15)
   const skip = (page - 1) * pageSize
+  const type = typeof request.query.type === 'string' ? request.query.type.trim().toUpperCase() : ''
+  const search = typeof request.query.search === 'string' ? request.query.search.trim() : ''
+  const where = {
+    ...(type ? { action: { startsWith: type } } : {}),
+    ...(search
+      ? {
+          actor: {
+            is: {
+              OR: [
+                { email: { contains: search, mode: 'insensitive' as const } },
+                { displayName: { contains: search, mode: 'insensitive' as const } },
+              ],
+            },
+          },
+        }
+      : {}),
+  }
   const [activity, total] = await prisma.$transaction([
     prisma.auditEvent.findMany({
+      where,
       include: { actor: { select: { id: true, email: true, displayName: true, username: true } } },
       orderBy: { createdAt: 'desc' },
       skip,
       take: pageSize,
     }),
-    prisma.auditEvent.count(),
+    prisma.auditEvent.count({ where }),
   ])
   response.json({ activity, pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) } })
 }
