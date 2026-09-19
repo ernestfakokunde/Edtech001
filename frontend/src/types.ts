@@ -14,7 +14,13 @@ export type Route =
   | "results"
   | "history"
   | "profile"
-  | "admin";
+  | "admin"
+  | "admin-users"
+  | "admin-admins"
+  | "admin-missions"
+  | "admin-promo"
+  | "admin-submissions"
+  | "admin-activity";
 export type Mode = "flashcards" | "quiz";
 export type Course = {
   id?: string;

@@ -190,7 +190,15 @@ export function getAdminUsers(filters: { search?: string; universityId?: string;
 }
 export function suspendAdminUser(userId: string, input: { until: string; reason: string }) { return request<{ user: Pick<AdminUser, 'id' | 'suspendedUntil' | 'suspensionReason'> }>(`/api/admin/users/${userId}/suspend`, { method: 'PATCH', body: JSON.stringify(input) }) }
 export function unsuspendAdminUser(userId: string) { return request<{ user: Pick<AdminUser, 'id' | 'suspendedUntil' | 'suspensionReason'> }>(`/api/admin/users/${userId}/unsuspend`, { method: 'PATCH', body: JSON.stringify({}) }) }
-export function getAdminActivity(page = 1, pageSize = 25) { return request<{ activity: ActivityEntry[]; pagination: Pagination }>(`/api/admin/activity?page=${page}&pageSize=${pageSize}`, { method: 'GET' }) }
+export function promoteAdminUser(email: string) { return request<{ user: Pick<AdminUser, 'id' | 'email' | 'displayName' | 'isAdmin'>; message?: string }>('/api/admin/users/promote', { method: 'POST', body: JSON.stringify({ email }) }) }
+export function getAdminActivity(filters: { page?: number; type?: string; search?: string } = {}) {
+  const params = new URLSearchParams()
+  params.set('page', String(filters.page ?? 1))
+  params.set('pageSize', '15')
+  if (filters.type && filters.type !== 'all') params.set('type', filters.type)
+  if (filters.search) params.set('search', filters.search)
+  return request<{ activity: ActivityEntry[]; pagination: Pagination }>(`/api/admin/activity?${params.toString()}`, { method: 'GET' })
+}
 export function getAdminSubmissions(filters: { status?: 'PENDING' | 'APPROVED' | 'REJECTED'; search?: string; page?: number; pageSize?: number } = {}) {
   const params = new URLSearchParams()
   Object.entries(filters).forEach(([key, value]) => value !== undefined && value !== '' && params.set(key, String(value)))

@@ -32,7 +32,35 @@ const protectedRoutes: Route[] = [
   "history",
   "profile",
   "admin",
+  "admin-users",
+  "admin-admins",
+  "admin-missions",
+  "admin-promo",
+  "admin-submissions",
+  "admin-activity",
 ];
+
+const adminRoutes: Route[] = [
+  "admin",
+  "admin-users",
+  "admin-admins",
+  "admin-missions",
+  "admin-promo",
+  "admin-submissions",
+  "admin-activity",
+];
+
+function adminSection(route: Route): string {
+  switch (route) {
+    case "admin-users": return "users";
+    case "admin-admins": return "admins";
+    case "admin-missions": return "missions";
+    case "admin-promo": return "promo";
+    case "admin-submissions": return "submissions";
+    case "admin-activity": return "activity";
+    default: return "overview";
+  }
+}
 
 function routeParts() {
   return window.location.hash.slice(1).split("/");
@@ -73,7 +101,7 @@ function App() {
   }, [authStatus, route]);
 
   useEffect(() => {
-    if (authStatus === "authenticated" && route === "admin" && !isAdmin) go("dashboard");
+    if (authStatus === "authenticated" && adminRoutes.includes(route) && !isAdmin) go("dashboard");
   }, [authStatus, isAdmin, route]);
 
   const materialId = route === "material" ? window.location.hash.slice(1).split("/")[1] : undefined;
@@ -93,7 +121,7 @@ function App() {
     setSelectedMaterial(paper);
     go(`material/${encodeURIComponent(paper.id)}`);
   };
-  const showHeader = !["login", "signup", "dashboard"].includes(route);
+  const showHeader = !["login", "signup", "dashboard"].includes(route) && !adminRoutes.includes(route);
   const showFooter = ["home", "hierarchy", "courses"].includes(route);
 
   if (authStatus === "checking" && protectedRoutes.includes(route)) {
@@ -172,7 +200,7 @@ function App() {
       ))}
       {route === "history" && <ResultsHistory />}
       {route === "profile" && <ProfilePage />}
-      {route === "admin" && isAdmin && <AdminPage />}
+      {adminRoutes.includes(route) && isAdmin && <AdminPage section={adminSection(route)} />}
       {showFooter && <Footer />}
     </div>
   );
