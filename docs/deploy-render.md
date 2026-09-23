@@ -74,9 +74,26 @@ session cookie is only marked `Secure` when it is set.
 
 ## 4. Point the frontend at the API
 
+The deployed service is <https://reacappedu.onrender.com>. `frontend/.env.production`
+is committed and pins `VITE_API_URL` to it, so `npm run build` output — and any
+host that does not define its own value — already calls production. To target a
+different deployment instead:
+
 1. In the frontend host (Vercel/Netlify/…), set `VITE_API_URL=https://<service>.onrender.com`
-   and rebuild — `frontend/src/lib/api.ts` uses it for every call.
-2. In Render, set `FRONTEND_ORIGIN` to the app's origin and redeploy.
+   and rebuild. A real env var wins over `.env.production`, and
+   `frontend/src/lib/api.ts` uses it for every call.
+2. In Render, set `FRONTEND_ORIGIN` to the app's origin and redeploy. CORS
+   rejects any origin that is not listed.
+
+To develop locally against the deployed API rather than the local one:
+
+```bash
+VITE_PROXY_TARGET=https://reacappedu.onrender.com npm run dev --prefix frontend
+# PowerShell: $env:VITE_PROXY_TARGET='https://reacappedu.onrender.com'; npm run dev --prefix frontend
+```
+
+The dev server proxies `/api` through itself, so the browser still sees
+same-origin requests and the host header is rewritten for the remote target.
 
 Then pick the cookie topology that matches where the app is hosted, because the
 session and CSRF cookies are `SameSite`-scoped:
@@ -87,6 +104,11 @@ session and CSRF cookies are `SameSite`-scoped:
 | App proxies `/api` to Render (same-origin requests, like the Vite dev proxy) | `lax` (default) | No CORS, no third-party cookies — the most robust option |
 | App on a different site (`*.vercel.app` → `*.onrender.com`) | `none` | `lax` cookies are stripped from cross-site fetches, so login would silently fail |
 
+> **Current setting** — `reacappedu.onrender.com` answers with `Secure; SameSite=Lax`.
+> That is correct for the same-origin/dev-proxy paths above, but a frontend on a
+> different site cannot sign in until `COOKIE_SAME_SITE=none` is set in Render
+> and the service is redeployed.
+
 `none` requires HTTPS (Render always serves it) and is still subject to
 browsers' third-party-cookie policies, which is why a subdomain or an `/api`
 rewrite is the safer long-term choice.
@@ -94,10 +116,10 @@ rewrite is the safer long-term choice.
 ## 5. Verify the deploy
 
 ```bash
-curl -i https://<service>.onrender.com/health      # 200 {"status":"ok","service":"recappedu-backend"}
+curl -i https://reacappedu.onrender.com/health      # 200 {"status":"ok","service":"recappedu-backend"}
 
 # CSRF token + cookie must both come back, otherwise no POST can succeed
-curl -i https://<service>.onrender.com/api/auth/csrf
+curl -i https://reacappedu.onrender.com/api/auth/csrf
 ```
 
 Then in the browser: load the frontend, sign in, and check the Network tab —

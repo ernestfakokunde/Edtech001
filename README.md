@@ -153,8 +153,10 @@ npm run dev --prefix backend     # API on http://localhost:4000
 npm run dev --prefix frontend    # app on http://localhost:5173
 ```
 
-The frontend calls `VITE_API_URL` when set and otherwise defaults to
-`http://localhost:4000`. `GET /health` returns `{ "status": "ok" }`.
+The frontend reads `VITE_API_URL` from the build environment and falls back to
+`http://localhost:4000`; the committed `frontend/.env.production` pins production
+builds to `https://reacappedu.onrender.com`. `GET /health` returns
+`{ "status": "ok" }`.
 
 ## Scripts
 
@@ -211,10 +213,15 @@ render.yaml          # rootDir: backend, build + start commands, env vars
 | Health check path | `/health` |
 | Node version | `24.21.0` (`NODE_VERSION`), `engines` pins `>=20.0.0 <25.0.0` |
 
-`FRONTEND_ORIGIN` must be the deployed app's exact origin and the frontend needs
-`VITE_API_URL` pointing at the service. When the app and the API sit on
-different sites, set `COOKIE_SAME_SITE=none` so the session and CSRF cookies
-survive cross-site requests.
+**Live now** — <https://reacappedu.onrender.com> (`/health` →
+`{"status":"ok","service":"recappedu-backend"}`).
+
+`FRONTEND_ORIGIN` must be the deployed app's exact origin, and the frontend needs
+`VITE_API_URL` pointing at the service — `frontend/.env.production` already sets
+it to <https://reacappedu.onrender.com>, so any production build talks to that
+API without host configuration. When the app and the API sit on different sites,
+set `COOKIE_SAME_SITE=none` so the session and CSRF cookies survive cross-site
+requests.
 
 The full walkthrough — variables, verification, migrations, free-plan behaviour
 and troubleshooting — is in [docs/deploy-render.md](docs/deploy-render.md).

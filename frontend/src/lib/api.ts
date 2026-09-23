@@ -2,7 +2,8 @@
  * In development the app talks to Vite, and Vite proxies `/api` to the Express
  * server (see vite.config.ts). A same-origin call skips the CORS preflight that
  * used to cost an extra round trip per login/state change. A built deployment
- * still needs VITE_API_URL; without one it falls back to the local API.
+ * still needs VITE_API_URL — `frontend/.env.production` pins it to the deployed
+ * service — and falls back to the local API when it is missing.
  */
 const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? '' : 'http://localhost:4000')
 

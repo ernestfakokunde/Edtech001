@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Local env values. `.env.production` is committed on purpose (it holds the
+# public API origin); the negation below is required because the root
+# .gitignore ignores `.env.*`. Everything else stays on your machine.
+.env
+.env.local
+.env.*.local
+!.env.production
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
