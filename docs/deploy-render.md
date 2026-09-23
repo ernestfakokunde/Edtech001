@@ -83,8 +83,13 @@ different deployment instead:
 1. In the frontend host (Vercel/Netlify/…), set `VITE_API_URL=https://<service>.onrender.com`
    and rebuild. A real env var wins over `.env.production`, and
    `frontend/src/lib/api.ts` uses it for every call.
-2. In Render, set `FRONTEND_ORIGIN` to the app's origin and redeploy. CORS
-   rejects any origin that is not listed.
+2. `FRONTEND_ORIGIN` already lists the deployed app in `render.yaml`
+   (`https://recapp-pi.vercel.app` plus `https://recapp-pi*.vercel.app` for
+   previews). Hosting somewhere else? Add that origin to the same comma-separated
+   value and redeploy — CORS reflects an origin only when it is listed, and
+   anything else gets no `Access-Control-Allow-Origin`, so the browser blocks it.
+   A manually-created service (Option B in §2) has no blueprint to read from, so
+   set the value in **Environment** there instead.
 
 To develop locally against the deployed API rather than the local one:
 
@@ -122,6 +127,15 @@ curl -i https://reacappedu.onrender.com/health      # 200 {"status":"ok","servic
 
 # CSRF token + cookie must both come back, otherwise no POST can succeed
 curl -i https://reacappedu.onrender.com/api/auth/csrf
+
+# CORS + cookies: the API reflects the app's origin and the cookie is cross-site.
+# Both headers must appear. If Access-Control-Allow-Origin is missing, the
+# service has not picked up FRONTEND_ORIGIN (see §4) and the browser blocks every
+# call; if Set-Cookie still says SameSite=Lax, COOKIE_SAME_SITE has not applied.
+curl -i -H "Origin: https://recapp-pi.vercel.app" \
+  https://reacappedu.onrender.com/api/auth/csrf | grep -Ei 'access-control-allow-origin|set-cookie'
+# Access-Control-Allow-Origin: https://recapp-pi.vercel.app
+# Set-Cookie: recappedu_csrf=…; Secure; SameSite=None
 ```
 
 Then in the browser: load the frontend, sign in, and check the Network tab —
