@@ -10,6 +10,7 @@ import { hierarchyRouter } from './routes/hierarchy.routes.js'
 import { generationRouter } from './routes/generation.routes.js'
 import { requireCsrf } from './middleware/csrf.js'
 import { prisma } from './lib/prisma.js'
+import { compileOriginMatchers } from './utils/origin.js'
 import { persistPermanentAdmin, RECAPP_ADMIN_EMAIL } from './services/auth.service.js'
 
 const app = express()
@@ -19,18 +20,22 @@ const app = express()
 // request logs and any future rate limiting all depend on it.
 app.set('trust proxy', 1)
 
-// FRONTEND_ORIGIN may list several origins (custom domain, www, previews).
-// Localhost stays allowed so the Vite dev server keeps working.
-const allowedFrontendOrigins = new Set([
+// FRONTEND_ORIGIN may list several origins (custom domain, www, previews) and an
+// entry may carry a `*` host wildcard for hosts that mint a new subdomain per
+// deploy (see utils/origin.ts). Localhost stays allowed so the Vite dev server
+// keeps working.
+const allowedFrontendOrigins = compileOriginMatchers([
   ...env.frontendOrigins,
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ])
 
 // Same-origin and server-to-server calls send no Origin header at all; when a
-// browser does send one it has to match the allow-list.
+// browser does send one it has to match the allow-list. Returning `false` leaves
+// the response without Access-Control-Allow-Origin, which is what makes the
+// browser block a disallowed origin — a rejected origin must never be reflected.
 app.use(cors({
-  origin: (origin, callback) => callback(null, !origin || allowedFrontendOrigins.has(origin)),
+  origin: (origin, callback) => callback(null, !origin || allowedFrontendOrigins.some((matches) => matches(origin))),
   credentials: true,
 }))
 app.use(express.json())

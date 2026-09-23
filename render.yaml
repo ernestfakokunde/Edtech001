@@ -40,16 +40,32 @@ services:
       # Signs the session cookie; generated once here and then kept stable.
       - key: SESSION_SECRET
         generateValue: true
-      # Public origin(s) of the frontend, comma-separated for several.
-      # CORS rejects any browser origin not listed here.
+      # Public origin(s) of the frontend, comma-separated for several. CORS
+      # rejects every browser origin that is not listed here, so a missing entry
+      # shows up in the console as "No 'Access-Control-Allow-Origin' header is
+      # present on the requested resource".
+      #
+      # Not a secret, so it is committed rather than left to the dashboard: a
+      # fresh Blueprint deploy is then correct without anyone typing values.
+      # `*` stands in for one host label, which lets a host that mints a new
+      # subdomain per deploy be allow-listed once —
+      # "https://recapp-pi*.vercel.app" covers recapp-pi.vercel.app (production)
+      # plus every recapp-pi-git-* / recapp-pi-<hash> preview without reaching
+      # any other site. See backend/src/utils/origin.ts.
+      #
+      # Going live on a custom domain? Add it here too (comma-separated), e.g.
+      # "https://recapp-pi.vercel.app,https://app.example.com".
       - key: FRONTEND_ORIGIN
-        sync: false
+        value: "https://recapp-pi.vercel.app,https://recapp-pi*.vercel.app"
       # --- Cookie policy ---------------------------------------------------
       # 'lax' when the app shares this API's registrable domain (app.example.com
       # → api.example.com), 'none' when the app is on a different site
       # (Vercel → onrender.com). 'none' needs HTTPS, which Render provides.
+      # The app is deployed on *.vercel.app, which is a different site from
+      # *.onrender.com, so the session and CSRF cookies have to be cross-site —
+      # with 'lax' the browser drops both and every sign-in fails.
       - key: COOKIE_SAME_SITE
-        value: lax
+        value: none
       # --- File storage (paper uploads) ------------------------------------
       - key: SUPABASE_URL
         sync: false

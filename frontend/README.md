@@ -19,7 +19,10 @@ pins it to the deployed service, `https://reacappedu.onrender.com`, so
 build environment (Vercel/Netlify/CI) wins over the file, and without either it
 falls back to `http://localhost:4000` (see `src/lib/api.ts`). In development the
 dev server proxies `/api` to the local API — set `VITE_PROXY_TARGET` in the shell
-to run the app against the deployed API instead. Routing is hash-based — the
+to run the app against the deployed API instead. A deployed build also needs its
+own origin allow-listed on the API (`FRONTEND_ORIGIN`; the deployed app is
+`https://recapp-pi.vercel.app`), otherwise every call fails CORS — see
+[docs/deploy-render.md](../docs/deploy-render.md) §4. Routing is hash-based — the
 `Route` union in `src/types.ts` and the route table in `src/App.tsx` define
 every screen, including the admin sub-pages (`#admin-users`, `#admin-activity`,
 …).

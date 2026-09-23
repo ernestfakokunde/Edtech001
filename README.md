@@ -121,8 +121,8 @@ Fill in `backend/.env`:
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `SESSION_SECRET` | yes | Long random value used to sign session cookies |
 | `PORT` | no | Defaults to `4000` |
-| `FRONTEND_ORIGIN` | no | Defaults to `http://localhost:5173`; accepts a comma-separated list. localhost and 127.0.0.1:5173 are always allowed |
-| `COOKIE_SAME_SITE` | no | `lax` (default) or `none` for a frontend hosted on a different site |
+| `FRONTEND_ORIGIN` | no | Defaults to `http://localhost:5173`; accepts a comma-separated list, and `*` matches one host label (`https://recapp-pi*.vercel.app` covers previews). localhost and 127.0.0.1:5173 are always allowed |
+| `COOKIE_SAME_SITE` | no | `lax` (default) or `none` for a frontend hosted on a different site — the deployed service runs with `none` |
 | `SUPABASE_URL` | for uploads | Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | for uploads | Backend only — never expose to the client |
 | `SUPABASE_BUCKET` | no | Defaults to `recappedu-papers` (code) / `recapp-paper` (example file) |
@@ -216,12 +216,15 @@ render.yaml          # rootDir: backend, build + start commands, env vars
 **Live now** — <https://reacappedu.onrender.com> (`/health` →
 `{"status":"ok","service":"recappedu-backend"}`).
 
-`FRONTEND_ORIGIN` must be the deployed app's exact origin, and the frontend needs
+`FRONTEND_ORIGIN` is the app's origin allow-list and `COOKIE_SAME_SITE` its cookie
+policy; both are committed in [`render.yaml`](render.yaml) — the deployed frontend
+is <https://recapp-pi.vercel.app>, and `https://recapp-pi*.vercel.app` additionally
+covers every Vercel preview subdomain. Because app and API sit on different sites,
+the service runs with `COOKIE_SAME_SITE=none`; with `lax` the browser would drop
+the session and CSRF cookies and sign-in would silently fail. The frontend needs
 `VITE_API_URL` pointing at the service — `frontend/.env.production` already sets
 it to <https://reacappedu.onrender.com>, so any production build talks to that
-API without host configuration. When the app and the API sit on different sites,
-set `COOKIE_SAME_SITE=none` so the session and CSRF cookies survive cross-site
-requests.
+API without host configuration.
 
 The full walkthrough — variables, verification, migrations, free-plan behaviour
 and troubleshooting — is in [docs/deploy-render.md](docs/deploy-render.md).

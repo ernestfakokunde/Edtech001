@@ -41,8 +41,9 @@ The repo must be pushed: Render builds from GitHub, not from your machine.
 1. Render Dashboard → **New → Blueprint**.
 2. Select the `Edtech001` repository (keep the Blueprint file path `render.yaml`).
 3. Render shows the service `recappedu-api` and prompts for every `sync: false`
-   variable — paste `DATABASE_URL`, `FRONTEND_ORIGIN`, the Supabase pair and the
-   Anthropic key. `SESSION_SECRET` is generated automatically.
+   variable — paste `DATABASE_URL`, the Supabase pair and the Anthropic key.
+   `SESSION_SECRET` is generated automatically, and `FRONTEND_ORIGIN` +
+   `COOKIE_SAME_SITE` already carry the right values in `render.yaml`.
 4. **Apply** → Render builds and deploys.
 
 ### Option B — Manual web service
@@ -62,8 +63,8 @@ session cookie is only marked `Secure` when it is set.
 | `NODE_VERSION` | recommended | `24.21.0`. Render's default for new services is Node 24, which matches |
 | `DATABASE_URL` | yes | Neon connection string |
 | `SESSION_SECRET` | yes | `generateValue: true` in the blueprint; changing it later signs everyone out |
-| `FRONTEND_ORIGIN` | yes | Exact browser origin of the app, e.g. `https://app.example.com`. Comma-separate several (custom domain + `www` + preview hosts). No trailing slash. CORS rejects anything else |
-| `COOKIE_SAME_SITE` | no | Defaults to `lax`. See §4 — set `none` when the app is on a different site |
+| `FRONTEND_ORIGIN` | yes | Exact browser origin(s) of the app, comma-separated, no trailing slash. Committed as `https://recapp-pi.vercel.app,https://recapp-pi*.vercel.app`. `*` matches a single host label, so one entry covers production plus every Vercel preview subdomain (`backend/src/utils/origin.ts`). CORS reflects only origins that match; anything else gets no `Access-Control-Allow-Origin`. Changing it needs a redeploy |
+| `COOKIE_SAME_SITE` | no | `lax` (default) when the app shares this API's registrable domain, `none` when it does not. Committed as `none` because the app is on `*.vercel.app` and the API on `*.onrender.com` — see §4 |
 | `SUPABASE_URL` | for uploads | Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | for uploads | Never expose to the client |
 | `SUPABASE_BUCKET` | no | Defaults to `recapp-paper` (the bucket the app already uses) |
@@ -104,14 +105,15 @@ session and CSRF cookies are `SameSite`-scoped:
 | App proxies `/api` to Render (same-origin requests, like the Vite dev proxy) | `lax` (default) | No CORS, no third-party cookies — the most robust option |
 | App on a different site (`*.vercel.app` → `*.onrender.com`) | `none` | `lax` cookies are stripped from cross-site fetches, so login would silently fail |
 
-> **Current setting** — `reacappedu.onrender.com` answers with `Secure; SameSite=Lax`.
-> That is correct for the same-origin/dev-proxy paths above, but a frontend on a
-> different site cannot sign in until `COOKIE_SAME_SITE=none` is set in Render
-> and the service is redeployed.
+> **Current setting** — `render.yaml` sets `COOKIE_SAME_SITE=none`, because the
+> app (`https://recapp-pi.vercel.app`) and this API are on different sites. A
+> deployed service that still answers `Secure; SameSite=Lax` has not picked up
+> the blueprint: check the **Environment** tab, then redeploy.
 
 `none` requires HTTPS (Render always serves it) and is still subject to
-browsers' third-party-cookie policies, which is why a subdomain or an `/api`
-rewrite is the safer long-term choice.
+browsers' third-party-cookie policies — Safari blocks third-party cookies
+outright — which is why a subdomain pair or an `/api` rewrite on the frontend
+host stays the safer long-term choice.
 
 ## 5. Verify the deploy
 
@@ -165,7 +167,7 @@ for `[request-error]`, `[auth/login]` and `[config]` lines.
 | Build succeeds, instance exits immediately | Read the logs: usually a missing `DATABASE_URL`/`SESSION_SECRET` or a failed `prisma migrate deploy` |
 | `P1001` / "Can't reach database server" | Wrong connection string, Neon compute suspended (retries in `src/lib/prisma.ts` cover the wake-up), or Neon's IP allow-list blocking Render's outbound IP |
 | `403 "This request could not be verified"` on every POST | The CSRF cookie is not reaching the API: `FRONTEND_ORIGIN` does not match the browser origin, or `COOKIE_SAME_SITE=lax` with a cross-site frontend |
-| Browser console shows a CORS error | `FRONTEND_ORIGIN` must be the exact origin — scheme + host + port, no trailing slash, every variant listed |
+| `No 'Access-Control-Allow-Origin' header is present on the requested resource` | The browser origin is not in `FRONTEND_ORIGIN`. It must match exactly — scheme + host + port, no trailing slash — or use a `*` wildcard for the host label (`https://recapp-pi*.vercel.app`). Check what the API really sends: `curl -i -H "Origin: https://your-app" https://reacappedu.onrender.com/api/auth/csrf`; a missing `Access-Control-Allow-Origin` in the reply means no match. Changing the value needs a redeploy |
 | Everyone is signed out after a deploy | `SESSION_SECRET` changed; set it to a fixed value instead of regenerating |
 | `502` on the very first request after idle | Cold start — retry once |
 
