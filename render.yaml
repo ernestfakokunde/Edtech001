@@ -1,0 +1,67 @@
+# Render Blueprint for the RecappEdu API.
+#
+# Deploy: Render Dashboard → New → Blueprint → pick this repository.
+# Reference: https://render.com/docs/blueprint-spec
+#
+# Values marked `sync: false` are never stored in the repo: Render prompts for
+# them on the first deploy and keeps the real secret in the dashboard.
+services:
+  - type: web
+    name: recappedu-api
+    runtime: node
+    plan: free
+    branch: main
+    autoDeploy: true
+    # The API lives in a subdirectory of this monorepo.
+    rootDir: backend
+    # Pick the region closest to the Neon project so API → database calls stay
+    # fast (Neon's default is us-east-1 = Virginia).
+    region: virginia
+    # /health answers 200 { status: 'ok' }; Render replaces the instance if it
+    # stops responding.
+    healthCheckPath: /health
+    # NODE_ENV=production (set below) makes npm skip devDependencies, so
+    # `--include=dev` keeps tsc and the Prisma CLI available to the build.
+    buildCommand: npm ci --include=dev && npx prisma generate && npm run build
+    # `preDeployCommand` needs a paid instance type, so migrations run at boot
+    # instead. `prisma migrate deploy` is idempotent: it applies only pending
+    # migrations and does nothing when the database is already up to date.
+    startCommand: npm run prisma:deploy && node dist/server.js
+    envVars:
+      # --- Runtime ---------------------------------------------------------
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 24.21.0
+      # --- Required secrets and connection strings -------------------------
+      # Neon/Postgres connection string, keep sslmode=require.
+      - key: DATABASE_URL
+        sync: false
+      # Signs the session cookie; generated once here and then kept stable.
+      - key: SESSION_SECRET
+        generateValue: true
+      # Public origin(s) of the frontend, comma-separated for several.
+      # CORS rejects any browser origin not listed here.
+      - key: FRONTEND_ORIGIN
+        sync: false
+      # --- Cookie policy ---------------------------------------------------
+      # 'lax' when the app shares this API's registrable domain (app.example.com
+      # → api.example.com), 'none' when the app is on a different site
+      # (Vercel → onrender.com). 'none' needs HTTPS, which Render provides.
+      - key: COOKIE_SAME_SITE
+        value: lax
+      # --- File storage (paper uploads) ------------------------------------
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: recapp-paper
+      # --- AI generation ---------------------------------------------------
+      # At least one provider key is needed for POST /api/generation. Other
+      # providers from backend/.env.example (OpenAI, Gemini, Grok, custom) can
+      # be added in the dashboard at any time.
+      - key: AI_PROVIDER
+        value: anthropic
+      - key: ANTHROPIC_API_KEY
+        sync: false

@@ -59,11 +59,29 @@ function knownProviderList(value: string | undefined): AiProviderId[] {
   return parsed
 }
 
+/**
+ * SameSite policy for the session and CSRF cookies. `lax` (the default) is
+ * right whenever the app and this API share a registrable domain — a pair like
+ * app.example.com / api.example.com, or a frontend that proxies /api to this
+ * service. A frontend on an unrelated site (e.g. *.vercel.app → *.onrender.com)
+ * needs `none`, otherwise the browser drops both cookies on cross-site fetches
+ * and every sign-in silently fails. `none` requires HTTPS, which Render serves.
+ */
+function cookieSameSite(value: string | undefined): 'lax' | 'none' | 'strict' {
+  const candidate = (value ?? '').trim().toLowerCase()
+  return candidate === 'none' || candidate === 'strict' ? candidate : 'lax'
+}
+
+const frontendOrigins = commaList(process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173')
+
 export const env = {
   port: Number(process.env.PORT ?? 4000),
-  frontendOrigin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173',
+  frontendOrigin: frontendOrigins[0] ?? 'http://localhost:5173',
+  /** Every origin CORS accepts; FRONTEND_ORIGIN may hold a comma-separated list. */
+  frontendOrigins,
   databaseUrl: process.env.DATABASE_URL,
   sessionSecret: process.env.SESSION_SECRET ?? 'development-only-change-me',
+  cookieSameSite: cookieSameSite(process.env.COOKIE_SAME_SITE),
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   supabaseBucket: process.env.SUPABASE_BUCKET ?? 'recappedu-papers',

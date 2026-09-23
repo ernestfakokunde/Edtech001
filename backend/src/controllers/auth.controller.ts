@@ -2,8 +2,12 @@ import type { Request, Response } from 'express'
 import { deleteSession, signIn, signUp } from '../services/auth.service.js'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { Prisma } from '@prisma/client'
+import { env } from '../config/env.js'
 
-const cookieOptions = { httpOnly: true, sameSite: 'lax' as const, secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 24 * 30 }
+// `sameSite` is env-driven so one build serves a same-site frontend (lax, the
+// default) and a cross-site one (COOKIE_SAME_SITE=none). `secure` follows
+// NODE_ENV, which Render sets to production for deployed services.
+const cookieOptions = { httpOnly: true, sameSite: env.cookieSameSite, secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 24 * 30 }
 function isDuplicateEmail(error: unknown) { return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && Array.isArray(error.meta?.target) && error.meta.target.includes('email') }
 function isDatabaseError(error: unknown) { return error instanceof Prisma.PrismaClientInitializationError || (error instanceof Error && /P100[1-3]|P1017|Can't reach database server|connection.*(?:failed|closed|timed out)|\btimed out/i.test(error.message)) }
 

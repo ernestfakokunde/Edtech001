@@ -121,7 +121,8 @@ Fill in `backend/.env`:
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `SESSION_SECRET` | yes | Long random value used to sign session cookies |
 | `PORT` | no | Defaults to `4000` |
-| `FRONTEND_ORIGIN` | no | Defaults to `http://localhost:5173`; localhost and 127.0.0.1:5173 are always allowed |
+| `FRONTEND_ORIGIN` | no | Defaults to `http://localhost:5173`; accepts a comma-separated list. localhost and 127.0.0.1:5173 are always allowed |
+| `COOKIE_SAME_SITE` | no | `lax` (default) or `none` for a frontend hosted on a different site |
 | `SUPABASE_URL` | for uploads | Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | for uploads | Backend only — never expose to the client |
 | `SUPABASE_BUCKET` | no | Defaults to `recappedu-papers` (code) / `recapp-paper` (example file) |
@@ -164,6 +165,7 @@ The frontend calls `VITE_API_URL` when set and otherwise defaults to
 | `dev` | `tsx watch src/server.ts` — hot-reloading API |
 | `build` / `start` | Compile to `dist/`, run `node dist/server.js` |
 | `prisma:migrate` | `prisma migrate dev` |
+| `prisma:deploy` | `prisma migrate deploy` — apply pending migrations (production) |
 | `prisma:generate` | `prisma generate` |
 | `prisma:validate` / `prisma:format` | Schema validation and formatting |
 
@@ -188,6 +190,34 @@ The frontend calls `VITE_API_URL` when set and otherwise defaults to
 | GET | `/hierarchy-activity` | Hierarchy-specific audit events |
 | GET/POST | `/missions` · PATCH/DELETE `/missions/:missionId` | XP challenges |
 | GET/POST | `/promo-codes` · PATCH/DELETE `/promo-codes/:codeId` | Promo codes |
+
+## Deploying
+
+The backend ships as a Render web service (free plan): Render installs
+dependencies, runs `tsc`, boots `dist/server.js` and health-checks `/health`.
+Postgres stays on Neon and uploads stay on Supabase, so the instance is
+stateless.
+
+```bash
+# Blueprint at the repo root — Render Dashboard → New → Blueprint
+render.yaml          # rootDir: backend, build + start commands, env vars
+```
+
+| Setting | Value |
+|---|---|
+| Root directory | `backend` |
+| Build command | `npm ci --include=dev && npx prisma generate && npm run build` |
+| Start command | `npm run prisma:deploy && node dist/server.js` |
+| Health check path | `/health` |
+| Node version | `24.21.0` (`NODE_VERSION`), `engines` pins `>=20.0.0 <25.0.0` |
+
+`FRONTEND_ORIGIN` must be the deployed app's exact origin and the frontend needs
+`VITE_API_URL` pointing at the service. When the app and the API sit on
+different sites, set `COOKIE_SAME_SITE=none` so the session and CSRF cookies
+survive cross-site requests.
+
+The full walkthrough — variables, verification, migrations, free-plan behaviour
+and troubleshooting — is in [docs/deploy-render.md](docs/deploy-render.md).
 
 ## Security model
 

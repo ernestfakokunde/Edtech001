@@ -1,5 +1,6 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 import type { NextFunction, Request, Response } from 'express'
+import { env } from '../config/env.js'
 
 const CSRF_COOKIE = 'recappedu_csrf'
 const CSRF_HEADER = 'x-csrf-token'
@@ -10,7 +11,7 @@ function createToken() {
 
 export function issueCsrfToken(_request: Request, response: Response) {
   const token = createToken()
-  response.cookie(CSRF_COOKIE, token, { httpOnly: false, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 24 })
+  response.cookie(CSRF_COOKIE, token, { httpOnly: false, sameSite: env.cookieSameSite, secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 * 24 })
   response.json({ csrfToken: token })
 }
 

@@ -1,6 +1,8 @@
 node_modules
 dist
+# Real secrets never belong in git.
 .env
 .env.*
-.env.example
+# ...but the documented template does: README step 2 copies it to backend/.env.
+!.env.example
 /src/.env

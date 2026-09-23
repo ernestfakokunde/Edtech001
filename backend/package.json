@@ -11,7 +11,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
+    "prisma:deploy": "prisma migrate deploy",
     "admin:promote": "tsx src/scripts/promote-admin.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0 <25.0.0"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",

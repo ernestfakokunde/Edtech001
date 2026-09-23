@@ -14,14 +14,23 @@ import { persistPermanentAdmin, RECAPP_ADMIN_EMAIL } from './services/auth.servi
 
 const app = express()
 
-const localFrontendOrigins = new Set([
-  env.frontendOrigin,
+// Render terminates TLS at its proxy, so the app has to trust the
+// X-Forwarded-* headers to see the real protocol and host: `secure` cookies,
+// request logs and any future rate limiting all depend on it.
+app.set('trust proxy', 1)
+
+// FRONTEND_ORIGIN may list several origins (custom domain, www, previews).
+// Localhost stays allowed so the Vite dev server keeps working.
+const allowedFrontendOrigins = new Set([
+  ...env.frontendOrigins,
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ])
 
+// Same-origin and server-to-server calls send no Origin header at all; when a
+// browser does send one it has to match the allow-list.
 app.use(cors({
-  origin: (origin, callback) => callback(null, !origin || localFrontendOrigins.has(origin)),
+  origin: (origin, callback) => callback(null, !origin || allowedFrontendOrigins.has(origin)),
   credentials: true,
 }))
 app.use(express.json())
