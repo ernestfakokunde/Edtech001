@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, ArrowLeft, Ban, Check, ChevronLeft, ChevronRight, Clock3, Copy, FileText, Flag, LayoutDashboard, Menu, Plus, Power, Search, ShieldCheck, Sparkles, Ticket, Trash2, UserRound, Users, X } from "lucide-react";
+import { Activity, ArrowLeft, Ban, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, FileText, Flag, LayoutDashboard, Menu, Plus, Power, Search, ShieldCheck, Sparkles, Ticket, Trash2, UserRound, Users, X } from "lucide-react";
 import { go } from "../components/Layout";
 import type { Route } from "../types";
-import { createAdminMission, createAdminPromoCode, deleteAdminMission, deleteAdminPromoCode, getAdminActivity, getAdminMissions, getAdminPromoCodes, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getModerationSummary, getUniversities, promoteAdminUser, reviewSubmission, suspendAdminUser, unsuspendAdminUser, updateAdminMission, updateAdminPromoCode } from "../lib/api";
+import { createAdminMission, createAdminPromoCode, deleteAdminMission, deleteAdminPromoCode, errorMessage, getAdminActivity, getAdminMissions, getAdminPromoCodes, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getModerationSummary, getUniversities, promoteAdminUser, reviewSubmission, suspendAdminUser, unsuspendAdminUser, updateAdminMission, updateAdminPromoCode } from "../lib/api";
 import type { ActivityEntry, AdminMission, AdminPromoCode, AdminUser, Department, Faculty, Pagination, RepositorySubmission, University } from "../lib/api";
 
 /* Phase 5 — standalone admin board: a Tailwind sidebar shell (drawer below
@@ -14,7 +14,7 @@ import type { ActivityEntry, AdminMission, AdminPromoCode, AdminUser, Department
 
 const ADMIN_TITLES: Record<string, string> = {
   overview: "Overview",
-  users: "People",
+  users: "Students",
   admins: "Make an admin",
   missions: "Missions",
   promo: "Promo codes",
@@ -24,7 +24,7 @@ const ADMIN_TITLES: Record<string, string> = {
 
 const ADMIN_NAV: { key: string; route: Route; label: string; icon: ReactNode }[] = [
   { key: "overview", route: "admin", label: "Overview", icon: <LayoutDashboard size={16} /> },
-  { key: "users", route: "admin-users", label: "People", icon: <Users size={16} /> },
+  { key: "users", route: "admin-users", label: "Students", icon: <Users size={16} /> },
   { key: "admins", route: "admin-admins", label: "Make an admin", icon: <ShieldCheck size={16} /> },
   { key: "missions", route: "admin-missions", label: "Missions", icon: <Flag size={16} /> },
   { key: "promo", route: "admin-promo", label: "Promo codes", icon: <Ticket size={16} /> },
@@ -33,13 +33,32 @@ const ADMIN_NAV: { key: string; route: Route; label: string; icon: ReactNode }[]
 ];
 
 const QUICK_LINKS: { route: Route; icon: ReactNode; title: string; text: string }[] = [
-  { route: "admin-users", icon: <Users size={17} />, title: "People", text: "Search the directory and suspend or restore accounts." },
+  { route: "admin-users", icon: <Users size={17} />, title: "Students", text: "Search the student directory and suspend or restore accounts." },
   { route: "admin-admins", icon: <ShieldCheck size={17} />, title: "Make an admin", text: "Promote a registered email to full board access." },
   { route: "admin-missions", icon: <Flag size={17} />, title: "Missions", text: "Create XP challenges students can claim once." },
   { route: "admin-promo", icon: <Ticket size={17} />, title: "Promo codes", text: "Hand out free Pro days and bonus XP." },
   { route: "admin-submissions", icon: <FileText size={17} />, title: "Submissions", text: "Review the repository upload queue." },
   { route: "admin-activity", icon: <Activity size={17} />, title: "Signals", text: "Signups, referrals and moderation events." },
 ];
+
+/* Shared control styling for every admin form. Without these the mission and
+   promo inputs fell back to bare element styling (no padding, no focus ring) and
+   the fixed-width grids squeezed them on narrow screens. */
+const adminField = "min-h-42 w-full rounded-10 border border-line bg-white px-12 text-13 text-ink outline-none transition-colors placeholder:text-slate-icon focus:border-outline focus:shadow-focus";
+const adminLabel = "grid gap-5 text-11 font-semibold text-muted";
+/* Native select arrows are removed (appearance-none) and replaced by a shared
+   ChevronDown rendered inside `adminSelectShell`, so every filter on the board
+   looks identical. Sizing classes live on the shell, not the <select> itself. */
+const adminSelectShell = "relative flex min-h-40 items-center text-slate-icon";
+const adminSelect = "h-full w-full cursor-pointer appearance-none truncate rounded-10 border border-line bg-white py-0 pl-12 pr-31 text-13 text-ink outline-none transition-colors focus:border-outline focus:shadow-focus disabled:cursor-not-allowed disabled:bg-pale disabled:opacity-60";
+const adminSelectChevron = <ChevronDown size={15} className="pointer-events-none absolute right-10" aria-hidden="true" />;
+const adminSearchBox = "flex min-h-40 items-center gap-8 rounded-10 border border-line bg-white px-12 text-slate-icon transition-colors focus-within:border-outline focus-within:shadow-focus max-1020:min-w-0";
+const adminSearchInput = "w-full min-w-0 border-0 bg-transparent text-13 text-ink outline-none placeholder:text-slate-icon";
+const adminFormGrid = "mb-16 grid gap-10 max-1020:grid-cols-2 max-760:grid-cols-1";
+/* Student-directory filter row: a wrapping flex line. The previous fixed-width
+   grid overflowed the panel between breakpoints; basis-based flex items shrink
+   and wrap instead, so every control stays inside the card. */
+const adminFilterShell = `${adminSelectShell} min-w-140 flex-[1_1_170px] max-760:flex-[1_1_100%]`;
 
 export function AdminPage({ section }: { section: string }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -88,44 +107,44 @@ export function AdminPage({ section }: { section: string }) {
       const result = await getAdminUsers({ search: usersSearch || undefined, universityId: selectedUniversity, departmentId: selectedDepartment, role: usersRole, recent: usersRecent, page: usersPage, pageSize: 20 });
       setUsers(result.users);
       setUsersPagination(result.pagination);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load users."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not load users.")); }
   }
   async function loadAdmins() {
     try {
       const result = await getAdminUsers({ role: "admin", pageSize: 8 });
       setAdmins(result.users);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load the admin list."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not load the admin list.")); }
   }
   async function loadSubmissions() {
     try {
       const result = await getAdminSubmissions({ status: submissionStatus, search: submissionSearch || undefined, page: submissionsPage, pageSize: 50 });
       setSubmissions(result.submissions);
       setSubmissionsPagination(result.pagination);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load submissions."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not load submissions.")); }
   }
   async function loadActivity() {
     try {
       const result = await getAdminActivity({ page: activityPage, type: activityType === "all" ? undefined : activityType, search: activitySearch || undefined });
       setActivity(result.activity);
       setActivityPagination(result.pagination);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load activity."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not load activity.")); }
   }
   async function loadSummary() {
     try { const result = await getModerationSummary(); setSummary(result.summary); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load the summary."); }
+    catch (reason) { setError(errorMessage(reason, "Could not load the summary.")); }
   }
   async function loadUniversities() {
     if (universities.length > 0) return;
     try { const result = await getUniversities(); setUniversities(result.universities); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load universities."); }
+    catch (reason) { setError(errorMessage(reason, "Could not load universities.")); }
   }
   async function loadMissions() {
     try { const result = await getAdminMissions(); setMissions(result.missions); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load missions."); }
+    catch (reason) { setError(errorMessage(reason, "Could not load missions.")); }
   }
   async function loadPromoCodes() {
     try { const result = await getAdminPromoCodes(); setPromoCodes(result.codes); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load promo codes."); }
+    catch (reason) { setError(errorMessage(reason, "Could not load promo codes.")); }
   }
 
   // ── Handlers
@@ -136,7 +155,7 @@ export function AdminPage({ section }: { section: string }) {
       setNotice(result.message || `${result.user.displayName || result.user.email} now has admin access.`);
       setPromoteEmail("");
       await loadAdmins();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not promote that account."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not promote that account.")); }
     finally { setPromoting(false); }
   }
   async function chooseUniversity(universityId: string) {
@@ -148,7 +167,7 @@ export function AdminPage({ section }: { section: string }) {
       const { faculties } = await getFaculties(universityId);
       const lists = await Promise.all(faculties.map((faculty: Faculty) => getDepartments(faculty.id)));
       setDepartments(lists.flatMap((list) => list.departments));
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load departments."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not load departments.")); }
   }
   async function restoreSuspension(user: AdminUser) {
     setNotice(""); setError("");
@@ -156,7 +175,7 @@ export function AdminPage({ section }: { section: string }) {
       const result = await unsuspendAdminUser(user.id);
       setUsers((current) => current.map((u) => (u.id === user.id ? { ...u, ...result.user } : u)));
       setNotice(`${user.displayName || user.email} can sign in again.`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not restore the account."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not restore the account.")); }
   }
   async function confirmSuspension(user: AdminUser, until: string, reasonText: string) {
     setNotice(""); setError(""); setSuspending(null);
@@ -164,7 +183,7 @@ export function AdminPage({ section }: { section: string }) {
       const result = await suspendAdminUser(user.id, { until, reason: reasonText });
       setUsers((current) => current.map((u) => (u.id === user.id ? { ...u, ...result.user } : u)));
       setNotice(`${user.displayName || user.email} has been suspended.`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not suspend account."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not suspend account.")); }
   }
   async function confirmReview(id: string, decision: "APPROVED" | "REJECTED", note?: string) {
     setReviewing(id);
@@ -173,7 +192,7 @@ export function AdminPage({ section }: { section: string }) {
       setNotice(`Submission ${decision === "APPROVED" ? "approved" : "rejected"}.`);
       await loadSubmissions();
       getModerationSummary().then((moderation) => setSummary(moderation.summary)).catch(() => { /* summary refresh is best-effort */ });
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not review submission."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not review submission.")); }
     finally { setReviewing(null); }
   }
 
@@ -184,19 +203,19 @@ export function AdminPage({ section }: { section: string }) {
       setMissionForm({ title: "", description: "", xpReward: 10 });
       setNotice("Mission created — students can claim it from their profile.");
       await loadMissions();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not create the mission."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not create the mission.")); }
     finally { setCreatingMission(false); }
   }
   async function toggleMission(mission: AdminMission) {
     setNotice(""); setError("");
     try { await updateAdminMission(mission.id, { isActive: !mission.isActive }); setMissions((current) => current.map((m) => (m.id === mission.id ? { ...m, isActive: !mission.isActive } : m))); setNotice(`Mission ${mission.isActive ? "paused" : "resumed"}.`); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update the mission."); }
+    catch (reason) { setError(errorMessage(reason, "Could not update the mission.")); }
   }
   async function removeMission(mission: AdminMission) {
     if (!window.confirm(`Delete the mission "${mission.title}"?`)) return;
     setNotice(""); setError("");
     try { await deleteAdminMission(mission.id); setMissions((current) => current.filter((m) => (m.id !== mission.id))); setNotice("Mission deleted."); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not delete the mission."); }
+    catch (reason) { setError(errorMessage(reason, "Could not delete the mission.")); }
   }
   async function createPromo() {
     setNotice(""); setError(""); setCreatingPromo(true);
@@ -212,7 +231,7 @@ export function AdminPage({ section }: { section: string }) {
       setPromoForm({ code: "", description: "", premiumDays: 7, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
       setNotice(`Code ${result.promo.code} created — copy it and share it with students.`);
       await loadPromoCodes();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not create the code."); }
+    } catch (reason) { setError(errorMessage(reason, "Could not create the code.")); }
     finally { setCreatingPromo(false); }
   }
   function copyCode(code: string) {
@@ -223,13 +242,13 @@ export function AdminPage({ section }: { section: string }) {
   async function togglePromo(promo: AdminPromoCode) {
     setNotice(""); setError("");
     try { await updateAdminPromoCode(promo.id, { isActive: !promo.isActive }); setPromoCodes((current) => current.map((c) => (c.id === promo.id ? { ...c, isActive: !promo.isActive } : c))); setNotice(`Code ${promo.code} ${promo.isActive ? "paused" : "resumed"}.`); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not update the code."); }
+    catch (reason) { setError(errorMessage(reason, "Could not update the code.")); }
   }
   async function removePromo(promo: AdminPromoCode) {
     if (!window.confirm(`Delete the promo code "${promo.code}"?`)) return;
     setNotice(""); setError("");
     try { await deleteAdminPromoCode(promo.id); setPromoCodes((current) => current.filter((c) => (c.id !== promo.id))); setNotice("Promo code deleted."); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Could not delete the code."); }
+    catch (reason) { setError(errorMessage(reason, "Could not delete the code.")); }
   }
 
   // ── Section-scoped data loading: entering a section pulls its data once,
@@ -280,7 +299,7 @@ export function AdminPage({ section }: { section: string }) {
           {section === "overview" && (
             <div className="flex flex-col gap-18">
               <div className="grid grid-cols-2 gap-12 max-680:grid-cols-1">
-                <Metric icon={<Users size={16} />} value={summary ? String(summary.users) : "—"} label="People on the platform" tone="blue" />
+                <Metric icon={<Users size={16} />} value={summary ? String(summary.users) : "—"} label="Students on the platform" tone="blue" />
                 <Metric icon={<Clock3 size={16} />} value={summary ? String(summary.pending) : "—"} label="Submissions awaiting review" tone="amber" />
                 <Metric icon={<Check size={16} />} value={summary ? String(summary.approved) : "—"} label="Approved papers" tone="green" />
                 <Metric icon={<Ban size={16} />} value={summary ? String(summary.rejected) : "—"} label="Rejected papers" tone="red" />
@@ -353,44 +372,57 @@ export function AdminPage({ section }: { section: string }) {
           {section === "users" && (
             <section className="admin-panel">
               <div className="admin-panel-head">
-                <div><p className="eyebrow">People</p><h2>Student directory</h2></div>
-                <span className="admin-status"><Users size={14} /> {usersPagination.total} users</span>
+                <div><p className="eyebrow">Students</p><h2>Student directory</h2></div>
+                <span className="admin-status"><Users size={14} /> {usersPagination.total} students</span>
               </div>
               <p className="admin-panel-help">Search by name, username or email, then suspend or restore an account. Suspended students cannot sign in until it lifts.</p>
-              <div className="admin-filters">
-                <label className="admin-search">
+              <div className="mb-16 flex flex-wrap items-center gap-9">
+                <label className={`${adminSearchBox} min-w-220 flex-[2_1_260px] max-760:flex-[1_1_100%]`}>
                   <Search size={16} />
                   <input
+                    className={adminSearchInput}
                     value={usersSearchInput}
                     onChange={(event) => setUsersSearchInput(event.target.value)}
                     onKeyDown={(event) => { if (event.key === "Enter") setUsersSearch(usersSearchInput.trim()); }}
                     placeholder="Search name, username, or email"
                   />
                 </label>
-                <select value={usersRole} onChange={(event) => { setUsersRole(event.target.value as "all" | "admin"); setUsersPage(1); }}>
-                  <option value="all">All roles</option>
-                  <option value="admin">Admins only</option>
-                </select>
-                <select value={usersRecent} onChange={(event) => { setUsersRecent(event.target.value as "all" | "24h" | "7d" | "30d" | "90d"); setUsersPage(1); }}>
-                  <option value="all">All signups</option>
-                  <option value="24h">Last 24h</option>
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                  <option value="90d">Last 90 days</option>
-                </select>
-                <select value={selectedUniversity} onChange={(event) => void chooseUniversity(event.target.value)}>
-                  <option value="">All universities</option>
-                  {universities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </select>
-                <select value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)} disabled={!selectedUniversity}>
-                  <option value="">All departments</option>
-                  {departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </select>
-                <button className="secondary-button" onClick={() => setUsersSearch(usersSearchInput.trim())}>Search</button>
+                <div className={adminFilterShell}>
+                  <select className={adminSelect} value={usersRole} onChange={(event) => { setUsersRole(event.target.value as "all" | "admin"); setUsersPage(1); }}>
+                    <option value="all">All roles</option>
+                    <option value="admin">Admins only</option>
+                  </select>
+                  {adminSelectChevron}
+                </div>
+                <div className={adminFilterShell}>
+                  <select className={adminSelect} value={usersRecent} onChange={(event) => { setUsersRecent(event.target.value as "all" | "24h" | "7d" | "30d" | "90d"); setUsersPage(1); }}>
+                    <option value="all">All signups</option>
+                    <option value="24h">Last 24h</option>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                  </select>
+                  {adminSelectChevron}
+                </div>
+                <div className={adminFilterShell}>
+                  <select className={adminSelect} value={selectedUniversity} onChange={(event) => void chooseUniversity(event.target.value)}>
+                    <option value="">All universities</option>
+                    {universities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                  {adminSelectChevron}
+                </div>
+                <div className={adminFilterShell}>
+                  <select className={adminSelect} value={selectedDepartment} onChange={(event) => setSelectedDepartment(event.target.value)} disabled={!selectedUniversity}>
+                    <option value="">All departments</option>
+                    {departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                  {adminSelectChevron}
+                </div>
+                <button className="ml-auto inline-flex min-h-40 flex-none items-center gap-7 rounded-10 bg-brand px-16 text-13 font-semibold text-white shadow-brand-sm transition-colors hover:bg-brand-deep max-760:ml-0" onClick={() => setUsersSearch(usersSearchInput.trim())}>Search</button>
               </div>
               <div className="admin-user-list">
                 {users.length === 0 ? (
-                  <div className="admin-empty"><UserRound size={20} /><span>No users match these filters.</span></div>
+                  <div className="admin-empty"><UserRound size={20} /><span>No students match these filters.</span></div>
                 ) : (
                   users.map((user) => {
                     const suspended = Boolean(user.suspendedUntil && new Date(user.suspendedUntil) > new Date());
@@ -415,26 +447,30 @@ export function AdminPage({ section }: { section: string }) {
                 <span className="admin-status"><Activity size={14} /> {activityPagination.total} events</span>
               </div>
               <p className="admin-panel-help">The newest 15 events per page — filter by kind or search for the person behind the event.</p>
-              <div className="admin-filters">
-                <select value={activityType} onChange={(event) => { setActivityType(event.target.value); setActivityPage(1); }}>
-                  <option value="all">Everything</option>
-                  <option value="SIGNUP">Signups</option>
-                  <option value="REFERRAL">Referrals</option>
-                  <option value="USER">Suspensions</option>
-                  <option value="MISSION">Missions</option>
-                  <option value="PROMO">Promo codes</option>
-                  <option value="ADMIN">Admin changes</option>
-                </select>
-                <label className="admin-search">
+              <div className={`${adminFormGrid} grid-cols-[minmax(180px,220px)_minmax(220px,1fr)_auto] max-1020:grid-cols-1`}>
+                <div className={adminSelectShell}>
+                  <select className={adminSelect} value={activityType} onChange={(event) => { setActivityType(event.target.value); setActivityPage(1); }}>
+                    <option value="all">Everything</option>
+                    <option value="SIGNUP">Signups</option>
+                    <option value="REFERRAL">Referrals</option>
+                    <option value="USER">Suspensions</option>
+                    <option value="MISSION">Missions</option>
+                    <option value="PROMO">Promo codes</option>
+                    <option value="ADMIN">Admin changes</option>
+                  </select>
+                  {adminSelectChevron}
+                </div>
+                <label className={adminSearchBox}>
                   <Search size={16} />
                   <input
+                    className={adminSearchInput}
                     value={activitySearchInput}
                     onChange={(event) => setActivitySearchInput(event.target.value)}
                     onKeyDown={(event) => { if (event.key === "Enter") { setActivitySearch(activitySearchInput.trim()); setActivityPage(1); } }}
                     placeholder="Search who did it — name or email"
                   />
                 </label>
-                <button className="secondary-button" onClick={() => { setActivitySearch(activitySearchInput.trim()); setActivityPage(1); }}>Search</button>
+                <button className="secondary-button w-full" onClick={() => { setActivitySearch(activitySearchInput.trim()); setActivityPage(1); }}>Search</button>
               </div>
               <div className="admin-activity-list">
                 {activity.length === 0 ? (
@@ -459,12 +495,21 @@ export function AdminPage({ section }: { section: string }) {
                 <div><p className="eyebrow">Missions</p><h2>XP challenges</h2></div>
                 <span className="admin-status"><Flag size={14} /> {missions.length} missions</span>
               </div>
-              <p className="admin-panel-help">Students claim these once from their profile for XP. Pause a mission to stop new claims.</p>
-              <div className="admin-mission-create">
-                <input value={missionForm.title} onChange={(event) => setMissionForm({ ...missionForm, title: event.target.value })} placeholder="Title e.g. Upload 3 past papers" />
-                <input value={missionForm.description} onChange={(event) => setMissionForm({ ...missionForm, description: event.target.value })} placeholder="Short description (optional)" />
-                <input type="number" min={1} value={missionForm.xpReward} onChange={(event) => setMissionForm({ ...missionForm, xpReward: Number(event.target.value) })} aria-label="XP reward" />
-                <button className="primary-button" disabled={!missionForm.title.trim() || creatingMission} onClick={() => void createMission()}><Plus size={15} /> Add mission</button>
+              <p className="admin-panel-help">Students claim these once from their study desk or profile for XP. Pause a mission to stop new claims.</p>
+              <div className={`${adminFormGrid} grid-cols-[minmax(200px,2fr)_minmax(200px,2fr)_minmax(90px,120px)_auto] items-end`}>
+                <label className={adminLabel}>
+                  Mission title
+                  <input className={adminField} value={missionForm.title} onChange={(event) => setMissionForm({ ...missionForm, title: event.target.value })} placeholder="Upload 3 past papers" />
+                </label>
+                <label className={adminLabel}>
+                  Description <span className="font-normal text-slate-icon">(optional)</span>
+                  <input className={adminField} value={missionForm.description} onChange={(event) => setMissionForm({ ...missionForm, description: event.target.value })} placeholder="What the student has to do" />
+                </label>
+                <label className={adminLabel}>
+                  XP reward
+                  <input className={adminField} type="number" min={1} value={missionForm.xpReward} onChange={(event) => setMissionForm({ ...missionForm, xpReward: Number(event.target.value) })} />
+                </label>
+                <button className="primary-button h-42 w-full max-760:w-full" disabled={!missionForm.title.trim() || creatingMission} onClick={() => void createMission()}><Plus size={15} /> Add mission</button>
               </div>
               <div className="admin-mission-list">
                 {missions.length === 0 ? (
@@ -484,16 +529,34 @@ export function AdminPage({ section }: { section: string }) {
                 <div><p className="eyebrow">Promo codes</p><h2>Give out free Pro</h2></div>
                 <span className="admin-status"><Ticket size={14} /> {promoCodes.length} codes</span>
               </div>
-              <p className="admin-panel-help">Share a code and students redeem it on their profile — free Pro days and/or bonus XP, once per student. Leave uses empty for unlimited.</p>
-              <div className="admin-promo-create">
-                <input className="admin-promo-code-input" value={promoForm.code} onChange={(event) => setPromoForm({ ...promoForm, code: event.target.value.toUpperCase() })} placeholder="CODE e.g. RECAPP-WEEK1" maxLength={24} />
-                <input value={promoForm.description} onChange={(event) => setPromoForm({ ...promoForm, description: event.target.value })} placeholder="What it says to students e.g. Welcome week free Pro (optional)" />
-                <button className="primary-button" disabled={!promoForm.code.trim() || creatingPromo} onClick={() => void createPromo()}><Plus size={15} /> Create code</button>
-                <div className="admin-promo-caps">
-                  <label>Pro days<input type="number" min={0} value={promoForm.premiumDays} onChange={(event) => setPromoForm({ ...promoForm, premiumDays: Number(event.target.value) })} /></label>
-                  <label>Bonus XP<input type="number" min={0} value={promoForm.xpBonus} onChange={(event) => setPromoForm({ ...promoForm, xpBonus: Number(event.target.value) })} /></label>
-                  <label>Max uses<input type="number" min={1} value={promoForm.maxRedemptions} onChange={(event) => setPromoForm({ ...promoForm, maxRedemptions: event.target.value })} placeholder="Unlimited" /></label>
-                  <label>Expires<input type="date" value={promoForm.expiresAt} onChange={(event) => setPromoForm({ ...promoForm, expiresAt: event.target.value })} /></label>
+              <p className="admin-panel-help">Share a code and students redeem it on their study desk or profile — free Pro days and/or bonus XP, once per student. Leave uses empty for unlimited.</p>
+              <div className={`${adminFormGrid} grid-cols-[minmax(200px,240px)_minmax(220px,1fr)_auto] items-end`}>
+                <label className={adminLabel}>
+                  Code
+                  <input className={`${adminField} font-mono font-bold uppercase tracking-[0.08em]`} value={promoForm.code} onChange={(event) => setPromoForm({ ...promoForm, code: event.target.value.toUpperCase() })} placeholder="RECAPP-WEEK1" maxLength={24} />
+                </label>
+                <label className={adminLabel}>
+                  Description <span className="font-normal text-slate-icon">(optional)</span>
+                  <input className={adminField} value={promoForm.description} onChange={(event) => setPromoForm({ ...promoForm, description: event.target.value })} placeholder="What it says to students" />
+                </label>
+                <button className="primary-button h-42 w-full" disabled={!promoForm.code.trim() || creatingPromo} onClick={() => void createPromo()}><Plus size={15} /> Create code</button>
+                <div className="col-span-full grid grid-cols-4 gap-10 max-760:grid-cols-2">
+                  <label className={adminLabel}>
+                    Pro days
+                    <input className={adminField} type="number" min={0} value={promoForm.premiumDays} onChange={(event) => setPromoForm({ ...promoForm, premiumDays: Number(event.target.value) })} />
+                  </label>
+                  <label className={adminLabel}>
+                    Bonus XP
+                    <input className={adminField} type="number" min={0} value={promoForm.xpBonus} onChange={(event) => setPromoForm({ ...promoForm, xpBonus: Number(event.target.value) })} />
+                  </label>
+                  <label className={adminLabel}>
+                    Max uses
+                    <input className={adminField} type="number" min={1} value={promoForm.maxRedemptions} onChange={(event) => setPromoForm({ ...promoForm, maxRedemptions: event.target.value })} placeholder="Unlimited" />
+                  </label>
+                  <label className={adminLabel}>
+                    Expires
+                    <input className={adminField} type="date" value={promoForm.expiresAt} onChange={(event) => setPromoForm({ ...promoForm, expiresAt: event.target.value })} />
+                  </label>
                 </div>
               </div>
               <div className="admin-promo-list">
@@ -514,22 +577,26 @@ export function AdminPage({ section }: { section: string }) {
                 <div><p className="eyebrow">Submissions</p><h2>Repository review</h2></div>
                 <span className="admin-status"><FileText size={14} /> {submissionsPagination.total} submissions</span>
               </div>
-              <div className="admin-filters">
-                <select value={submissionStatus} onChange={(event) => { setSubmissionStatus(event.target.value as "PENDING" | "APPROVED" | "REJECTED"); setSubmissionsPage(1); }}>
-                  <option value="PENDING">Pending review</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
-                <label className="admin-search">
+              <div className={`${adminFormGrid} grid-cols-[minmax(150px,180px)_minmax(220px,1fr)_auto] max-1020:grid-cols-1`}>
+                <div className={adminSelectShell}>
+                  <select className={adminSelect} value={submissionStatus} onChange={(event) => { setSubmissionStatus(event.target.value as "PENDING" | "APPROVED" | "REJECTED"); setSubmissionsPage(1); }}>
+                    <option value="PENDING">Pending review</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                  {adminSelectChevron}
+                </div>
+                <label className={adminSearchBox}>
                   <Search size={16} />
                   <input
+                    className={adminSearchInput}
                     value={submissionSearchInput}
                     onChange={(event) => setSubmissionSearchInput(event.target.value)}
                     onKeyDown={(event) => { if (event.key === "Enter") { setSubmissionSearch(submissionSearchInput.trim()); setSubmissionsPage(1); } }}
                     placeholder="Search course or owner"
                   />
                 </label>
-                <button className="secondary-button" onClick={() => { setSubmissionSearch(submissionSearchInput.trim()); setSubmissionsPage(1); }}>Search</button>
+                <button className="secondary-button w-full" onClick={() => { setSubmissionSearch(submissionSearchInput.trim()); setSubmissionsPage(1); }}>Search</button>
               </div>
               <div className="admin-submission-list">
                 {submissions.length === 0 ? (
@@ -581,29 +648,26 @@ function Metric({ icon, value, label, tone }: { icon: ReactNode; value: string; 
 
 function AdminSidebar({ section, open, onClose }: { section: string; open: boolean; onClose: () => void }) {
   return (
-    <aside className={`fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
-      <div className="flex items-center gap-10 border-b border-line px-18 py-16">
-        <span className="grid h-34 w-34 shrink-0 place-items-center rounded-10 bg-brand text-white shadow-brand-sm"><ShieldCheck size={17} /></span>
-        <div className="min-w-0">
-          <p className="m-0 text-13 font-bold text-ink">Admin board</p>
-          <p className="m-0 text-11 text-muted">RecappEdu control</p>
-        </div>
+    <aside className={`font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
+      <div className="flex h-60 items-center gap-11 border-b border-line px-16">
+        <span className="grid h-34 w-34 shrink-0 place-items-center rounded-11 bg-brand text-white shadow-brand-sm"><ShieldCheck size={17} /></span>
+        <p className="m-0 min-w-0 truncate text-[15px] font-semibold text-ink">Admin board</p>
       </div>
-      <button className="flex items-center gap-8 border-b border-line px-18 py-12 text-12 font-semibold text-brand transition-colors hover:bg-pale" onClick={() => { go("dashboard"); onClose(); }}>
+      <button className="flex items-center gap-8 border-b border-line px-16 py-13 text-12 font-semibold text-brand transition-colors hover:bg-pale" onClick={() => { go("dashboard"); onClose(); }}>
         <ArrowLeft size={14} /> Back to main app
       </button>
-      <nav className="flex-1 overflow-y-auto p-10">
+      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {ADMIN_NAV.map((item) => (
           <button
             key={item.key}
-            className={`mb-2 flex w-full items-center gap-10 rounded-10 px-12 py-10 text-13 font-semibold transition-colors ${section === item.key ? "bg-brand text-white shadow-brand-sm" : "text-muted hover:bg-pale hover:text-brand"}`}
+            className={`flex w-full shrink-0 items-center gap-12 rounded-10 px-13 py-11 text-left text-13 font-medium transition-colors ${section === item.key ? "bg-brand font-semibold text-white shadow-brand-sm" : "text-muted hover:bg-pale hover:text-ink"}`}
             onClick={() => { go(item.route); onClose(); }}
           >
-            {item.icon} {item.label}
+            <span className="shrink-0">{item.icon}</span>
+            <span className="truncate">{item.label}</span>
           </button>
         ))}
       </nav>
-      <p className="m-0 border-t border-line px-18 py-12 text-11 text-muted">Signed in with super access</p>
     </aside>
   );
 }

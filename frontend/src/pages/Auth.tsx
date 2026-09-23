@@ -1,9 +1,18 @@
 import { useState } from "react";
 import { ArrowRight, Check, LayoutGrid, LockKeyhole, Mail } from "lucide-react";
 import { go } from "../components/Layout";
-import { login, signup } from "../lib/api";
+import { errorMessage, login, signup, type AuthProfile } from "../lib/api";
 
-export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; onAuthenticated?: () => void }) {
+/* Community snapshot for the signup panel — same card language as the admin
+   directory rows (monogram avatar, name, meta, stat chip). Sample profiles;
+   swap for a real members feed when the backend exposes a public endpoint. */
+const SIGNUP_STUDENTS = [
+  { initials: "NA", name: "Ngozi A.", meta: "300 level · Medicine", stat: "14 papers" },
+  { initials: "TO", name: "Tunde O.", meta: "Final year · Law", stat: "520 XP" },
+  { initials: "AK", name: "Amara K.", meta: "200 level · Computer science", stat: "92% avg" },
+];
+
+export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login" | "signup"; onAuthenticated?: (profile: AuthProfile) => void; notice?: string }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +46,23 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
             Keep your own PDFs private, or learn from the papers your course
             community has already shared.
           </p>
-          <div className="grid gap-14 mt-34 text-brand-deep text-12 font-semibold">
+          {/* Directory-style student card — the same card language as the admin
+              student directory (monogram avatars + name lines), used here as
+              social proof so the signup page feels alive, not empty. */}
+          <div className="mt-32 flex max-w-430 items-center gap-13 rounded-13 border border-line bg-white p-14 shadow-card">
+            <div className="flex shrink-0 -space-x-8">
+              {["D", "A", "E", "F"].map((letter) => (
+                <span key={letter} className="grid h-32 w-32 place-items-center rounded-half border-2 border-white bg-pale text-11 font-bold text-brand">
+                  {letter}
+                </span>
+              ))}
+            </div>
+            <p className="m-0 min-w-0 text-12 leading-150 text-muted">
+              <strong className="font-semibold text-ink">Students are already on board.</strong>{" "}
+              Share papers, earn XP, and keep every revision in one place.
+            </p>
+          </div>
+          <div className="grid gap-14 mt-22 text-brand-deep text-12 font-semibold">
             <span className="flex gap-8 items-center">
               <Check size={15} /> AI-generated flashcards and quizzes
             </span>
@@ -48,16 +73,40 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
               <Check size={15} /> Course repositories that grow with you
             </span>
           </div>
+          {isSignup && (
+            <div className="mt-20 grid gap-10">
+              <p className="eyebrow">Students already revising here</p>
+              <div className="grid gap-8">
+                {SIGNUP_STUDENTS.map((student) => (
+                  <div key={student.name} className="flex items-center gap-12 rounded-13 border border-line bg-surface px-14 py-11 shadow-card">
+                    <span className="grid h-35 w-35 shrink-0 place-items-center rounded-half bg-pale text-12 font-bold text-brand">{student.initials}</span>
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate text-13 font-semibold text-ink">{student.name}</strong>
+                      <small className="block truncate text-11 text-muted">{student.meta}</small>
+                    </span>
+                    <span className="shrink-0 rounded-99 bg-pale px-10 py-5 text-11 font-bold text-brand">{student.stat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
-      <section className="grid place-items-center p-30">
-        <div className="w-[min(100%,410px)]">
-          <button className="back-link mb-46" onClick={() => go("home")}>
+      {/* The form sits in a white card on the pale canvas — same card language
+          as the admin panels, so signup reads as part of the same product. */}
+      <section className="grid place-items-center bg-pale p-30 max-1020:py-28 max-1020:px-26">
+        <div className="w-[min(100%,450px)] rounded-16 border border-line bg-white p-[clamp(24px,3.4vw,38px)] shadow-card">
+          <button className="back-link mb-30" onClick={() => go("home")}>
             Back to home
           </button>
           <p className="eyebrow">
             {isSignup ? "Create your workspace" : "Welcome back"}
           </p>
+          {notice && (
+            <p className="mb-18 flex items-start gap-8 rounded-10 border border-warning-surface bg-warning-surface px-12 py-10 text-11 leading-145 text-warning" role="status">
+              {notice}
+            </p>
+          )}
           <h2 className="mb-10 text-[31px] leading-[1.1]">
             {isSignup
               ? "Start practising with purpose."
@@ -75,7 +124,7 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
                 {isSignup ? "Your workspace is ready." : "You are signed in."}
               </strong>
               <span className="text-success-alt leading-150">
-                Take a look around and choose how you want to practise.
+                Taking you to your study desk…
               </span>
               <button
                 className={`${primaryCta} mt-8`}
@@ -93,7 +142,10 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
                 setLoading(true);
                 const form = new FormData(event.currentTarget);
                 try {
-                  await (isSignup
+                  /* The auth response already carries the full profile, so the app
+                     can move on immediately instead of calling /api/auth/me again
+                     (which used to be a second round trip before the dashboard). */
+                  const result = await (isSignup
                     ? signup({
                         email: String(form.get("email")),
                         password: String(form.get("password")),
@@ -103,10 +155,11 @@ export function AuthPage({ mode, onAuthenticated }: { mode: "login" | "signup"; 
                         email: String(form.get("email")),
                         password: String(form.get("password")),
                       }));
-                      onAuthenticated?.();
                   setSubmitted(true);
+                  onAuthenticated?.(result.profile);
+                  go("dashboard");
                 } catch (requestError) {
-                  setError(requestError instanceof Error ? requestError.message : "Authentication failed.");
+                  setError(errorMessage(requestError, "We could not sign you in. Please try again."));
                 } finally {
                   setLoading(false);
                 }

@@ -1,4 +1,10 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
+/**
+ * In development the app talks to Vite, and Vite proxies `/api` to the Express
+ * server (see vite.config.ts). A same-origin call skips the CORS preflight that
+ * used to cost an extra round trip per login/state change. A built deployment
+ * still needs VITE_API_URL; without one it falls back to the local API.
+ */
+const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? '' : 'http://localhost:4000')
 
 // The backend protects every non-GET request with double-submit CSRF validation
 // (see backend/src/middleware/csrf.ts). GET /api/auth/csrf issues the token and
@@ -16,19 +22,34 @@ async function getCsrfToken(): Promise<string> {
     csrfFetch = fetch(`${API_URL}/api/auth/csrf`, { credentials: 'include' })
       .then(async (response) => {
         if (!response.ok) throw new Error('Could not establish a secure session. Refresh the page and try again.')
-        const body = await response.json() as { csrfToken?: string }
+        let body: { csrfToken?: string }
+        try { body = await response.json() as { csrfToken?: string } }
+        catch { throw new Error('Could not establish a secure session. Refresh the page and try again.') }
         if (!body.csrfToken) throw new Error('The server did not return a verification token. Refresh the page and try again.')
         csrfToken = body.csrfToken
         return csrfToken
+      })
+      .catch((reason: unknown) => {
+        // Never surface `TypeError: Failed to fetch` from a warm-up call.
+        throw new Error(isTransportError(reason) ? OFFLINE_MESSAGE : reason instanceof Error ? reason.message : 'Could not establish a secure session. Refresh the page and try again.')
       })
       .finally(() => { csrfFetch = null })
   }
   return csrfFetch
 }
 
+/**
+ * Warms the CSRF token + cookie in the background so the first state-changing
+ * request (usually login) does not have to wait for a second round trip.
+ */
+export function prefetchCsrfToken(): void {
+  void getCsrfToken().catch(() => { /* the next real request reports the failure */ })
+}
+
 export type AuthResponse = {
   profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean; tier?: "FREE" | "PREMIUM"; xp?: number; referralCode?: string | null; premiumUntil?: string | null }
 }
+export type AuthProfile = AuthResponse["profile"]
 
 export type University = { id: string; name: string; slug: string }
 export type Faculty = { id: string; name: string; slug: string; universityId: string }
@@ -80,6 +101,36 @@ export type ActivityEntry = {
   metadata?: { deletedEmail?: string; deletedName?: string | null; deletedUsername?: string | null; title?: string; xpReward?: number } | null
 }
 
+/**
+ * Every user-visible failure goes through this helper so the UI never prints a
+ * raw `TypeError: Failed to fetch`, a JSON parser stack trace, a [object Object]
+ * or an HTTP status line. Non-Error throws (string, object, null) are folded
+ * into the caller's fallback text.
+ */
+export function errorMessage(reason: unknown, fallback: string) {
+  if (typeof reason === 'string' && reason.trim()) return reason
+  if (reason instanceof Error && typeof reason.message === 'string' && reason.message.trim() && !/^\[object/i.test(reason.message)) return reason.message
+  return fallback
+}
+
+/** A network failure (server asleep/offline) reads nothing like an HTTP error. */
+function isTransportError(reason: unknown) {
+  return reason instanceof TypeError
+    || (reason instanceof Error && /failed to fetch|network ?error|load failed|fetch failed|aborted/i.test(reason.message))
+}
+
+const OFFLINE_MESSAGE = 'We could not reach the server. Check your connection and try again.'
+
+function apiError(response: Response, message?: string) {
+  if (message) return new Error(message)
+  if (response.status === 401) return new Error('Your session has expired. Please sign in again.')
+  if (response.status === 403) return new Error('You do not have permission to do that.')
+  if (response.status === 404) return new Error('We could not find what you asked for.')
+  if (response.status === 429) return new Error('Too many attempts. Please wait a moment and try again.')
+  if (response.status >= 500) return new Error('The server ran into a problem. Please try again shortly.')
+  return new Error('The request could not be completed.')
+}
+
 async function request<T>(path: string, options: RequestInit, retried = false): Promise<T> {
   const method = options.method ?? 'GET'
   const headers: Record<string, string> = {
@@ -87,12 +138,28 @@ async function request<T>(path: string, options: RequestInit, retried = false): 
     ...(options.headers as Record<string, string> | undefined),
   }
   if (!CSRF_SAFE_METHODS.has(method)) headers[CSRF_HEADER] = await getCsrfToken()
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers,
-  })
-  const body = response.status === 204 ? {} as T & { message?: string } : await response.json() as T & { message?: string }
+  let response: Response
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      credentials: 'include',
+      headers,
+    })
+  } catch (reason) {
+    throw new Error(isTransportError(reason) ? OFFLINE_MESSAGE : 'The request could not be completed.')
+  }
+  // A non-JSON body (crashing proxy, HTML error page) must never leak a parsing
+  // error to the UI — it is reported by status instead.
+  let body: T & { message?: string }
+  if (response.status === 204) {
+    body = {} as T & { message?: string }
+  } else {
+    try {
+      body = await response.json() as T & { message?: string }
+    } catch {
+      body = {} as T & { message?: string }
+    }
+  }
   if (!response.ok) {
     // A stale or missing CSRF token is the usual cause of a 403 on a state-changing
     // request. Refetch the token once and replay the request before surfacing the error.
@@ -100,7 +167,7 @@ async function request<T>(path: string, options: RequestInit, retried = false): 
       csrfToken = null
       return request<T>(path, options, true)
     }
-    throw new Error(body.message ?? 'The request could not be completed.')
+    throw apiError(response, typeof body.message === 'string' ? body.message : undefined)
   }
   return body
 }
@@ -131,13 +198,22 @@ export function invalidateProfileCache() {
   if (typeof localStorage !== 'undefined') localStorage.removeItem(PROFILE_CACHE_KEY)
 }
 
-export function signup(input: { email: string; password: string; displayName: string; referralCode?: string }) {
-  return request<AuthResponse>('/api/auth/signup', { method: 'POST', body: JSON.stringify(input) })
+export async function signup(input: { email: string; password: string; displayName: string; referralCode?: string }) {
+  const result = await request<AuthResponse>('/api/auth/signup', { method: 'POST', body: JSON.stringify(input) })
+  // Seed the identity cache straight from the auth response so the next screen
+  // does not immediately re-request /api/auth/me (one less round trip per login).
+  writeProfileCache(result)
+  return result
 }
 
-export function login(input: { email: string; password: string }) {
-  return request<AuthResponse>('/api/auth/login', { method: 'POST', body: JSON.stringify(input) })
+export async function login(input: { email: string; password: string }) {
+  const result = await request<AuthResponse>('/api/auth/login', { method: 'POST', body: JSON.stringify(input) })
+  writeProfileCache(result)
+  return result
 }
+
+/** True when a non-expired identity is already cached — lets App skip its loading flash. */
+export function hasProfileCache() { return readProfileCache() !== null }
 
 export async function getCurrentProfile() {
   const cached = readProfileCache()

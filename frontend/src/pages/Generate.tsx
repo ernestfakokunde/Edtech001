@@ -14,6 +14,7 @@ import {
 import { PageFrame, go } from "../components/Layout";
 import {
   addMyCourse,
+  errorMessage,
   generateStudySet,
   getGenerationProviders,
   getGenerationQuota,
@@ -144,7 +145,7 @@ export function GenerateFlow({
       closeAddForm();
       setCourseOptions((current) => (current.some((item) => item.id === created.id) ? current : [...current, created].sort((a, b) => a.code.localeCompare(b.code))));
     } catch (reason) {
-      setAddCourseError(reason instanceof Error ? reason.message : "Could not save the course.");
+      setAddCourseError(errorMessage(reason, "Could not save the course."));
     } finally {
       setAddingCourseBusy(false);
     }
@@ -166,7 +167,7 @@ export function GenerateFlow({
       onComplete(set);
       if (mode === "quiz") setQuota((current) => ({ ...current, used: current.used + 1, remaining: current.remaining === null ? null : Math.max(0, current.remaining - 1) }));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not generate the study set.");
+      setError(errorMessage(reason, "Could not generate the study set."));
       setBusy(false);
     }
   }

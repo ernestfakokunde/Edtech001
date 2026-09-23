@@ -40,7 +40,7 @@ export function generateReferralCode(seed = 're') {
   return referralCode(seed)
 }
 
-/** Marks the given profile as admin in the DB (best-effort, never fatal). */
+/** Marks the given profile as admin in the DB (awaited by callers that need it). */
 export async function persistPermanentAdmin(profileId: string) {
   try { await prisma.profile.update({ where: { id: profileId }, data: { isAdmin: true } }) } catch { /* non-fatal */ }
 }
@@ -105,23 +105,38 @@ export async function signUp(input: SignUpInput) {
       })
     }
 
-    if (isPermanentAdminEmail(email)) profile.isAdmin = true
+    if (isPermanentAdminEmail(email)) {
+      profile.isAdmin = true
+      void persistPermanentAdmin(profile.id)
+    }
     const token = await createSession(profile.id)
-    return { token, profile }
+    const { passwordHash: _passwordHash, ...safeProfile } = profile
+    return { token, profile: safeProfile }
   })
 }
 
 export async function signIn(input: SignInInput) {
   return withConnectionRetry(async () => {
     const email = normalizeEmail(input.email)
-    const profile = await prisma.profile.findUnique({ where: { email } })
+    // Only the columns the client needs — a slimmer row means a smaller payload
+    // and a faster round trip on the login path.
+    const profile = await prisma.profile.findUnique({
+      where: { email },
+      select: {
+        id: true, email: true, passwordHash: true, displayName: true, username: true,
+        isAdmin: true, tier: true, xp: true, referralCode: true, premiumUntil: true,
+        suspendedUntil: true, createdAt: true,
+      },
+    })
     if (!profile || !(await verifyPassword(input.password, profile.passwordHash))) throw new Error('Invalid login credentials')
-    if (isPermanentAdminEmail(email)) {
+    if (isPermanentAdminEmail(email) && !profile.isAdmin) {
       profile.isAdmin = true
       void persistPermanentAdmin(profile.id)
     }
     const token = await createSession(profile.id)
-    return { token, profile }
+    // Never hand the hash back to the controller.
+    const { passwordHash: _passwordHash, ...safeProfile } = profile
+    return { token, profile: safeProfile }
   })
 }
 
@@ -134,7 +149,10 @@ export async function getProfileBySession(token: string) {
       session.profile.isAdmin = true
       void persistPermanentAdmin(session.profile.id)
     }
-    return { session, profile: session.profile }
+    // The password hash stays in the database: every API response built from this
+    // profile (including /api/auth/me) is hash-free.
+    const { passwordHash: _passwordHash, ...safeProfile } = session.profile
+    return { session, profile: safeProfile }
   })
 }
 

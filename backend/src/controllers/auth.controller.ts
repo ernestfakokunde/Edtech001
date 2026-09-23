@@ -10,7 +10,17 @@ function isDatabaseError(error: unknown) { return error instanceof Prisma.Prisma
 export async function signup(request: Request, response: Response) {
   const { email, password, displayName, referralCode } = request.body as Partial<{ email: string; password: string; displayName: string; referralCode?: string }>
   if (!email || !password || !displayName || password.length < 8) { response.status(400).json({ message: 'displayName, email, and a password of at least 8 characters are required.' }); return }
-  try { const result = await signUp({ email, password, displayName, referralCode }); response.cookie('recappedu_session', result.token, cookieOptions); response.status(201).json({ profile: result.profile }) } catch (error) { if (isDuplicateEmail(error)) { response.status(409).json({ message: 'An account with that email already exists.' }); return } response.status(500).json({ message: 'Could not create your account.' }) }
+  try {
+    const result = await signUp({ email, password, displayName, referralCode })
+    response.cookie('recappedu_session', result.token, cookieOptions)
+    response.status(201).json({ profile: result.profile })
+  } catch (error) {
+    if (isDuplicateEmail(error)) { response.status(409).json({ message: 'An account with that email already exists.' }); return }
+    if (isDatabaseError(error)) { response.status(503).json({ message: 'The database is temporarily unavailable. Please try again in a moment.' }); return }
+    // Anything else is unexpected: log the real cause, never the raw message.
+    console.error('[auth/signup]', error)
+    response.status(500).json({ message: 'Could not create your account. Please try again.' })
+  }
 }
 
 export async function login(request: Request, response: Response) {
@@ -22,7 +32,11 @@ export async function login(request: Request, response: Response) {
     response.json({ profile: result.profile })
   } catch (error) {
     if (isDatabaseError(error)) { response.status(503).json({ message: 'The database is temporarily unavailable. Please try again in a moment.' }); return }
-    response.status(401).json({ message: error instanceof Error ? error.message : 'Invalid email or password.' })
+    if (error instanceof Error && error.message === 'Invalid login credentials') { response.status(401).json({ message: 'That email and password do not match an account.' }); return }
+    // Unexpected failures are logged server-side and reported generically, so no
+    // internal/Prisma message ever reaches the browser.
+    console.error('[auth/login]', error)
+    response.status(500).json({ message: 'We could not sign you in right now. Please try again in a moment.' })
   }
 }
 
