@@ -1,11 +1,16 @@
 // Temporary offline verification of the multi-provider AI service.
-// Env vars are set BEFORE importing so dotenv (which never overrides) keeps them.
+// tsx pre-loads dotenv BEFORE this file runs, so the real .env on disk is
+// already injected by the time these assignments execute (process.env wins
+// because these lines run after that preload). Do NOT add any dotenv
+// import/config() call here: dotenv never overrides, so re-loading would
+// re-inject the stale on-disk GEMINI_API_KEY/GROQ_API_KEY over the test keys.
 process.env.AI_PROVIDER = "openai"
 process.env.AI_FALLBACK_PROVIDERS = "grok,gemini"
 process.env.ANTHROPIC_API_KEY = "ak-test"
 process.env.OPENAI_API_KEY = "ok-test"
 process.env.GROK_API_KEY = "gk-test"
-process.env.GEMINI_API_KEY = "gemk-test"
+process.env.GROQ_API_KEY = "gsk-test"
+process.env.GEMINI_API_KEY = "AIza-test"
 process.env.CUSTOM_OPENAI_API_KEY = "ck-test"
 process.env.CUSTOM_OPENAI_BASE_URL = "http://localhost:9999/v1"
 process.env.CUSTOM_OPENAI_PROVIDER_NAME = "Test Custom"
@@ -31,7 +36,7 @@ function check(name: string, ok: boolean, extra = "") {
 }
 
 // fetch stub routed by host; behaviour switched via `mode` per test step.
-let mode: "openai-ok" | "openai-retry" | "openai-down" | "grok-ok" | "grok-bad" | "all-down" | "custom-ok" | "gemini-fallback" | "gemini-all-overloaded" = "openai-ok"
+let mode: "openai-ok" | "openai-retry" | "openai-down" | "grok-ok" | "grok-bad" | "groq-ok" | "all-down" | "custom-ok" | "gemini-fallback" | "gemini-all-overloaded" = "openai-ok"
 let openaiCalls = 0
 let geminiCalls = 0
 const respond = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { "content-type": "application/json" } })
@@ -74,6 +79,11 @@ globalThis.fetch = async (url) => {
     // after the closing fence; the service must still extract the array.
     return respond({ candidates: [{ content: { parts: [{ text: "```json\n" + JSON.stringify(CARD_ONE) + "\n```\nHere are your flashcards!" }] } }] })
   }
+  if (target.includes("api.groq.com")) {
+    if (mode === "all-down") return respond({ error: { message: "invalid_api_key" } }, 401)
+    if (mode === "groq-ok") return choicesJson(CARD_ONE)
+    return respond({ error: { message: "engine_overloaded" } }, 503)
+  }
   if (target.includes("localhost:9999")) {
     if (mode === "custom-ok") return choicesJson(CARD_ONE)
     return respond({ error: { message: "not_found" } }, 404)
@@ -85,7 +95,7 @@ const TEXT = "A reasonably long document about cyber security with enough conten
 
 // 1. Listing + config detection
 const providers = listGenerationProviders()
-check("listing returns all 5 providers", providers.length === 5, providers.map((p) => `${p.id}:${p.configured}`).join(" "))
+check("listing returns all 6 providers", providers.length === 6, providers.map((p) => `${p.id}:${p.configured}`).join(" "))
 check("all providers marked configured", providers.every((p) => p.configured))
 check("isAiConfigured() === true", isAiConfigured() === true)
 
@@ -111,6 +121,11 @@ check("fenced ```json gemini payload with trailing prose is extracted", single.l
 mode = "custom-ok"
 const custom = await generateStudyItems({ text: TEXT, kind: "FLASHCARD", length: 1 }, { provider: "custom" })
 check("client can request the custom provider", custom.length === 1 && custom.every((i) => i.metadata.provider === "custom"))
+
+// 5a. Client-requested Groq (native provider, `gsk_` key, no base URL needed)
+mode = "groq-ok"
+const groqOnly = await generateStudyItems({ text: TEXT, kind: "FLASHCARD", length: 1 }, { provider: "groq" })
+check("client can request the groq provider", groqOnly.length === 1 && groqOnly.every((i) => i.metadata.provider === "groq" && i.metadata.model === "llama-3.3-70b-versatile"))
 
 // 5b. Transient upstream failures (Google "high demand"-style 503 overloads)
 // are retried with backoff instead of failing the request outright.

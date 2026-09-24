@@ -75,9 +75,13 @@ services:
         value: recapp-paper
       # --- AI generation ---------------------------------------------------
       # At least one provider key is needed for POST /api/generation. Other
-      # providers from backend/.env.example (OpenAI, Gemini, Grok, custom) can
-      # be added in the dashboard at any time.
+      # providers from backend/.env.example (OpenAI, Gemini, Grok, Groq,
+      # custom) can be added in the dashboard at any time.
       - key: AI_PROVIDER
-        value: anthropic
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
       - key: ANTHROPIC_API_KEY
         sync: false

@@ -131,13 +131,14 @@ Fill in `backend/.env`:
 | `SUPABASE_URL` | for uploads | Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | for uploads | Backend only — never expose to the client |
 | `SUPABASE_BUCKET` | no | Defaults to `recappedu-papers` (code) / `recapp-paper` (example file) |
-| `AI_PROVIDER` | no | Primary provider: `anthropic` (default), `openai`, `grok`, `gemini`, `custom` |
-| `AI_FALLBACK_PROVIDERS` | no | Comma-separated providers tried in order, e.g. `openai,gemini` |
+| `AI_PROVIDER` | no | Primary provider: `anthropic` (default), `openai`, `grok`, `groq`, `gemini`, `custom` |
+| `AI_FALLBACK_PROVIDERS` | no | Comma-separated providers tried in order, e.g. `openai,groq` |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | no | Default model `claude-sonnet-4-5` |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_BASE_URL` | no | Default model `gpt-4o` |
-| `GROK_API_KEY` / `GROK_MODEL` / `GROK_BASE_URL` | no | Default model `grok-3` |
+| `GROK_API_KEY` / `GROK_MODEL` / `GROK_BASE_URL` | no | Default model `grok-3` — xAI only, never a `gsk_` key |
+| `GROQ_API_KEY` / `GROQ_MODEL` / `GROQ_BASE_URL` | no | Default model `llama-3.3-70b-versatile`, default base `https://api.groq.com/openai/v1` — no base URL needed |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` / `GEMINI_FALLBACK_MODELS` | no | Default model `gemini-2.5-flash` |
-| `CUSTOM_OPENAI_PROVIDER_NAME` / `CUSTOM_OPENAI_BASE_URL` / `CUSTOM_OPENAI_API_KEY` / `CUSTOM_OPENAI_MODEL` | no | Any OpenAI-compatible endpoint (DeepSeek, Mistral, OpenRouter, Ollama, …) |
+| `CUSTOM_OPENAI_PROVIDER_NAME` / `CUSTOM_OPENAI_BASE_URL` / `CUSTOM_OPENAI_API_KEY` / `CUSTOM_OPENAI_MODEL` | no | Any other OpenAI-compatible endpoint (DeepSeek, Mistral, OpenRouter, Ollama, …) |
 
 Generation is provider-agnostic: configure **any combination** of the keys
 above. `AI_PROVIDER` is the primary, `AI_FALLBACK_PROVIDERS` are tried in order

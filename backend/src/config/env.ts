@@ -2,9 +2,18 @@ import { config } from 'dotenv'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const backendEnvPath = resolve(process.cwd(), 'backend/.env')
-const localEnvPath = resolve(process.cwd(), '.env')
-config({ path: existsSync(backendEnvPath) ? backendEnvPath : localEnvPath })
+// tsx pre-loads dotenv before any script runs, so by the time this module
+// loads the real .env (if any) is already in process.env. Calling config()
+// again would re-inject the on-disk file OVER values a script stamped first
+// (dotenv never overrides), which is exactly how a stale GEMINI_API_KEY /
+// GROQ_API_KEY leaked into the offline ai-multiprovider-check. So: only load
+// a .env file when nothing was pre-loaded (real `node dist/server.js` boot
+// without tsx, where process.env is still empty).
+if (!process.env.DOTENV_PRELOADED && !process.env.TSX_VERSION && !process.env.DATABASE_URL) {
+  const backendEnvPath = resolve(process.cwd(), 'backend/.env')
+  const localEnvPath = resolve(process.cwd(), '.env')
+  config({ path: existsSync(backendEnvPath) ? backendEnvPath : localEnvPath })
+}
 
 const requiredEnv = ['DATABASE_URL', 'SESSION_SECRET'] as const
 
@@ -21,7 +30,7 @@ for (const key of requiredEnv) {
  * lets a client override the selection per request with an explicit
  * `provider` field (see GET /api/generation/providers).
  */
-export type AiProviderId = 'anthropic' | 'openai' | 'grok' | 'gemini' | 'custom'
+export type AiProviderId = 'anthropic' | 'openai' | 'grok' | 'groq' | 'gemini' | 'custom'
 
 export type AiProviderConfig = {
   /** Human-friendly name shown in the UI / stored next to nothing sensitive. */
@@ -36,7 +45,7 @@ export type AiProviderConfig = {
   fallbackModels?: string[]
 }
 
-const aiProviderIds: AiProviderId[] = ['anthropic', 'openai', 'grok', 'gemini', 'custom']
+const aiProviderIds: AiProviderId[] = ['anthropic', 'openai', 'grok', 'groq', 'gemini', 'custom']
 
 function commaList(value: string | undefined): string[] {
   return (value ?? '')
@@ -107,6 +116,15 @@ export const env = {
         apiKey: process.env.GROK_API_KEY,
         model: process.env.GROK_MODEL ?? 'grok-3',
         baseUrl: process.env.GROK_BASE_URL ?? 'https://api.x.ai/v1',
+      } satisfies AiProviderConfig,
+      // Groq (https://console.groq.com) — OpenAI-compatible Chat Completions
+      // API, so no base URL is needed from you: it defaults to
+      // https://api.groq.com/openai/v1. Keys start with `gsk_`.
+      groq: {
+        label: 'Groq',
+        apiKey: process.env.GROQ_API_KEY,
+        model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+        baseUrl: process.env.GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1',
       } satisfies AiProviderConfig,
       gemini: {
         label: 'Google Gemini',

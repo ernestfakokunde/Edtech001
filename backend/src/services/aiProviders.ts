@@ -312,6 +312,24 @@ export function getConfiguredProviders(): AiProvider[] {
       ),
     }))
   }
+  // Groq (console.groq.com, `gsk_` keys). A `gsk_` key pasted into GROK_API_KEY
+  // (xAI) fails on xAI's API with an opaque auth error and a 502 here, so
+  // validate the prefix up front and say exactly which variable is wrong.
+  if (providers.groq.apiKey) {
+    if (!providers.groq.apiKey.trim().startsWith('gsk_')) {
+      console.warn('[config] GROQ_API_KEY does not start with "gsk_" — it will fail. Paste a key from https://console.groq.com/keys, not console.x.ai.')
+    }
+    configured.push(makeProvider({
+      id: 'groq',
+      config: providers.groq,
+      complete: (config, system, userText) => completeOpenAiCompatible(
+        providers.groq.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
+      ),
+    }))
+  }
   if (providers.gemini.apiKey) {
     configured.push(makeProvider({ id: 'gemini', config: providers.gemini, complete: completeGemini }))
   }
@@ -340,6 +358,7 @@ export function listProviderInfo(): ProviderInfo[] {
     { id: 'anthropic', label: providers.anthropic.label, configured: Boolean(providers.anthropic.apiKey) },
     { id: 'openai', label: providers.openai.label, configured: Boolean(providers.openai.apiKey) },
     { id: 'grok', label: providers.grok.label, configured: Boolean(providers.grok.apiKey) },
+    { id: 'groq', label: providers.groq.label, configured: Boolean(providers.groq.apiKey) },
     { id: 'gemini', label: providers.gemini.label, configured: Boolean(providers.gemini.apiKey) },
     { id: 'custom', label: providers.custom.label, configured: Boolean(providers.custom.apiKey && providers.custom.baseUrl) },
   ]
