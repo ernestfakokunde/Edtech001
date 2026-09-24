@@ -20,6 +20,8 @@ history, and a standalone **admin board** for moderation, growth and support.
 * Upload past papers (PDF / DOCX) with level, session, year and semester
 * AI generation of flashcards and quizzes from an uploaded paper or typed text
 * Quiz attempts are recorded so students can see and clear their history
+* Dashboard opens with a **Create your first practice** panel until the first
+  quiz is recorded, and the landing page carries a brand carousel
 * Per-question timing metadata and provider/model provenance on generated items
 
 **Growth**
@@ -78,10 +80,13 @@ Edtech001/
 │       ├── utils/                  # course helpers, text extraction, file helpers, upload limits
 │       └── scripts/                # promote-admin.ts, ai-multiprovider-check.ts, upload-error-check.ts
 ├── frontend/
+│   ├── public/
+│   │   └── favicon.png             # brand mark — tab icon + apple-touch icon
 │   └── src/
-│       ├── App.tsx                 # route table, guards, header/footer wiring
+│       ├── assets/                 # brand artwork: logo lock-up, mark, carousel images
+│       ├── App.tsx                 # route table, guards, per-route <title>
 │       ├── pages/                  # Auth, Dashboard, Generate, Admin, Profile, …
-│       ├── components/             # Layout (Header, PageFrame, Footer)
+│       ├── components/             # Layout (Header, PageFrame, Footer), BrandCarousel
 │       ├── lib/api.ts              # typed API client + CSRF handling
 │       ├── lib/ui.ts               # shared UI helpers
 │       ├── types.ts                # Route union and shared view types
@@ -243,4 +248,31 @@ and troubleshooting — is in [docs/deploy-render.md](docs/deploy-render.md).
   write `AuditEvent` rows, which is what the Signals feed reads.
 
 ## Styling with Tailwind v4
+
+Tokens are CSS-first in `src/index.css` (`@theme` — there is no
+`tailwind.config.js`): `--spacing: 1px` makes `p-9` mean 9px, and the colour,
+type-scale and radius tokens mirror the values the original stylesheet used.
+`src/App.css` is the older sheet, wrapped in `@layer components` so utilities can
+override it; its rules are retired page by page as each page is converted (see
+[docs/phase-3-auth-pilot.md](docs/phase-3-auth-pilot.md) and
+[docs/phase-4-layout.md](docs/phase-4-layout.md)). Converted components use
+utilities; `BrandCarousel` and the dashboard first-practice banner keep their
+rules in `App.css` because they sit beside pages that have not been converted.
+
+### Brand assets
+
+| File | Role |
+| --- | --- |
+| `src/assets/recapplogo.png` | Source artwork as supplied (white background, mark + wordmark) |
+| `src/assets/recapp-logo.png` | Background keyed out — the header, sidebar, mobile bar and auth panel render this |
+| `src/assets/recapp-mark.png` | Mark alone, square — for tight spots |
+| `public/favicon.png` | The mark on a transparent square: browser tab and apple-touch icon |
+| `src/assets/brand1.png`, `brand2.png` | Landing-page carousel imagery |
+
+Only `recapplogo.png` is hand-supplied; the three derived files remove the white
+background with a flood fill seeded from the image border, so the white bolt
+*inside* the navy tile survives. Re-run that derivation when the artwork changes.
+`.brand-logo` sizes the lock-up by height (38px in the header and auth panel,
+30px on phones) and lets the width follow from the image, so a replacement must
+keep the same proportions (~3.05:1).
  

@@ -177,15 +177,14 @@
     700 18px "Space Grotesk",
     sans-serif;
 }
-.wordmark span {
-  width: 31px;
-  height: 31px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: var(--blue);
-  border-radius: 9px;
-  box-shadow: 0 8px 18px #1d4ed833;
+/* The brand lock-up ships as one artwork file (assets/recapp-logo.png), so the
+   icon tile that used to be drawn here with a grid + `LayoutGrid` icon is gone:
+   `.wordmark span` was consumed only by Layout.tsx and Auth.tsx, both of which
+   now render the image. See "Brand assets" in README.md. */
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 38px;
 }
 .avatar {
   width: 35px;
@@ -426,6 +425,122 @@ h3 {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.65;
+}
+/* ── Landing brand carousel (components/BrandCarousel.tsx) ───────────
+   The caption is an overlay card so the photograph stays the subject, and the
+   slide is relative while the track only ever translates: one property changes,
+   which is what keeps the movement smooth on phones. Phones drop the overlay
+   under the image instead (see the 680px block at the end of the sheet). */
+.brand-carousel {
+  max-width: 1480px;
+  margin-inline: auto;
+  padding: 0 clamp(28px, 6vw, 70px) 84px;
+}
+.carousel-viewport {
+  position: relative;
+  overflow: hidden;
+  border-radius: 25px;
+  background: #0f172a;
+  box-shadow: 0 28px 50px #1d4ed82b;
+}
+.carousel-track {
+  display: flex;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.carousel-slide {
+  position: relative;
+  flex: 0 0 100%;
+  min-width: 100%;
+  margin: 0;
+}
+.carousel-slide img {
+  display: block;
+  width: 100%;
+  height: clamp(240px, 32vw, 430px);
+  object-fit: cover;
+}
+.carousel-slide figcaption {
+  position: absolute;
+  left: clamp(16px, 3vw, 40px);
+  bottom: clamp(16px, 3vw, 36px);
+  max-width: 470px;
+  padding: 22px 24px;
+  color: #fff;
+  border-radius: 18px;
+  background: #0f172ad9;
+  backdrop-filter: blur(6px);
+}
+.carousel-slide .eyebrow {
+  margin-bottom: 10px;
+  color: #bfdbfe;
+}
+.carousel-slide figcaption strong {
+  display: block;
+  margin-bottom: 8px;
+  font:
+    700 23px "Space Grotesk",
+    sans-serif;
+}
+.carousel-slide figcaption span {
+  display: block;
+  color: #dbeafe;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  border: 1px solid #ffffff33;
+  border-radius: 50%;
+  background: #0f172a99;
+  transition: 0.18s;
+}
+.carousel-arrow.prev {
+  left: clamp(14px, 2vw, 26px);
+  transform: translateY(-50%);
+}
+.carousel-arrow.next {
+  right: clamp(14px, 2vw, 26px);
+  transform: translateY(-50%);
+}
+.carousel-arrow:hover {
+  border-color: #ffffff66;
+  background: var(--blue);
+}
+/* Top-right, not bottom-right: the caption owns the bottom-left corner and the
+   dots must not sit on top of it on a narrow screen. */
+.carousel-dots {
+  position: absolute;
+  top: clamp(14px, 2vw, 26px);
+  right: clamp(14px, 2vw, 26px);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 99px;
+  background: #0f172acc;
+}
+.carousel-dots button {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff80;
+  transition: 0.18s;
+}
+.carousel-dots button.active {
+  width: 22px;
+  border-radius: 99px;
+  background: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .carousel-track {
+    transition: none;
+  }
 }
 .screen-wrap {
   width: 100%;
@@ -693,6 +808,101 @@ select {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+/* ── Dashboard: "Create your first practice" banner ──────────────────
+   The main use of the product in one screen, for a student who has not sat a
+   quiz yet (Dashboard.tsx hides it as soon as `stats.attempts` is non-zero).
+   Blue panel = the same gradient as `.hero-panel`, so the landing page and the
+   dashboard read as one brand. */
+.first-practice {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  align-items: center;
+  gap: 28px;
+  margin: 0 0 8px;
+  padding: 30px clamp(22px, 3vw, 38px);
+  overflow: hidden;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #173c9e, #1d4ed8 62%, #477ce0);
+  box-shadow: 0 22px 40px #1d4ed833;
+}
+.first-practice-copy {
+  max-width: 560px;
+  color: #fff;
+}
+.first-practice-copy .eyebrow {
+  margin-bottom: 10px;
+  color: #bfdbfe;
+}
+.first-practice-copy h2 {
+  margin: 0 0 10px;
+  font-size: clamp(24px, 3vw, 32px);
+}
+.first-practice-copy > p:not(.eyebrow) {
+  margin: 0;
+  color: #dbeafe;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.first-practice-steps {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.first-practice-steps li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #e0ecff;
+  font-size: 12px;
+}
+.first-practice-steps span {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffffff2b;
+  font:
+    700 10px "Space Grotesk",
+    sans-serif;
+}
+.first-practice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+/* Inverted CTAs: a blue button on a blue panel would disappear. */
+.first-practice-actions .primary-button {
+  color: var(--blue);
+  background: #fff;
+  box-shadow: 0 12px 24px #0f172a33;
+}
+.first-practice-actions .primary-button:hover {
+  background: var(--pale);
+}
+.first-practice-actions .secondary-button {
+  color: #fff;
+  border-color: #ffffff59;
+  background: #ffffff1f;
+}
+.first-practice-actions .secondary-button:hover {
+  border-color: #ffffffb3;
+  background: #ffffff33;
+}
+.first-practice-art {
+  width: 100%;
+  height: 100%;
+  max-height: 224px;
+  object-fit: cover;
+  border: 1px solid #ffffff2b;
+  border-radius: 16px;
+  box-shadow: 0 18px 30px #0f172a3d;
+  transform: rotate(-1.5deg);
 }
 .metric-grid {
   display: grid;
@@ -1506,7 +1716,7 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 }
 
 @media (max-width: 680px) {
-  .wordmark { font-size: 16px; }
+  .brand-logo { height: 30px; }
   .flashcard { min-height: 240px; padding: 20px 16px; }
   .card-explanation { max-width: 100%; }
   .question { font-size: 18px; }
@@ -1516,6 +1726,29 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
   .hero-copy h1 { font-size: 32px; }
   .hero-grid { padding: 36px 0 44px; }
   .path-section, .how-section { padding: 44px 20px; }
+  /* Phones: the caption drops under the photograph instead of covering it —
+     an overlay card would hide half of a 210px image. */
+  .brand-carousel { padding: 0 20px 44px; }
+  .carousel-viewport { border-radius: 18px; }
+  .carousel-slide { display: flex; flex-direction: column; }
+  .carousel-slide img { height: 210px; }
+  .carousel-slide figcaption {
+    position: static;
+    max-width: none;
+    padding: 16px 18px;
+    border-radius: 0;
+    background: #0f172a;
+    backdrop-filter: none;
+  }
+  .carousel-slide figcaption strong { font-size: 19px; }
+  .carousel-arrow { width: 34px; height: 34px; }
+  .carousel-arrow.prev { left: 10px; }
+  .carousel-arrow.next { right: 10px; }
+  .carousel-dots { top: 10px; right: 10px; }
+  /* The banner keeps its copy; the chalkboard is decoration, and two columns of
+     text on a phone is one column too many. */
+  .first-practice { grid-template-columns: 1fr; padding: 24px 20px; }
+  .first-practice-art { display: none; }
 }
 
 /* ── Past results history ────────────────────────────────────────── */

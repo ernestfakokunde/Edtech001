@@ -50,6 +50,34 @@ const adminRoutes: Route[] = [
   "admin-activity",
 ];
 
+/* Page titles. The scaffold shipped `<title>frontend</title>`, and because the
+   app routes on the hash the document never reloads — index.html cannot fix it
+   per page, so the title is set here on every route change. */
+const ROUTE_TITLES: Record<Route, string> = {
+  home: "Turn past papers into practice",
+  dashboard: "Dashboard",
+  login: "Sign in",
+  signup: "Create your account",
+  personal: "Practise from my PDF",
+  hierarchy: "Browse courses",
+  material: "Material",
+  courses: "Courses",
+  course: "Course",
+  generate: "Generate a study set",
+  flashcards: "Flashcards",
+  quiz: "Quiz",
+  results: "Quiz results",
+  history: "Past results",
+  profile: "Profile",
+  admin: "Admin overview",
+  "admin-users": "Students",
+  "admin-admins": "Admins",
+  "admin-missions": "Missions",
+  "admin-promo": "Promo codes",
+  "admin-submissions": "Submissions",
+  "admin-activity": "Activity",
+};
+
 function adminSection(route: Route): string {
   switch (route) {
     case "admin-users": return "users";
@@ -91,6 +119,10 @@ function App() {
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+
+  useEffect(() => {
+    document.title = `${ROUTE_TITLES[route]} · RecappEdu`;
+  }, [route]);
 
   useEffect(() => {
     // Warm the CSRF token while the page settles: login (the first state-changing

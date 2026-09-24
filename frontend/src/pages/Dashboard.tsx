@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { displayNameOf, go, type ProfileIdentity } from "../components/Layout";
 import { claimMission, errorMessage, getMyCourses, getMyMissions, redeemPromoCode, type MySchool, type ProfileMission } from "../lib/api";
 import { getQuizStats } from "../lib/results";
+import practiceArt from "../assets/brand1.png";
 
 /* Student study desk. Everything shown here comes from the signed-in profile —
    the greeting, the school line and the action row all read real data (the page
@@ -69,9 +70,39 @@ export function Dashboard({ profile }: { profile: ProfileIdentity }) {
   }
 
   const openMissions = missions.filter((mission) => !mission.claimedAt).slice(0, 3);
+  /* Nothing has been practised on this device yet, so the desk opens with the
+     one thing the product is for. It retires itself after the first saved quiz
+     (`stats.attempts` comes from lib/results). */
+  const firstPractice = stats.attempts === 0;
 
   return (
     <main className="screen-wrap">
+      {firstPractice && (
+        <section className="first-practice">
+          <div className="first-practice-copy">
+            <p className="eyebrow"><Sparkles size={14} /> Start here</p>
+            <h2>Create your first practice</h2>
+            <p>
+              This is what RecappEdu is for: a paper you already have becomes
+              practice you can mark yourself — flashcards to flip, or a timed
+              quiz that scores you.
+            </p>
+            <ol className="first-practice-steps">
+              <li><span>1</span> Bring a PDF — yours, or one from your course archive</li>
+              <li><span>2</span> Choose flashcards or a timed quiz</li>
+              <li><span>3</span> Answer, get scored, and watch your streak build</li>
+            </ol>
+            <div className="first-practice-actions">
+              <button className="primary-button" onClick={() => go("generate")}>
+                Use my own PDF <ArrowRight size={16} />
+              </button>
+              <button className="secondary-button" onClick={() => go("hierarchy")}>Find my course</button>
+            </div>
+          </div>
+          <img className="first-practice-art" src={practiceArt} alt="" />
+        </section>
+      )}
+
       <section className="dashboard-greeting">
         <p className="eyebrow">Your study desk</p>
         <h1>Welcome back, {displayNameOf(profile)}</h1>

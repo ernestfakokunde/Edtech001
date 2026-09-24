@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowRight, Check, LayoutGrid, LockKeyhole, Mail } from "lucide-react";
+import { ArrowRight, Check, LockKeyhole, Mail } from "lucide-react";
+import recappLogo from "../assets/recapp-logo.png";
 import { go } from "../components/Layout";
 import { errorMessage, login, signup, type AuthProfile } from "../lib/api";
 
@@ -34,10 +35,7 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
     <main className="max-w-none min-h-screen grid grid-cols-2 max-1020:grid-cols-1 bg-surface">
       <section className="py-36 px-[clamp(30px,7vw,100px)] max-1020:min-h-0 max-1020:py-30 max-1020:px-26 flex flex-col justify-between bg-pale">
         <button className="wordmark self-start" onClick={() => go("home")}>
-          <span>
-            <LayoutGrid size={16} />
-          </span>{" "}
-          RecappEdu
+          <img className="brand-logo" src={recappLogo} alt="RecappEdu" />
         </button>
         <div>
           <p className="eyebrow">A calmer way to revise</p>

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { BookOpen, Flag, History, LayoutDashboard, LayoutGrid, LogOut, Menu, ShieldCheck, Sparkles, Ticket, UserRound, X } from "lucide-react";
+import { BookOpen, Flag, History, LayoutDashboard, LogOut, Menu, ShieldCheck, Sparkles, Ticket, UserRound, X } from "lucide-react";
+import recappLogo from "../assets/recapp-logo.png";
 import type { Route } from "../types";
 import type { AuthProfile } from "../lib/api";
 
@@ -42,10 +43,9 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
   return (
     <header className="sticky top-0 z-30 w-full h-64 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash">
       <button className="wordmark" onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>
-        <span>
-          <LayoutGrid size={16} />
-        </span>{" "}
-        RecappEdu
+        {/* The brand lock-up (mark + wordmark) ships as one image so the site
+            always shows the artwork exactly as it was drawn. */}
+        <img className="brand-logo" src={recappLogo} alt="RecappEdu" />
       </button>
       <nav className="flex gap-30 ml-auto mr-34 max-1160:gap-18 max-680:gap-8 max-680:overflow-x-auto">
         <button
@@ -166,8 +166,8 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
       className={`font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
     >
       <div className="flex h-60 items-center gap-11 border-b border-line px-16">
-        <span className="grid h-34 w-34 shrink-0 place-items-center rounded-11 bg-brand text-white shadow-brand-sm"><LayoutGrid size={17} /></span>
-        <p className="m-0 min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">RecappEdu</p>
+        <img className="brand-logo h-30" src={recappLogo} alt="RecappEdu" />
+        <span className="flex-1" />
         <button className="hidden h-32 w-32 shrink-0 place-items-center rounded-10 text-muted hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close navigation" onClick={onClose}>
           <X size={16} />
         </button>
@@ -234,7 +234,7 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
           <button className="grid h-36 w-36 shrink-0 place-items-center rounded-9 border border-line bg-white text-muted" aria-label="Open navigation" onClick={() => setOpen(true)}>
             <Menu size={18} />
           </button>
-          <span className="truncate text-13 font-bold text-ink">RecappEdu</span>
+          <img className="brand-logo h-24" src={recappLogo} alt="RecappEdu" />
           <button className="ml-auto grid h-32 w-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand" aria-label="Open profile" onClick={() => go("profile")}>
             {initialsOf(profile)}
           </button>

@@ -1,4 +1,5 @@
 import { ArrowRight, Brain, Sparkles } from "lucide-react";
+import { BrandCarousel } from "../components/BrandCarousel";
 import { go } from "../components/Layout";
 
 export function Home() {
@@ -58,6 +59,9 @@ export function Home() {
           </div>
         </div>
       </section>
+      {/* Brand showcase — the course-archive / study-desk imagery, right where a
+          first-time visitor decides whether the product is for them. */}
+      <BrandCarousel />
       <section className="path-section">
         <div className="section-heading">
           <p className="eyebrow">Two ways in</p>
