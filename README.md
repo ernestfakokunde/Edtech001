@@ -73,10 +73,10 @@ Edtech001/
 │       ├── controllers/           # admin, auth, generatedSet, hierarchy, paper, profile
 │       ├── routes/                # one router per domain
 │       ├── services/              # auth.service, ai.service, aiProviders
-│       ├── middleware/            # auth (requireAuth/requireAdmin), csrf
+│       ├── middleware/            # auth (requireAuth/requireAdmin), csrf, errorHandler
 │       ├── lib/                    # prisma + supabase clients
-│       ├── utils/                  # course helpers, text extraction, file helpers
-│       └── scripts/                # promote-admin.ts, ai-multiprovider-check.ts
+│       ├── utils/                  # course helpers, text extraction, file helpers, upload limits
+│       └── scripts/                # promote-admin.ts, ai-multiprovider-check.ts, upload-error-check.ts
 ├── frontend/
 │   └── src/
 │       ├── App.tsx                 # route table, guards, header/footer wiring

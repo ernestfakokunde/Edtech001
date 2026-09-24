@@ -184,6 +184,22 @@ for `[request-error]`, `[auth/login]` and `[config]` lines.
 | `No 'Access-Control-Allow-Origin' header is present on the requested resource` | The browser origin is not in `FRONTEND_ORIGIN`. It must match exactly — scheme + host + port, no trailing slash — or use a `*` wildcard for the host label (`https://recapp-pi*.vercel.app`). Check what the API really sends: `curl -i -H "Origin: https://your-app" https://reacappedu.onrender.com/api/auth/csrf`; a missing `Access-Control-Allow-Origin` in the reply means no match. Changing the value needs a redeploy |
 | Everyone is signed out after a deploy | `SESSION_SECRET` changed; set it to a fixed value instead of regenerating |
 | `502` on the very first request after idle | Cold start — retry once |
+| `TypeError: Failed to fetch` / `Load failed` while uploading a paper, only ever on a phone | The upload never received a readable response. Documents are capped at **10 MB** (`utils/upload.ts`); an oversize file is refused the moment multer crosses the cap, and if that reply is not a real `413` the mobile browser shows a bare transfer failure instead of a size error. The API now answers `413 LIMIT_FILE_SIZE` ("larger than 10 MB") or `415 UNSUPPORTED_FILE_TYPE`, and the client rejects both *before* the upload starts (`uploadFileProblem` in `frontend/src/lib/api.ts`). Still seeing it with a small PDF? The connection dropped mid-upload: retry, or check whatever sits between the phone and Render |
+| Generation runs for ~100 s and then fails | A proxy in front of the API (Cloudflare's free plan, for example) cuts long requests at 100 s. Provider failover can exceed that; retry, or move the call off the request/response cycle |
+
+### Upload contract
+
+Both `POST /api/papers` and `POST /api/generation` take exactly one PDF/DOC/DOCX
+in the `file` field, up to **10 MB**. One multer instance and one error mapping
+serve both (`backend/src/utils/upload.ts`, wired up in
+`middleware/errorHandler.ts`), and the client mirrors the same rules before it
+sends anything (`uploadFileProblem` in `frontend/src/lib/api.ts`). Re-run the
+contract check after touching any of them:
+
+```
+npx tsx src/scripts/upload-error-check.ts
+# 9 assertions: in-limit 200 · oversize 413 · wrong type 415 · generic 500 intact
+```
 
 ## 9. Security checklist
 

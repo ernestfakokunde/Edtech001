@@ -21,6 +21,8 @@ import {
   getMyCourses,
   getMyPapers,
   getRepositoryPapers,
+  MAX_UPLOAD_LABEL,
+  uploadFileProblem,
   type GeneratedSet,
   type GenerationProvider,
   type GenerationQuota,
@@ -264,7 +266,13 @@ export function GenerateFlow({
       </PageFrame>
     );
   }
-return (
+
+  // Surfaced the moment the file is picked so an oversize or unsupported file
+  // never reaches the upload — the point where a phone turns a real 413 into a
+  // bare "Failed to fetch" (see uploadFileProblem in lib/api.ts).
+  const fileProblem = selectedFile ? uploadFileProblem(selectedFile) : null;
+
+  return (
     <PageFrame
       eyebrow={course ? `${course.code} · ${course.title}` : "AI study tools"}
       title="What do you want to create?"
@@ -278,11 +286,11 @@ return (
       <label className="upload-zone generate-upload">
         <Upload size={17} />
         <span>{selectedFile ? selectedFile.name : "Choose a PDF, DOC, or DOCX file"}</span>
-        <small>{selectedFile ? "Ready to process" : "The file is used only to generate your private practice set."}</small>
+        <small>{fileProblem ?? (selectedFile ? "Ready to process" : `The file is used only to generate your private practice set — PDF, DOC or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
         <input
           type="file"
           accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          onChange={(event) => { setSelectedFile(event.target.files?.[0] || null); setError(""); }}
+          onChange={(event) => { const file = event.target.files?.[0] || null; setSelectedFile(file); setError(file ? uploadFileProblem(file) ?? "" : ""); }}
         />
       </label>
 
@@ -351,7 +359,7 @@ return (
 
       <button
         className="primary-button full"
-        disabled={!course || !selectedFile || (mode === "quiz" && quota.limit !== null && (quota.remaining ?? 0) === 0)}
+        disabled={!course || !selectedFile || fileProblem !== null || (mode === "quiz" && quota.limit !== null && (quota.remaining ?? 0) === 0)}
         onClick={() => void submit()}
       >
         <Sparkles size={16} /> Create {mode === "quiz" ? "quiz" : "flashcards"}

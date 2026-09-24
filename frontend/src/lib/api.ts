@@ -122,6 +122,51 @@ function isTransportError(reason: unknown) {
 
 const OFFLINE_MESSAGE = 'We could not reach the server. Check your connection and try again.'
 
+/**
+ * Upload contract, mirrored from `backend/src/utils/upload.ts`. Checking here
+ * matters most on a phone: a 14 MB photo-scan spends minutes uploading a body
+ * the server stops reading at 10 MB, and the browser reports that aborted
+ * transfer as an opaque transfer error instead of a size problem.
+ */
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+export const MAX_UPLOAD_LABEL = '10 MB'
+const UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx']
+
+/**
+ * Returns the message to show for a file this app cannot upload, or null when
+ * the file is fine. Called before the request so the answer never depends on
+ * how far a mobile upload got before it failed.
+ */
+export function uploadFileProblem(file: File): string | null {
+  const name = file.name.toLowerCase()
+  if (!UPLOAD_EXTENSIONS.some((extension) => name.endsWith(extension))) {
+    return 'That file type is not supported. Choose a PDF, DOC or DOCX file.'
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    const size = `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+    return `That file is ${size}, over the ${MAX_UPLOAD_LABEL} limit. Compress it or upload a smaller version.`
+  }
+  return null
+}
+
+/**
+ * `fetch` for the endpoints that cannot use the JSON helper (multipart bodies
+ * and sign-out). A transport failure has to become an Error with readable text:
+ * the browser's own message ("Failed to fetch" on Chrome, "Load failed" on
+ * Safari) tells the user nothing about what to do next.
+ */
+async function fetchWithOfflineMessage(url: string, init: RequestInit, offlineHint?: string): Promise<Response> {
+  try {
+    return await fetch(url, init)
+  } catch (reason) {
+    if (isTransportError(reason)) throw new Error(offlineHint ? `${OFFLINE_MESSAGE} ${offlineHint}` : OFFLINE_MESSAGE)
+    throw new Error('The request could not be completed.')
+  }
+}
+
+/** The hint appended when an upload dies mid-flight on a weak mobile link. */
+const UPLOAD_INTERRUPTED_HINT = 'The upload did not finish — on a weak connection try a smaller file.'
+
 function apiError(response: Response, message?: string) {
   if (message) return new Error(message)
   if (response.status === 401) return new Error('Your session has expired. Please sign in again.')
@@ -290,12 +335,17 @@ export function updateMyPaper(paperId: string, input: Pick<OwnedPaper, 'descript
 export function deleteMyPaper(paperId: string) { return request<void>(`/api/papers/${encodeURIComponent(paperId)}`, { method: 'DELETE' }) }
 
 export async function uploadPaper(input: { file: File; courseId?: string; universityName?: string; facultyName?: string; courseTitle?: string; courseCode?: string; description: string; level: string; session: string; year: string; semester: "FIRST" | "SECOND" }) {
+  // Rejected before a single byte leaves the device: the API stops reading at
+  // MAX_UPLOAD_BYTES, and an upload that dies there is the case phones report as
+  // a bare "Failed to fetch" with no hint about the real problem.
+  const problem = uploadFileProblem(input.file)
+  if (problem) throw new Error(problem)
   const formData = new FormData()
   Object.entries(input).forEach(([key, value]) => formData.append(key, value instanceof File ? value : value))
-  let response = await fetch(`${API_URL}/api/papers`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } })
+  let response = await fetchWithOfflineMessage(`${API_URL}/api/papers`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
   if (response.status === 403) {
     csrfToken = null
-    response = await fetch(`${API_URL}/api/papers`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } })
+    response = await fetchWithOfflineMessage(`${API_URL}/api/papers`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
   }
   const contentType = response.headers.get('content-type') ?? ''
   const body = contentType.includes('application/json')
@@ -311,6 +361,8 @@ export function getPaperDownloadUrl(paperId: string) { return request<{ url: str
 // POST /api/generation — multipart/form-data, never set Content-Type manually:
 // the browser adds the multipart boundary itself when a FormData is the body.
 export async function generateStudySet(input: { file: File; courseId: string; type: "FLASHCARD" | "QUIZ"; length: number; timePerQuestion?: 30 | 60; provider?: string }) {
+  const problem = uploadFileProblem(input.file)
+  if (problem) throw new Error(problem)
   const formData = new FormData()
   formData.append('file', input.file)
   formData.append('courseId', input.courseId)
@@ -320,10 +372,10 @@ export async function generateStudySet(input: { file: File; courseId: string; ty
   if (input.type === 'QUIZ') {
     formData.append('timePerQuestion', String(input.timePerQuestion))
   }
-  let response = await fetch(`${API_URL}/api/generation`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } })
+  let response = await fetchWithOfflineMessage(`${API_URL}/api/generation`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
   if (response.status === 403) {
     csrfToken = null
-    response = await fetch(`${API_URL}/api/generation`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } })
+    response = await fetchWithOfflineMessage(`${API_URL}/api/generation`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
   }
   const contentType = response.headers.get('content-type') ?? ''
   const body = contentType.includes('application/json')
@@ -357,14 +409,14 @@ export function clearQuizAttempts() {
 }
 
 export async function logout() {
-  let response = await fetch(`${API_URL}/api/auth/logout`, {
+  let response = await fetchWithOfflineMessage(`${API_URL}/api/auth/logout`, {
     method: 'POST',
     credentials: 'include',
     headers: { [CSRF_HEADER]: await getCsrfToken() },
   })
   if (response.status === 403) {
     csrfToken = null
-    response = await fetch(`${API_URL}/api/auth/logout`, {
+    response = await fetchWithOfflineMessage(`${API_URL}/api/auth/logout`, {
       method: 'POST',
       credentials: 'include',
       headers: { [CSRF_HEADER]: await getCsrfToken() },

@@ -9,6 +9,7 @@ import { profileRouter } from './routes/profile.routes.js'
 import { hierarchyRouter } from './routes/hierarchy.routes.js'
 import { generationRouter } from './routes/generation.routes.js'
 import { requireCsrf } from './middleware/csrf.js'
+import { apiErrorHandler } from './middleware/errorHandler.js'
 import { prisma } from './lib/prisma.js'
 import { compileOriginMatchers } from './utils/origin.js'
 import { persistPermanentAdmin, RECAPP_ADMIN_EMAIL } from './services/auth.service.js'
@@ -55,10 +56,10 @@ app.use('/api/admin', adminRouter)
 app.use('/api/papers', paperRouter)
 app.use('/api/generation', generationRouter)
 
-app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
-  console.error('[request-error]', error)
-  response.status(500).json({ message: 'The server could not process the request.' })
-})
+// The error middleware lives in middleware/errorHandler.ts so the upload
+// contract can be regression-checked (scripts/upload-error-check.ts) without
+// booting this server, its env and its database.
+app.use(apiErrorHandler)
 
 
 app.listen(env.port, () => {

@@ -1,17 +1,9 @@
 import { Router } from 'express'
-import multer from 'multer'
 import { deleteMyPaper, getPaperDownloadUrl, getRepositoryPaper, listMyPapers, listRepositoryPapers, submitPaper, updateMyPaper, uploadPaper } from '../controllers/paper.controller.js'
 import { requireAuth } from '../middleware/auth.js'
+import { createDocumentUpload } from '../utils/upload.js'
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (_request, file, callback) => {
-    const extension = file.originalname.toLowerCase().split('.').pop()
-    const accepted = ['pdf', 'doc', 'docx'].includes(extension ?? '')
-    callback(null, accepted)
-  },
-})
+const upload = createDocumentUpload()
 
 export const paperRouter = Router()
 paperRouter.use(requireAuth)
