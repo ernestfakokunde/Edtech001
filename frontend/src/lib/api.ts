@@ -340,12 +340,15 @@ export async function uploadPaper(input: { file: File; courseId?: string; univer
   // a bare "Failed to fetch" with no hint about the real problem.
   const problem = uploadFileProblem(input.file)
   if (problem) throw new Error(problem)
-  const formData = new FormData()
-  Object.entries(input).forEach(([key, value]) => formData.append(key, value instanceof File ? value : value))
-  let response = await fetchWithOfflineMessage(`${API_URL}/api/papers`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
+  const buildFormData = () => {
+    const next = new FormData()
+    Object.entries(input).forEach(([key, value]) => next.append(key, value instanceof File ? value : value))
+    return next
+  }
+  let response = await fetchWithOfflineMessage(`${API_URL}/api/papers`, { method: 'POST', credentials: 'include', body: buildFormData(), headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
   if (response.status === 403) {
     csrfToken = null
-    response = await fetchWithOfflineMessage(`${API_URL}/api/papers`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
+    response = await fetchWithOfflineMessage(`${API_URL}/api/papers`, { method: 'POST', credentials: 'include', body: buildFormData(), headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
   }
   const contentType = response.headers.get('content-type') ?? ''
   const body = contentType.includes('application/json')
@@ -363,19 +366,22 @@ export function getPaperDownloadUrl(paperId: string) { return request<{ url: str
 export async function generateStudySet(input: { file: File; courseId: string; type: "FLASHCARD" | "QUIZ"; length: number; timePerQuestion?: 30 | 60; provider?: string }) {
   const problem = uploadFileProblem(input.file)
   if (problem) throw new Error(problem)
-  const formData = new FormData()
-  formData.append('file', input.file)
-  formData.append('courseId', input.courseId)
-  formData.append('type', input.type)
-  formData.append('length', String(input.length))
-  if (input.provider) formData.append('provider', input.provider)
-  if (input.type === 'QUIZ') {
-    formData.append('timePerQuestion', String(input.timePerQuestion))
+  const buildGenerationForm = () => {
+    const next = new FormData()
+    next.append('file', input.file)
+    next.append('courseId', input.courseId)
+    next.append('type', input.type)
+    next.append('length', String(input.length))
+    if (input.provider) next.append('provider', input.provider)
+    if (input.type === 'QUIZ') {
+      next.append('timePerQuestion', String(input.timePerQuestion ?? 30))
+    }
+    return next
   }
-  let response = await fetchWithOfflineMessage(`${API_URL}/api/generation`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
+  let response = await fetchWithOfflineMessage(`${API_URL}/api/generation`, { method: 'POST', credentials: 'include', body: buildGenerationForm(), headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
   if (response.status === 403) {
     csrfToken = null
-    response = await fetchWithOfflineMessage(`${API_URL}/api/generation`, { method: 'POST', credentials: 'include', body: formData, headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
+    response = await fetchWithOfflineMessage(`${API_URL}/api/generation`, { method: 'POST', credentials: 'include', body: buildGenerationForm(), headers: { [CSRF_HEADER]: await getCsrfToken() } }, UPLOAD_INTERRUPTED_HINT)
   }
   const contentType = response.headers.get('content-type') ?? ''
   const body = contentType.includes('application/json')

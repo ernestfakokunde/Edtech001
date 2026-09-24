@@ -218,6 +218,13 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
   // id does not exist for this key), lighter sibling models from
   // GEMINI_FALLBACK_MODELS take over — they usually have spare capacity
   // during demand spikes.
+  const key = (config.apiKey ?? '').trim()
+  if (!key.startsWith('AIza')) {
+    // Genuine Gemini keys start with "AIza"; anything else (a pasted URL, a
+    // truncated secret, another provider's key) fails with an opaque 400 on
+    // every sibling, so reject it directly with a fixable message instead.
+    throw new AiProviderTransportError('Gemini', 'the configured GEMINI_API_KEY does not look like a valid Google API key (it should start with \"AIza\"). Replace it in the Render dashboard → Environment and redeploy.')
+  }
   const models = [config.model, ...(config.fallbackModels ?? [])]
   const attempts: string[] = []
   let lastStatus: number | undefined

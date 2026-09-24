@@ -31,7 +31,7 @@ function setTitle(course: { code: string }, kind: 'FLASHCARD' | 'QUIZ') {
  * available provider choices (or a "no provider configured" warning).
  */
 export function listGenerationProvidersController(_request: Request, response: Response) {
-  response.json({ providers: listGenerationProviders() })
+  response.json({ providers: listGenerationProviders(), primary: env.ai.provider })
 }
 
 const FREE_DAILY_QUIZ_LIMIT = 5
@@ -227,12 +227,10 @@ export async function generateStudySet(request: Request, response: Response) {
   })
 
   if (error) {
-    await rollbackPersonalPaper(paper.id)
-    response.status(502).json({ message: `Could not upload file: ${error.message}` })
-    return
+    console.warn(`[generate] archive upload failed, continuing without archive: ${error.message}`)
+  } else {
+    await prisma.paper.update({ where: { id: paper.id }, data: { fileUrl: path } })
   }
-
-  await prisma.paper.update({ where: { id: paper.id }, data: { fileUrl: path } })
 
   // 10–11. Extract text from the file (pdf-parse for .pdf, mammoth for .docx).
   let text: string
