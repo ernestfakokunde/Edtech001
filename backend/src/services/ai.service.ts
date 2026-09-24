@@ -56,6 +56,27 @@ export function listGenerationProviders(): ProviderListing {
   return listProviderInfo()
 }
 
+export class GenerationFailedError extends Error {
+  /** Short code the frontend can map to friendly copy without parsing text. */
+  code: 'AI_BAD_KEY' | 'AI_BUSY' | 'AI_FAILED'
+  constructor(code: 'AI_BAD_KEY' | 'AI_BUSY' | 'AI_FAILED', internalDetail: string) {
+    super(internalDetail)
+    this.name = 'GenerationFailedError'
+    this.code = code
+  }
+}
+
+function generationFailureCode(failures: string[]): 'AI_BAD_KEY' | 'AI_BUSY' | 'AI_FAILED' {
+  const joined = failures.join(' ').toLowerCase()
+  if (joined.includes('ai_bad_key') || joined.includes('does not look like a valid google api key') || joined.includes('api key not valid') || joined.includes('invalid api key') || joined.includes('incorrect api key') || joined.includes('permission_denied') || joined.includes('unauthenticated')) {
+    return 'AI_BAD_KEY'
+  }
+  if (joined.includes('overloaded') || joined.includes('rate') || joined.includes('429') || joined.includes('503') || joined.includes('all ') && joined.includes('models failed')) {
+    return 'AI_BUSY'
+  }
+  return 'AI_FAILED'
+}
+
 /**
  * Sends the extracted document text to a configured AI provider and asks for a
  * deterministic JSON array of study items. The response is NOT trusted: it is
@@ -63,6 +84,10 @@ export function listGenerationProviders(): ProviderListing {
  * database. If a provider fails (transport error, invalid JSON, wrong shape or
  * wrong count) we retry with the next provider in the chain rather than
  * surfacing a partial failure.
+ *
+ * The thrown GenerationFailedError carries the full internal detail in
+ * `message` (server logs) and a short stable `code` for the controller to map
+ * to user-facing copy — the raw provider text never reaches the UI.
  */
 export async function generateStudyItems(input: { text: string; kind: GeneratedSetKind; length: number }, options: GenerationOptions = {}): Promise<GeneratedItem[]> {
   const candidates = resolveCandidates(options.provider)
@@ -80,7 +105,7 @@ export async function generateStudyItems(input: { text: string; kind: GeneratedS
     }
   }
 
-  throw new Error(`No AI provider could generate the study set. ${failures.join(' | ')}`)
+  throw new GenerationFailedError(generationFailureCode(failures), `No AI provider could generate the study set. ${failures.join(' | ')}`)
 }
 
 /**

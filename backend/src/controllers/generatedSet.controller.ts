@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import { env } from '../config/env.js'
 import { fileExtension } from '../utils/file.js'
 import { extractText } from '../utils/extractText.js'
-import { generateStudyItems, AiNotConfiguredError, isAiConfigured, listGenerationProviders, type GeneratedItem } from '../services/ai.service.js'
+import { generateStudyItems, AiNotConfiguredError, GenerationFailedError, isAiConfigured, listGenerationProviders, type GeneratedItem } from '../services/ai.service.js'
 
 /**
  * Best-effort cleanup after any post-upload failure: removes the stored file
@@ -267,9 +267,13 @@ export async function generateStudySet(request: Request, response: Response) {
     console.error('[generate] AI generation failed:', reason)
     await rollbackPersonalPaper(paper.id, path)
     if (reason instanceof AiNotConfiguredError) {
-      response.status(503).json({ message: reason.message })
+      response.status(503).json({ code: 'AI_NOT_CONFIGURED', message: 'The study generator is not set up yet. Please try again later.' })
+    } else if (reason instanceof GenerationFailedError && reason.code === 'AI_BAD_KEY') {
+      response.status(502).json({ code: 'AI_BAD_KEY', message: 'The study generator is unavailable right now. Please try again later.' })
+    } else if (reason instanceof GenerationFailedError && reason.code === 'AI_BUSY') {
+      response.status(502).json({ code: 'AI_BUSY', message: 'The study generator is busy right now. Please try again in a moment.' })
     } else {
-      response.status(502).json({ message: reason instanceof Error ? reason.message : 'The AI could not generate a study set. Please try again.' })
+      response.status(502).json({ code: 'AI_FAILED', message: 'We could not create your study set. Please try again.' })
     }
     return
   }

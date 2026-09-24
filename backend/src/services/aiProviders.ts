@@ -21,10 +21,13 @@ export type AiProvider = {
 export class AiProviderTransportError extends Error {
   /** HTTP status when the failure came from a response; absent for network errors. */
   status?: number
-  constructor(providerLabel: string, detail: string, status?: number) {
+  /** Machine-readable category so the controller can return a clean user message. */
+  code: 'AI_BAD_KEY' | 'AI_OVERLOADED' | 'AI_FAILED' = 'AI_FAILED'
+  constructor(providerLabel: string, detail: string, status?: number, code: 'AI_BAD_KEY' | 'AI_OVERLOADED' | 'AI_FAILED' = 'AI_FAILED') {
     super(`${providerLabel} request failed: ${detail}`)
     this.name = 'AiProviderTransportError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -223,7 +226,9 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
     // Genuine Gemini keys start with "AIza"; anything else (a pasted URL, a
     // truncated secret, another provider's key) fails with an opaque 400 on
     // every sibling, so reject it directly with a fixable message instead.
-    throw new AiProviderTransportError('Gemini', 'the configured GEMINI_API_KEY does not look like a valid Google API key (it should start with \"AIza\"). Replace it in the Render dashboard → Environment and redeploy.')
+    // The message stays internal (server logs); the controller maps the
+    // AI_BAD_KEY code to a short user-facing message.
+    throw new AiProviderTransportError('Gemini', 'the configured GEMINI_API_KEY does not look like a valid Google API key (it should start with "AIza")', 401, 'AI_BAD_KEY')
   }
   const models = [config.model, ...(config.fallbackModels ?? [])]
   const attempts: string[] = []

@@ -385,10 +385,22 @@ export async function generateStudySet(input: { file: File; courseId: string; ty
   }
   const contentType = response.headers.get('content-type') ?? ''
   const body = contentType.includes('application/json')
-    ? await response.json() as { set?: GeneratedSet; message?: string }
+    ? await response.json() as { set?: GeneratedSet; code?: string; message?: string }
     : { message: response.ok ? 'The server returned an unexpected response.' : `Generation failed with status ${response.status}. Check that the backend is running.` }
-  if (!response.ok) throw new Error(body.message ?? 'The study set could not be generated.')
+  if (!response.ok) throw new Error(friendlyGenerationError(body.code, body.message))
   return body.set!
+}
+
+/**
+ * Maps the backend's stable generation error codes to short, user-safe copy.
+ * Raw provider detail (keys, model names, HTTP bodies) never reaches the UI —
+ * it stays in the server logs for the admin to fix.
+ */
+function friendlyGenerationError(code: string | undefined, message: string | undefined): string {
+  if (code === 'AI_BUSY') return 'The study generator is busy right now. Please try again in a moment.'
+  if (code === 'AI_BAD_KEY' || code === 'AI_NOT_CONFIGURED') return 'The study generator is unavailable right now. Please try again later.'
+  if (message && message.trim() && message.length < 160 && !/AIza|sk-ant|sk-|Bearer|http/i.test(message)) return message
+  return 'We could not create your study set. Please try again.'
 }
 
 // GET /api/generation/providers — which AI providers this server can generate
