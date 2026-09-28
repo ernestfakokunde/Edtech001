@@ -264,7 +264,12 @@ export async function generateStudySet(request: Request, response: Response) {
   try {
     generated = await generateStudyItems({ text, kind: type, length: parsedLength }, { provider: provider ?? null })
   } catch (reason) {
-    console.error('[generate] AI generation failed:', reason)
+    // Server-side detail stays here, keyed by the same code the client receives
+    // so a Render log line can be matched to what the UI showed.
+    const code = reason instanceof AiNotConfiguredError
+      ? 'AI_NOT_CONFIGURED'
+      : reason instanceof GenerationFailedError ? reason.code : 'AI_FAILED'
+    console.error(`[generate] AI generation failed (code=${code}, requested=${provider ?? 'default'}):`, reason)
     await rollbackPersonalPaper(paper.id, path)
     if (reason instanceof AiNotConfiguredError) {
       response.status(503).json({ code: 'AI_NOT_CONFIGURED', message: 'The study generator is not set up yet. Please try again later.' })

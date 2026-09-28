@@ -47,6 +47,24 @@ export type AiProviderConfig = {
 
 const aiProviderIds: AiProviderId[] = ['anthropic', 'openai', 'grok', 'groq', 'gemini', 'custom']
 
+/**
+ * Render (and any other dashboard) passes env values through verbatim — there
+ * is no dotenv parsing on that path, and dotenv only strips quotes when it
+ * reads a .env file. So a key copied out of a .env-style snippet *with* its
+ * quotes (`"gsk_abc123"`) or with a trailing newline reaches `fetch()` as part
+ * of the credential and every provider call fails with an opaque 401 that
+ * surfaces as a 502 in the UI. Strip one layer of matching quotes and
+ * surrounding whitespace so both styles work.
+ */
+function cleanSecret(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined
+  const trimmed = value.trim()
+  const quoted = trimmed.length >= 2 &&
+    ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'")))
+  const cleaned = (quoted ? trimmed.slice(1, -1) : trimmed).trim()
+  return cleaned || undefined
+}
+
 function commaList(value: string | undefined): string[] {
   return (value ?? '')
     .split(',')
@@ -88,12 +106,12 @@ export const env = {
   frontendOrigin: frontendOrigins[0] ?? 'http://localhost:5173',
   /** Every origin CORS accepts; FRONTEND_ORIGIN may hold a comma-separated list. */
   frontendOrigins,
-  databaseUrl: process.env.DATABASE_URL,
-  sessionSecret: process.env.SESSION_SECRET ?? 'development-only-change-me',
+  databaseUrl: cleanSecret(process.env.DATABASE_URL),
+  sessionSecret: cleanSecret(process.env.SESSION_SECRET) ?? 'development-only-change-me',
   cookieSameSite: cookieSameSite(process.env.COOKIE_SAME_SITE),
-  supabaseUrl: process.env.SUPABASE_URL,
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  supabaseBucket: process.env.SUPABASE_BUCKET ?? 'recappedu-papers',
+  supabaseUrl: cleanSecret(process.env.SUPABASE_URL),
+  supabaseServiceRoleKey: cleanSecret(process.env.SUPABASE_SERVICE_ROLE_KEY),
+  supabaseBucket: cleanSecret(process.env.SUPABASE_BUCKET) ?? 'recappedu-papers',
   ai: {
     /** Preferred provider when the client does not request one. */
     provider: knownProvider(process.env.AI_PROVIDER) ?? ('anthropic' as AiProviderId),
@@ -102,33 +120,33 @@ export const env = {
     providers: {
       anthropic: {
         label: 'Anthropic Claude',
-        apiKey: process.env.ANTHROPIC_API_KEY,
+        apiKey: cleanSecret(process.env.ANTHROPIC_API_KEY),
         model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5',
       } satisfies AiProviderConfig,
       openai: {
         label: 'OpenAI',
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: cleanSecret(process.env.OPENAI_API_KEY),
         model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-        baseUrl: process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
+        baseUrl: cleanSecret(process.env.OPENAI_BASE_URL) ?? 'https://api.openai.com/v1',
       } satisfies AiProviderConfig,
       grok: {
         label: 'Grok (xAI)',
-        apiKey: process.env.GROK_API_KEY,
+        apiKey: cleanSecret(process.env.GROK_API_KEY),
         model: process.env.GROK_MODEL ?? 'grok-3',
-        baseUrl: process.env.GROK_BASE_URL ?? 'https://api.x.ai/v1',
+        baseUrl: cleanSecret(process.env.GROK_BASE_URL) ?? 'https://api.x.ai/v1',
       } satisfies AiProviderConfig,
       // Groq (https://console.groq.com) — OpenAI-compatible Chat Completions
       // API, so no base URL is needed from you: it defaults to
       // https://api.groq.com/openai/v1. Keys start with `gsk_`.
       groq: {
         label: 'Groq',
-        apiKey: process.env.GROQ_API_KEY,
+        apiKey: cleanSecret(process.env.GROQ_API_KEY),
         model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
-        baseUrl: process.env.GROQ_BASE_URL ?? 'https://api.groq.com/openai/v1',
+        baseUrl: cleanSecret(process.env.GROQ_BASE_URL) ?? 'https://api.groq.com/openai/v1',
       } satisfies AiProviderConfig,
       gemini: {
         label: 'Google Gemini',
-        apiKey: process.env.GEMINI_API_KEY,
+        apiKey: cleanSecret(process.env.GEMINI_API_KEY),
         model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
         // When the primary model is rate-limited or overloaded (or the model
         // id does not exist for this key), lighter siblings take over — they
@@ -138,10 +156,10 @@ export const env = {
       // OpenAI-compatible endpoint for any other provider (DeepSeek, Mistral,
       // OpenRouter, LM Studio, Ollama, …). Needs both a base URL and API key.
       custom: {
-        label: process.env.CUSTOM_OPENAI_PROVIDER_NAME ?? 'Custom provider',
-        apiKey: process.env.CUSTOM_OPENAI_API_KEY,
+        label: cleanSecret(process.env.CUSTOM_OPENAI_PROVIDER_NAME) ?? 'Custom provider',
+        apiKey: cleanSecret(process.env.CUSTOM_OPENAI_API_KEY),
         model: process.env.CUSTOM_OPENAI_MODEL ?? 'gpt-3.5-turbo',
-        baseUrl: process.env.CUSTOM_OPENAI_BASE_URL,
+        baseUrl: cleanSecret(process.env.CUSTOM_OPENAI_BASE_URL),
       } satisfies AiProviderConfig,
     },
   },

@@ -12,7 +12,30 @@ import { requireCsrf } from './middleware/csrf.js'
 import { apiErrorHandler } from './middleware/errorHandler.js'
 import { prisma } from './lib/prisma.js'
 import { compileOriginMatchers } from './utils/origin.js'
+import { describeConfiguredProviders } from './services/aiProviders.js'
 import { persistPermanentAdmin, RECAPP_ADMIN_EMAIL } from './services/auth.service.js'
+
+/**
+ * Boot-time summary of the AI configuration. A misconfigured provider is the
+ * most common cause of a 502 on POST /api/generation and the only symptom the
+ * student sees is a generic message, so print which providers are live, on
+ * which model, and whether each key's prefix matches the provider it was set
+ * on (never the key itself). Read it here: Render → service → Logs, the lines
+ * right after "RecappEdu API listening".
+ */
+function logAiConfiguration() {
+  const diagnostics = describeConfiguredProviders()
+  if (diagnostics.length === 0) {
+    console.warn('[config] No AI provider is configured: POST /api/generation will answer 503. Set GROQ_API_KEY (console.groq.com), ANTHROPIC_API_KEY, OPENAI_API_KEY, GROK_API_KEY or GEMINI_API_KEY.')
+    return
+  }
+  console.log(`[config] AI providers configured: ${diagnostics.map((entry) => `${entry.id}(${entry.model})`).join(', ')} — primary: ${env.ai.provider}`)
+  for (const entry of diagnostics) {
+    if (!entry.keyLooksRight) {
+      console.warn(`[config] ${entry.id} is configured but its key does not have the expected prefix; ${entry.label} calls will fail with an auth error. Get the key from ${entry.expects}, or check that it was not pasted under another provider's variable (or with surrounding quotes).`)
+    }
+  }
+}
 
 const app = express()
 
@@ -64,6 +87,7 @@ app.use(apiErrorHandler)
 
 app.listen(env.port, () => {
   console.log(`RecappEdu API listening on http://localhost:${env.port}`)
+  logAiConfiguration()
   // Make sure the main admin account always has admin rights, even if a prior
   // edit or a partial migration dropped the flag.
   prisma.profile

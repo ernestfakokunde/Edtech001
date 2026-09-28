@@ -186,6 +186,7 @@ for `[request-error]`, `[auth/login]` and `[config]` lines.
 | `502` on the very first request after idle | Cold start — retry once |
 | `TypeError: Failed to fetch` / `Load failed` while uploading a paper, only ever on a phone | The upload never received a readable response. Documents are capped at **10 MB** (`utils/upload.ts`); an oversize file is refused the moment multer crosses the cap, and if that reply is not a real `413` the mobile browser shows a bare transfer failure instead of a size error. The API now answers `413 LIMIT_FILE_SIZE` ("larger than 10 MB") or `415 UNSUPPORTED_FILE_TYPE`, and the client rejects both *before* the upload starts (`uploadFileProblem` in `frontend/src/lib/api.ts`). Still seeing it with a small PDF? The connection dropped mid-upload: retry, or check whatever sits between the phone and Render |
 | Generation runs for ~100 s and then fails | A proxy in front of the API (Cloudflare's free plan, for example) cuts long requests at 100 s. Provider failover can exceed that; retry, or move the call off the request/response cycle |
+| `502` on `POST /api/generation` (the UI says "The study generator is unavailable / busy right now") | The API reached a configured AI provider and the provider refused the call. Read the two boot-log lines added by `logAiConfiguration()` in `src/server.ts` — Render → service → **Logs**, right after `RecappEdu API listening`: `AI providers configured: groq(llama-3.3-70b-versatile), … — primary: groq`. If a provider is missing there, its key is not set in the dashboard. The next line is the fix when a key is present but wrong: `${id} is configured but its key does not have the expected prefix` — the API compares the key against what each provider issues (`xai-` Grok, `gsk_` Groq, `AIza` Gemini, `sk-ant-` Anthropic) without ever logging the key. `[config] No AI provider is configured … will answer 503` instead means every key is empty. The request log line `[generate] AI generation failed (code=AI_BAD_KEY, requested=groq)` names the same code the browser received, so log and UI can be matched |
 
 ### Upload contract
 
@@ -200,6 +201,29 @@ contract check after touching any of them:
 npx tsx src/scripts/upload-error-check.ts
 # 9 assertions: in-limit 200 · oversize 413 · wrong type 415 · generic 500 intact
 ```
+
+### AI provider contract
+
+`POST /api/generation` answers with a short stable `code` the UI turns into
+plain English; the upstream provider's own words stay in the logs. Re-run the
+provider check after touching env parsing, provider adapters or the error codes:
+
+```
+npx tsx src/scripts/ai-multiprovider-check.ts
+# 26 assertions: listing · boot diagnostics · quoted keys · failover · retries ·
+# model cascade · loose quiz answers · short/oversize batches · error-code mapping
+```
+
+| `code` | HTTP | The student sees |
+|---|---|---|
+| `AI_NOT_CONFIGURED` | 503 | "The study generator is not set up yet. Please try again later." |
+| `AI_BAD_KEY` | 502 | "The study generator is unavailable right now. Please try again later." |
+| `AI_BUSY` | 502 | "The study generator is busy right now. Please try again in a moment." |
+| `AI_FAILED` | 502 | "We could not create your study set. Please try again." |
+
+Dashboard values are read verbatim, so `cleanSecret()` in `src/config/env.ts`
+strips one layer of surrounding quotes and whitespace from every key, URL and
+connection string — a `"gsk_…"` pasted with quotes works the same as `gsk_…`.
 
 ## 9. Security checklist
 

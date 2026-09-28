@@ -313,12 +313,10 @@ export function getConfiguredProviders(): AiProvider[] {
     }))
   }
   // Groq (console.groq.com, `gsk_` keys). A `gsk_` key pasted into GROK_API_KEY
-  // (xAI) fails on xAI's API with an opaque auth error and a 502 here, so
-  // validate the prefix up front and say exactly which variable is wrong.
+  // (xAI) fails on xAI's API with an opaque auth error and a 502 here, so the
+  // boot log (describeConfiguredProviders) flags a key whose prefix does not
+  // match the provider it was set on.
   if (providers.groq.apiKey) {
-    if (!providers.groq.apiKey.trim().startsWith('gsk_')) {
-      console.warn('[config] GROQ_API_KEY does not start with "gsk_" — it will fail. Paste a key from https://console.groq.com/keys, not console.x.ai.')
-    }
     configured.push(makeProvider({
       id: 'groq',
       config: providers.groq,
@@ -362,4 +360,51 @@ export function listProviderInfo(): ProviderInfo[] {
     { id: 'gemini', label: providers.gemini.label, configured: Boolean(providers.gemini.apiKey) },
     { id: 'custom', label: providers.custom.label, configured: Boolean(providers.custom.apiKey && providers.custom.baseUrl) },
   ]
+}
+
+/**
+ * The credential prefix each provider issues. Used only for the boot-time
+ * diagnostic below: swapping two providers' keys (a `gsk_` Groq key in
+ * GROK_API_KEY, say) produces a bare 401 from the upstream API that reaches a
+ * student as "the study generator is unavailable" with nothing in the logs
+ * pointing at the environment. Comparing prefixes catches that in one line at
+ * startup, and never logs the key itself.
+ */
+const KEY_EXPECTATIONS: Record<AiProviderId, { prefix: string; hint: string }> = {
+  anthropic: { prefix: 'sk-ant-', hint: 'console.anthropic.com' },
+  openai: { prefix: 'sk-', hint: 'platform.openai.com' },
+  grok: { prefix: 'xai-', hint: 'console.x.ai' },
+  groq: { prefix: 'gsk_', hint: 'console.groq.com' },
+  gemini: { prefix: 'AIza', hint: 'aistudio.google.com' },
+  custom: { prefix: '', hint: 'your endpoint’s own key' },
+}
+
+export type ProviderDiagnostic = {
+  id: AiProviderId
+  label: string
+  model: string
+  /** False when the key's prefix does not match what this provider issues. */
+  keyLooksRight: boolean
+  expects: string
+}
+
+/**
+ * One line per configured provider for the boot log — id, model, and whether
+ * the key looks like the right kind of key. Never includes any part of a key.
+ */
+export function describeConfiguredProviders(): ProviderDiagnostic[] {
+  const { providers } = env.ai
+  return (Object.keys(providers) as AiProviderId[])
+    .filter((id) => id !== 'custom' ? Boolean(providers[id].apiKey) : Boolean(providers.custom.apiKey && providers.custom.baseUrl))
+    .map((id) => {
+      const expectation = KEY_EXPECTATIONS[id]
+      const apiKey = providers[id].apiKey ?? ''
+      return {
+        id,
+        label: providers[id].label,
+        model: providers[id].model,
+        keyLooksRight: !expectation.prefix || apiKey.startsWith(expectation.prefix),
+        expects: expectation.hint,
+      }
+    })
 }

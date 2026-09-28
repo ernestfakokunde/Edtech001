@@ -68,7 +68,9 @@ export class GenerationFailedError extends Error {
 
 function generationFailureCode(failures: string[]): 'AI_BAD_KEY' | 'AI_BUSY' | 'AI_FAILED' {
   const joined = failures.join(' ').toLowerCase()
-  if (joined.includes('ai_bad_key') || joined.includes('does not look like a valid google api key') || joined.includes('api key not valid') || joined.includes('invalid api key') || joined.includes('incorrect api key') || joined.includes('permission_denied') || joined.includes('unauthenticated')) {
+  // Auth failures: bad/revoked key on any provider. Groq's API says
+  // "invalid_api_key" here; without this the UI shows a generic failure.
+  if (joined.includes('ai_bad_key') || joined.includes('does not look like a valid google api key') || joined.includes('api key not valid') || joined.includes('invalid_api_key') || joined.includes('invalid api key') || joined.includes('incorrect api key') || joined.includes('authentication_error') || joined.includes('permission_denied') || joined.includes('unauthenticated') || joined.includes('unauthorized') || joined.includes(' 401')) {
     return 'AI_BAD_KEY'
   }
   if (joined.includes('overloaded') || joined.includes('rate') || joined.includes('429') || joined.includes('503') || joined.includes('all ') && joined.includes('models failed')) {
@@ -179,10 +181,21 @@ function parseJsonPayload(payload: string): string {
 }
 
 /**
- * Validates the raw AI output and maps it to clean GeneratedItem values.
- * Throws (the controller turns this into a 502) if the shape or count is
- * off — we never write unvalidated AI output to the database.
+ * Validates the raw AI output and maps it to clean GeneratedItem values — we
+ * never write unvalidated AI output to the database.
+ *
+ * Unusable entries are skipped rather than failing the batch, and a batch that
+ * carries at least `minimumAccepted` well-formed items is kept and trimmed to
+ * the requested length. A short response is still usable: a 20-question quiz
+ * that comes back with 17 good questions helps the student, while failing the
+ * whole request over a near-miss burns every provider in the chain and shows
+ * them an error. Below half, the prompt clearly did not land, so the caller
+ * fails over to the next provider instead of saving a stub set.
  */
+function minimumAccepted(expectedLength: number) {
+  return Math.max(1, Math.ceil(expectedLength / 2))
+}
+
 function mapItems(raw: unknown[], kind: GeneratedSetKind, providerId: string, model: string, expectedLength: number): GeneratedItem[] {
   if (!Array.isArray(raw)) {
     throw new Error('The AI did not return a JSON array. Please try again.')
@@ -190,10 +203,10 @@ function mapItems(raw: unknown[], kind: GeneratedSetKind, providerId: string, mo
 
   const items: GeneratedItem[] = []
   for (const entry of raw) {
+    // One unusable item (missing answer, malformed quiz options) no longer
+    // discards the whole batch — it is skipped and the rest are kept.
     const parsed = parseItem(entry, kind)
-    if (!parsed) {
-      throw new Error('The AI returned items that could not be read. Please try again.')
-    }
+    if (!parsed) continue
     items.push({
       prompt: parsed.prompt,
       answer: parsed.answer,
@@ -207,10 +220,49 @@ function mapItems(raw: unknown[], kind: GeneratedSetKind, providerId: string, mo
     })
   }
 
-  if (items.length !== expectedLength) {
+  if (items.length < minimumAccepted(expectedLength)) {
     throw new Error(`The AI generated ${items.length} of the ${expectedLength} items requested. Please try again.`)
   }
-  return items
+  // Extra items are dropped so the stored set matches the requested length.
+  return items.slice(0, expectedLength)
+}
+
+/** Loose comparison for model-written text: case, spacing and punctuation are noise. */
+function normalizeText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Resolves a quiz item's `answer` to one of its options. The prompt asks for the
+ * option copied verbatim, but models often answer with a letter (`B`), a
+ * position (`2`), or the option wrapped in a sentence — and the client grades by
+ * comparing the clicked option against this exact string (Study.tsx), so the
+ * stored answer has to be one of the option strings. Returns null when nothing
+ * matches, which drops that one item.
+ */
+function matchOption(answer: string, options: string[]): string | null {
+  const exact = options.find((option) => option === answer)
+  if (exact) return exact
+
+  const target = normalizeText(answer)
+  const loose = options.find((option) => normalizeText(option) === target)
+  if (loose) return loose
+
+  // "B", "b)", "2." — a letter or position that points at an option.
+  const pointer = /^\(?([a-f]|[1-6])\)?[.):]?$/.exec(answer.toLowerCase().trim())
+  if (pointer) {
+    const token = pointer[1]
+    const index = /[0-9]/.test(token) ? Number(token) - 1 : token.charCodeAt(0) - 97
+    if (options[index]) return options[index]
+  }
+
+  // The answer paraphrases an option: accept it only when exactly one option is
+  // contained in the answer, otherwise the choice would be a guess.
+  const contained = options.filter((option) => {
+    const normalized = normalizeText(option)
+    return normalized.length > 3 && target.includes(normalized)
+  })
+  return contained.length === 1 ? contained[0] : null
 }
 
 function parseItem(raw: unknown, kind: GeneratedSetKind): { prompt: string; answer: string; explanation: string | null; options?: string[] } | null {
@@ -225,10 +277,14 @@ function parseItem(raw: unknown, kind: GeneratedSetKind): { prompt: string; answ
 
   if (kind === 'QUIZ') {
     const options = Array.isArray(item.options)
-      ? item.options.map((option) => (typeof option === 'string' ? option.trim() : '')).filter(Boolean)
+      ? [...new Set(item.options.map((option) => (typeof option === 'string' ? option.trim() : '')).filter(Boolean))]
       : []
-    if (options.length !== 4 || !options.includes(answer)) return null
-    return { prompt, answer, explanation, options }
+    // The UI renders whatever options it gets; 3 or 5 are still a valid quiz, so
+    // only genuinely unusable sets (fewer than two choices) are rejected.
+    if (options.length < 2 || options.length > 6) return null
+    const matched = matchOption(answer, options)
+    if (!matched) return null
+    return { prompt, answer: matched, explanation, options }
   }
 
   return { prompt, answer, explanation }
