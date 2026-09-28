@@ -145,6 +145,21 @@ above. `AI_PROVIDER` is the primary, `AI_FALLBACK_PROVIDERS` are tried in order
 when it fails, and a request may override the choice per call —
 `GET /api/generation/providers` lists what is currently configured.
 
+Two things worth knowing before debugging a failed generation:
+
+* **The boot log says what is live.** Every start prints
+  `AI providers configured: groq(llama-3.3-70b-versatile), … — primary: groq`,
+  warns when no provider is configured, and flags a key whose prefix does not
+  match the provider it was set on (`gsk_` = Groq, `xai-` = Grok, `AIza` =
+  Gemini, `sk-ant-` = Anthropic) — the most common cause of a `502` on
+  `POST /api/generation`. It never prints any part of a key.
+* **Quotes are stripped for you.** Dashboard/CI environments pass values
+  verbatim (no dotenv parsing), so `cleanSecret()` in `backend/src/config/env.ts`
+  removes one layer of surrounding quotes and whitespace from every key, URL and
+  connection string: `"gsk_…"` behaves exactly like `gsk_…`.
+
+The provider check (`npx tsx src/scripts/ai-multiprovider-check.ts`) covers both.
+
 ### 3. Prepare the database
 
 ```bash
