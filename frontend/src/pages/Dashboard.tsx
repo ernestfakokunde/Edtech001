@@ -11,13 +11,13 @@ import {
   Crown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { displayNameOf, go, type ProfileIdentity } from "../components/Layout";
-import { addMyCourse, errorMessage, getMyCourses, getProPricing, startProCheckout, type MySchool } from "../lib/api";
+import { displayNameOf, go } from "../components/Layout";
+import { addMyCourse, errorMessage, getMyCourses, getMyXp, getProPricing, startProCheckout, type AuthProfile, type MySchool } from "../lib/api";
 import { getQuizStats } from "../lib/results";
 import practiceArt from "../assets/brand1.png";
 
 /* Student study desk. */
-export function Dashboard({ profile }: { profile: ProfileIdentity }) {
+export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   const [stats, setStats] = useState({ attempts: 0, average: 0, best: 0, streak: 0 });
   const [school, setSchool] = useState<MySchool>(null);
   const [courses, setCourses] = useState<{ id: string; code: string; title: string }[]>([]);
@@ -29,6 +29,7 @@ export function Dashboard({ profile }: { profile: ProfileIdentity }) {
   const [proPrice, setProPrice] = useState<number | null>(null);
   const [proBusy, setProBusy] = useState(false);
   const [proError, setProError] = useState("");
+  const [activePro, setActivePro] = useState(() => isProActive(profile?.tier, profile?.premiumUntil));
   useEffect(() => {
     setStats(getQuizStats());
     // Each block is independent and best-effort: a failing call leaves its card
@@ -37,6 +38,7 @@ export function Dashboard({ profile }: { profile: ProfileIdentity }) {
       .then((result) => { setSchool(result.school); setCourses(result.courses); })
       .catch(() => { /* the courses card falls back to its empty state */ });
     getProPricing().then((price) => setProPrice(price.available ? price.amountNaira : null)).catch(() => undefined);
+    getMyXp().then((account) => setActivePro(isProActive(account.tier, account.premiumUntil))).catch(() => undefined);
   }, []);
 
   async function upgrade() {
@@ -96,12 +98,12 @@ export function Dashboard({ profile }: { profile: ProfileIdentity }) {
         <p>{school ? `${school.facultyName} · ${school.universityName}` : "Add your school on your profile to file papers by course."}</p>
       </section>
 
-      <section className="dashboard-pro-card">
+      {!activePro && <section className="dashboard-pro-card">
         <div className="dashboard-pro-icon"><Crown size={20} /></div>
-        <div className="dashboard-pro-copy"><span className="eyebrow">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get unlimited quiz generations for 90 days{proPrice !== null ? ` for ₦${proPrice.toLocaleString()}` : ""}.</p></div>
+        <div className="dashboard-pro-copy"><span className="eyebrow">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get unlimited quiz generations for 90 days{proPrice !== null ? ` for ${formatProPrice(proPrice)}` : ""}.</p></div>
         <button className="primary-button" disabled={proBusy} onClick={() => void upgrade()}>{proBusy ? "Opening checkout…" : <>Go Pro <ArrowRight size={16} /></>}</button>
         {proError && <small className="dashboard-pro-error">{proError}</small>}
-      </section>
+      </section>}
 
       <section className="metric-grid">
         <Metric icon={<Flame size={15} />} value={String(stats.streak)} label="Day streak" tone="amber" />
@@ -145,6 +147,16 @@ export function Dashboard({ profile }: { profile: ProfileIdentity }) {
       </section>
     </main>
   );
+}
+
+function isProActive(tier?: "FREE" | "PREMIUM", premiumUntil?: string | null) {
+  return tier === "PREMIUM" && (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
+}
+
+function formatProPrice(naira: number) {
+  const nairaLabel = `₦${naira.toLocaleString()}`;
+  const usdLabel = `$${((naira / 1000) * 0.7).toFixed(2)}`;
+  return `${nairaLabel} (about ${usdLabel})`;
 }
 
 function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) { return <div className="metric-card"><span className={`metric-icon ${tone}`}>{icon}</span><strong>{value}</strong><small>{label}</small></div>; }
