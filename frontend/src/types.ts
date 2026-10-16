@@ -13,6 +13,8 @@ export type Route =
   | "quiz"
   | "results"
   | "history"
+  | "rewards"
+  | "onboarding"
   | "profile"
   | "admin"
   | "admin-users"

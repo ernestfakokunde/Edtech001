@@ -75,6 +75,10 @@ export type GeneratedQuestionMetadata = { provider?: string; model?: string; pro
 export type GeneratedQuestion = { id: string; paperId: string; questionNo: string | null; prompt: string; answer: string | null; explanation: string | null; metadata: GeneratedQuestionMetadata | null; createdAt: string }
 export type GeneratedSetItem = { position: number; question: GeneratedQuestion }
 export type GeneratedSet = { id: string; userId: string; courseId: string; type: "FLASHCARD" | "QUIZ"; title: string; requestedLength: number; timePerQuestion: number | null; createdAt: string; items: GeneratedSetItem[] }
+export type SavedQuiz = GeneratedSet & {
+  course: { code: string; title: string };
+  attempts: { score: number; total: number; percent: number; createdAt: string }[];
+}
 
 // AI providers usable for generation. `configured` mirrors the backend: an
 // API key is set for it, so it can serve POST /api/generation right now.
@@ -275,7 +279,7 @@ export function updateProfile(input: { displayName: string; username: string }) 
 
 // The student's school is entered once on the profile; both names are
 // resolve-or-create on the backend, so re-submitting never duplicates rows.
-export function saveMySchool(input: { universityName: string; facultyName: string }) {
+export function saveMySchool(input: { universityName: string; facultyName?: string }) {
   return request<{ school: { universityName: string; facultyName: string } }>('/api/profile/school', { method: 'PUT', body: JSON.stringify(input) })
 }
 export function getMyCourses() {
@@ -363,13 +367,13 @@ export function getPaperDownloadUrl(paperId: string) { return request<{ url: str
 
 // POST /api/generation — multipart/form-data, never set Content-Type manually:
 // the browser adds the multipart boundary itself when a FormData is the body.
-export async function generateStudySet(input: { file: File; courseId: string; type: "FLASHCARD" | "QUIZ"; length: number; timePerQuestion?: 30 | 60; provider?: string }) {
+export async function generateStudySet(input: { file: File; courseId?: string; type: "FLASHCARD" | "QUIZ"; length: number; timePerQuestion?: 30 | 60; provider?: string }) {
   const problem = uploadFileProblem(input.file)
   if (problem) throw new Error(problem)
   const buildGenerationForm = () => {
     const next = new FormData()
     next.append('file', input.file)
-    next.append('courseId', input.courseId)
+    if (input.courseId) next.append('courseId', input.courseId)
     next.append('type', input.type)
     next.append('length', String(input.length))
     if (input.provider) next.append('provider', input.provider)
@@ -419,6 +423,8 @@ export function recordQuizAttempt(setId: string, input: { score: number; total: 
 export function getQuizAttempts(page = 1, pageSize = 50) {
   return request<{ attempts: QuizAttempt[]; pagination: Pagination; stats: QuizAttemptStats }>(`/api/generation/attempts?page=${page}&pageSize=${pageSize}`, { method: 'GET' })
 }
+export function getSavedQuizzes() { return request<{ sets: SavedQuiz[] }>('/api/generation/sets', { method: 'GET' }) }
+export function getSavedQuiz(setId: string) { return request<{ set: SavedQuiz }>(`/api/generation/sets/${encodeURIComponent(setId)}`, { method: 'GET' }) }
 export function deleteQuizAttempt(attemptId: string) {
   return request<void>(`/api/generation/attempts/${encodeURIComponent(attemptId)}`, { method: 'DELETE' })
 }
@@ -449,7 +455,7 @@ export function getReferralInfo() {
   return request<{ referral: ReferralInfo }>('/api/profile/referral', { method: 'GET' })
 }
 export function getMyMissions() {
-  return request<{ xp: number; tier: "FREE" | "PREMIUM"; missions: ProfileMission[] }>('/api/profile/missions', { method: 'GET' })
+  return request<{ xp: number; tier: "FREE" | "PREMIUM"; dailyLogin: { xpReward: number; claimedToday: boolean; claimedAt: string | null }; missions: ProfileMission[] }>('/api/profile/missions', { method: 'GET' })
 }
 export function claimMission(missionId: string) {
   return request<{ xp: number; xpEarned: number; missionId: string }>(`/api/profile/missions/${encodeURIComponent(missionId)}/claim`, { method: 'POST', body: JSON.stringify({}) })

@@ -1,4 +1,5 @@
 import { env, type AiProviderConfig, type AiProviderId } from '../config/env.js'
+import { GoogleGenAI, Type } from '@google/genai'
 
 /**
  * A ready-to-call AI provider. `complete()` returns the raw completion text
@@ -14,7 +15,7 @@ export type AiProvider = {
   id: AiProviderId
   label: string
   model: string
-  complete(system: string, userText: string): Promise<{ text: string; model: string }>
+  complete(system: string, userText: string, document?: { pdfBase64: string }): Promise<{ text: string; model: string }>
 }
 
 /** Thrown when a provider's HTTP call fails (transport error, non-2xx, or an empty body). */
@@ -38,6 +39,7 @@ type ProviderInput = {
     config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { baseUrl?: string; fallbackModels?: string[] },
     system: string,
     userText: string,
+    document?: { pdfBase64: string },
   ) => Promise<{ text: string; model: string }>
 }
 
@@ -129,7 +131,7 @@ async function postJson(
   throw lastError ?? new AiProviderTransportError(providerLabel, 'exhausted retry attempts')
 }
 
-const MAX_TOKENS = 8192
+const MAX_TOKENS = 16384
 
 /** Anthropic Messages API — https://platform.anthropic.com/docs/api/messages */
 async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>>, system: string, userText: string): Promise<{ text: string; model: string }> {
@@ -189,47 +191,60 @@ async function completeOpenAiCompatible(
 }
 
 /** Google Gemini generateContent API — https://ai.google.dev/api/generate-content */
-async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] }, system: string, userText: string): Promise<{ text: string; model: string }> {
+async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] }, system: string, userText: string, document?: { pdfBase64: string }): Promise<{ text: string; model: string }> {
+  const ai = new GoogleGenAI({ apiKey: config.apiKey })
   const generateWithModel = async (model: string): Promise<string> => {
-    // One attempt per model here: the sibling cascade below is the retry loop,
-    // so a hot-spike 503 on flash moves to flash-lite immediately instead of
-    // burning 3 backoff retries on the same model first.
-    const data = await postJson(
-      'Gemini',
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      { 'x-goog-api-key': config.apiKey },
-      {
-        contents: [{ role: 'user', parts: [{ text: `${system}\n\n${userText}` }] }],
-        generationConfig: { maxOutputTokens: MAX_TOKENS, temperature: 0 },
-      },
-      1,
-    )
-
-    const candidates = isRecord(data) && Array.isArray(data.candidates) ? data.candidates : []
-    const parts = candidates[0] && isRecord(candidates[0]) && isRecord(candidates[0].content) && Array.isArray(candidates[0].content.parts)
-      ? candidates[0].content.parts
-      : []
-    const text = parts
-      .filter((part) => isRecord(part) && typeof part.text === 'string')
-      .map((part) => (part as { text: string }).text)
-      .join('\n')
-    if (!text.trim()) throw new AiProviderTransportError('Gemini', 'the model returned no text')
-    return text
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{
+          role: 'user',
+          parts: [
+            ...(document ? [{ inlineData: { mimeType: 'application/pdf', data: document.pdfBase64 } }] : []),
+            { text: `${system}\n\n${userText}` },
+          ],
+        }],
+        config: {
+          maxOutputTokens: MAX_TOKENS,
+          temperature: 0,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                prompt: { type: Type.STRING },
+                answer: { type: Type.STRING },
+                explanation: { type: Type.STRING },
+                options: { type: Type.ARRAY, items: { type: Type.STRING } },
+              },
+              // A quiz item without choices cannot be rendered or graded;
+              // require options at generation time rather than dropping it later.
+              required: ['prompt', 'answer', 'explanation', 'options'],
+            },
+          },
+        },
+      })
+      const text = response.text ?? ''
+      if (!text.trim()) throw new AiProviderTransportError('Gemini', 'the model returned no text')
+      return text
+    } catch (error) {
+      if (error instanceof AiProviderTransportError) throw error
+      const detail = error instanceof Error ? error.message : String(error)
+      const statusMatch = /(?:status|code)\s*[:=]?\s*(\d{3})/i.exec(detail)
+      const status = statusMatch ? Number(statusMatch[1]) : undefined
+      const lower = detail.toLowerCase()
+      const code = status === 401 || status === 403 || lower.includes('api key not valid') || lower.includes('invalid api key')
+        ? 'AI_BAD_KEY'
+        : status === 429 || status === 503 ? 'AI_OVERLOADED' : 'AI_FAILED'
+      throw new AiProviderTransportError('Gemini', detail, status, code)
+    }
   }
 
   // Primary model first; when it is rate-limited or overloaded (or the model
   // id does not exist for this key), lighter sibling models from
   // GEMINI_FALLBACK_MODELS take over — they usually have spare capacity
   // during demand spikes.
-  const key = (config.apiKey ?? '').trim()
-  if (!key.startsWith('AIza')) {
-    // Genuine Gemini keys start with "AIza"; anything else (a pasted URL, a
-    // truncated secret, another provider's key) fails with an opaque 400 on
-    // every sibling, so reject it directly with a fixable message instead.
-    // The message stays internal (server logs); the controller maps the
-    // AI_BAD_KEY code to a short user-facing message.
-    throw new AiProviderTransportError('Gemini', 'the configured GEMINI_API_KEY does not look like a valid Google API key (it should start with "AIza")', 401, 'AI_BAD_KEY')
-  }
   const models = [config.model, ...(config.fallbackModels ?? [])]
   const attempts: string[] = []
   let lastStatus: number | undefined
@@ -267,11 +282,12 @@ function makeProvider(input: ProviderInput): AiProvider {
     id: input.id,
     label: input.config.label,
     model: input.config.model,
-    complete: (system, userText) =>
+    complete: (system, userText, document) =>
       input.complete(
         { apiKey: input.config.apiKey!, model: input.config.model, baseUrl: input.config.baseUrl!, fallbackModels: input.config.fallbackModels },
         system,
         userText,
+        input.id === 'gemini' ? document : undefined,
       ),
   }
 }
@@ -375,7 +391,7 @@ const KEY_EXPECTATIONS: Record<AiProviderId, { prefix: string; hint: string }> =
   openai: { prefix: 'sk-', hint: 'platform.openai.com' },
   grok: { prefix: 'xai-', hint: 'console.x.ai' },
   groq: { prefix: 'gsk_', hint: 'console.groq.com' },
-  gemini: { prefix: 'AIza', hint: 'aistudio.google.com' },
+  gemini: { prefix: '', hint: 'aistudio.google.com' },
   custom: { prefix: '', hint: 'your endpoint’s own key' },
 }
 
@@ -403,6 +419,8 @@ export function describeConfiguredProviders(): ProviderDiagnostic[] {
         id,
         label: providers[id].label,
         model: providers[id].model,
+        // Google currently uses more than one visible API-key prefix; let the
+        // Gemini SDK/API validate credentials rather than rejecting a key here.
         keyLooksRight: !expectation.prefix || apiKey.startsWith(expectation.prefix),
         expects: expectation.hint,
       }

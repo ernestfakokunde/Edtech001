@@ -22,7 +22,7 @@ export class UnsupportedFileTypeError extends Error {
   readonly status = 415
   readonly code = 'UNSUPPORTED_FILE_TYPE'
   constructor(fileName: string) {
-    super(`"${fileName}" is not a supported document. Upload a PDF, DOC or DOCX file.`)
+    super(`"${fileName}" is not a supported document. Upload a PDF or DOCX file.`)
     this.name = 'UnsupportedFileTypeError'
   }
 }
@@ -65,5 +65,5 @@ export function describeUploadError(error: unknown): { status: number; code: str
   if (error.code === 'LIMIT_UNEXPECTED_FILE') {
     return { status: 400, code: error.code, message: 'Send one document in the "file" field.' }
   }
-  return { status: 400, code: error.code, message: 'That upload could not be read. Attach a PDF, DOC or DOCX file and try again.' }
+  return { status: 400, code: error.code, message: 'That upload could not be read. Attach a PDF or DOCX file and try again.' }
 }

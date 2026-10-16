@@ -10,14 +10,13 @@ if (process.env.NODE_ENV !== 'production') {
 
 function isConnectionError(error: unknown) {
   return error instanceof Prisma.PrismaClientInitializationError
+    || (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2024')
     || (error instanceof Error && /Can't reach database server|P100[1-3]|P1017|connection.*(?:failed|closed|timed out)/i.test(error.message))
 }
 
-// Neon's free tier suspends the database compute after a period of inactivity.
-// The first query after a wake-up can fail with a connection error before Prisma's
-// short default connect timeout elapses, so we retry transient connection failures
-// with a small backoff. Reads are safe to replay; writes that fail to connect never
-// committed, so replaying them is safe too.
+// Neon can briefly wake from idle, and Prisma can run out of free pool slots when
+// several requests arrive together. P2024 means the query never acquired a
+// connection, so a short retry is safe for both reads and writes.
 export async function withConnectionRetry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
   let lastError: unknown
   for (let attempt = 0; attempt <= retries; attempt++) {

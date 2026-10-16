@@ -49,8 +49,9 @@ function check(name: string, ok: boolean, extra = "") {
 }
 
 // fetch stub routed by host; behaviour switched via `mode` per test step.
-let mode: "openai-ok" | "openai-retry" | "openai-down" | "openai-lettered" | "openai-short" | "openai-one-good" | "grok-ok" | "grok-bad" | "groq-ok" | "all-down" | "custom-ok" | "gemini-fallback" | "gemini-all-overloaded" = "openai-ok"
+let mode: "openai-ok" | "openai-retry" | "openai-down" | "openai-lettered" | "openai-short" | "openai-one-good" | "openai-repair" | "openai-truncated" | "openai-brackets" | "grok-ok" | "grok-bad" | "groq-ok" | "all-down" | "custom-ok" | "gemini-fallback" | "gemini-all-overloaded" = "openai-ok"
 let openaiCalls = 0
+let repairCalls = 0
 let geminiCalls = 0
 const respond = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), { status, headers: { "content-type": "application/json" } })
 const choicesJson = (items: unknown) => respond({ choices: [{ message: { content: JSON.stringify(items) } }] })
@@ -64,6 +65,24 @@ globalThis.fetch = async (url) => {
     // 1 usable item out of 3 with the other two malformed: below half, so the
     // service must fail over instead of saving a 1-card "set".
     if (mode === "openai-one-good") return choicesJson([CARD_ITEMS[0], { prompt: "no answer" }, { answer: "no prompt" }])
+    // Prose instead of JSON on the first call, clean on the second: a formatting
+    // slip that the one repair retry is there to absorb.
+    if (mode === "openai-repair") {
+      repairCalls += 1
+      return repairCalls === 1
+        ? respond({ choices: [{ message: { content: "Sure! Here are your flashcards — I could not format them as JSON." } }] })
+        : choicesJson(CARD_ITEMS)
+    }
+    // Brackets inside the prose *after* the array: the old first-`[` → last-`]`
+    // slice swallowed the trailing sentence and broke JSON.parse.
+    if (mode === "openai-brackets") {
+      return respond({ choices: [{ message: { content: '[{"prompt":"What is a[0]?","answer":"the first element of a","explanation":null}]\n\nNote: the notation [x] means "index x".' } }] })
+    }
+    // Cut off mid-object, the way a long batch ends at the token cap: only the
+    // two complete objects of the three requested survive.
+    if (mode === "openai-truncated") {
+      return respond({ choices: [{ message: { content: '[{"prompt":"F1?","answer":"ans1","explanation":"note"},{"prompt":"F2?","answer":"ans2","explanation":"note"},{"prompt":"F3?","ans' } }] })
+    }
     if (mode === "openai-retry") {
       openaiCalls += 1
       // Two transient 503 overloads (postJson retries them), then a real answer.
@@ -155,6 +174,27 @@ mode = "openai-one-good"
 const belowHalf = await generateStudyItems({ text: TEXT, kind: "FLASHCARD", length: 3 }).then(() => null).catch((error) => error)
 check("a response below half the requested items still fails over", belowHalf instanceof GenerationFailedError, belowHalf instanceof Error ? belowHalf.message.slice(0, 48) : "no error")
 
+// 2e. An unusable reply is retried once on the SAME provider (with the problem
+// spelled out) before failing over: prose-instead-of-JSON is a formatting slip,
+// not a broken provider, and failing over to a provider that may not be
+// configured is what produced the students' generic 502.
+mode = "openai-repair"
+repairCalls = 0
+const repaired = await generateStudyItems({ text: TEXT, kind: "FLASHCARD", length: 3 })
+check("an unusable reply is retried on the same provider", repaired.length === 3 && repaired.every((i) => i.metadata.provider === "openai") && repairCalls === 2, `calls=${repairCalls}`)
+
+// 2f. A batch cut off mid-array is salvaged up to its last complete object
+// (a long quiz hitting the completion cap), instead of failing outright.
+mode = "openai-truncated"
+const salvaged = await generateStudyItems({ text: TEXT, kind: "FLASHCARD", length: 3 })
+check("a truncated array is salvaged to its complete items", salvaged.length === 2, `items=${salvaged.length}`)
+
+// 2g. Bracketed prose after the array no longer breaks parsing (the old
+// first-`[` → last-`]` slice included it).
+mode = "openai-brackets"
+const bracketed = await generateStudyItems({ text: TEXT, kind: "FLASHCARD", length: 1 })
+check("bracketed prose after the array is ignored", bracketed.length === 1 && bracketed[0]?.prompt === "What is a[0]?", `prompt=${bracketed[0]?.prompt}`)
+
 // 3. Failover on HTTP error: openai 429 → grok
 mode = "openai-down"
 const cards = await generateStudyItems({ text: TEXT, kind: "FLASHCARD", length: 3 })
@@ -208,6 +248,15 @@ check("auth failures map to AI_BAD_KEY", allDown instanceof GenerationFailedErro
 // 7. Requesting a provider that is not configured → AiNotConfiguredError
 const missing = await generateStudyItems({ text: TEXT, kind: "FLASHCARD", length: 1 }, { provider: "deepseek" }).then(() => null).catch((error) => error)
 check("unknown requested provider raises AiNotConfiguredError", missing instanceof AiNotConfiguredError && missing.message.includes('"deepseek"'))
+
+// 8. The admin diagnostics log keeps the newest failures, capped, newest first
+// — it is what answers "why did it fail" without the server logs.
+const { recordGenerationFailure, listGenerationFailures } = await import("../services/generationDiagnostics.js")
+for (let index = 1; index <= 12; index += 1) {
+  recordGenerationFailure({ code: "AI_FAILED", requested: null, requestedItems: `${index} × flashcards`, detail: `failure ${index}` })
+}
+const failures = listGenerationFailures()
+check("failure log is capped at 10 entries, newest first", failures.length === 10 && failures[0]?.detail === "failure 12" && failures[9]?.detail === "failure 3", `${failures.length} entries, newest=${failures[0]?.detail}`)
 
 console.log(results.join("\n"))
 if (!pass) process.exit(1)

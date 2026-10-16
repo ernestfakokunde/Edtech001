@@ -20,6 +20,8 @@ import { saveQuizResult } from "./lib/results";
 import { ProfilePage } from "./pages/Profile";
 import { AdminPage } from "./pages/Admin";
 import { ResultsHistory } from "./pages/History";
+import { Onboarding } from "./pages/Onboarding";
+import { RewardsPage } from "./pages/Rewards";
 
 const protectedRoutes: Route[] = [
   "dashboard",
@@ -30,6 +32,8 @@ const protectedRoutes: Route[] = [
   "quiz",
   "results",
   "history",
+  "rewards",
+  "onboarding",
   "profile",
   "admin",
   "admin-users",
@@ -68,6 +72,8 @@ const ROUTE_TITLES: Record<Route, string> = {
   quiz: "Quiz",
   results: "Quiz results",
   history: "Past results",
+  rewards: "Rewards",
+  onboarding: "Set up your study desk",
   profile: "Profile",
   admin: "Admin overview",
   "admin-users": "Students",
@@ -186,8 +192,8 @@ function App() {
     setSelectedMaterial(paper);
     go(`material/${encodeURIComponent(paper.id)}`);
   };
-  const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "generate", "flashcards", "quiz", "results", "profile"];
-  const showHeader = !["login", "signup", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
+  const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "flashcards", "quiz", "results", "profile"];
+  const showHeader = !["login", "signup", "onboarding", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   // The rail replaces the old standalone dashboard top line, so the dashboard
   // no longer shows the global header — and its footer never made sense there.
   const showFooter = ["home", "hierarchy", "courses"].includes(route);
@@ -267,8 +273,10 @@ function App() {
       ) : (
         <MissingSet back="dashboard" />
       ))}
-      {route === "history" && <ResultsHistory />}
-      {route === "profile" && <ProfilePage section={sub} profile={profile} />}
+      {route === "history" && <ResultsHistory onPractice={(set) => { setGeneratedSet(set); setQuizResult(null); go(`quiz/${set.id}`); }} />}
+      {route === "profile" && <ProfilePage profile={profile} />}
+      {route === "rewards" && <RewardsPage />}
+      {route === "onboarding" && <Onboarding />}
     </>
   );
 

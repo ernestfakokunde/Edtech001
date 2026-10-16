@@ -155,7 +155,7 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
                       }));
                   setSubmitted(true);
                   onAuthenticated?.(result.profile);
-                  go("dashboard");
+                  go(isSignup ? "onboarding" : "dashboard");
                 } catch (requestError) {
                   setError(errorMessage(requestError, "We could not sign you in. Please try again."));
                 } finally {

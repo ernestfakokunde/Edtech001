@@ -12,6 +12,29 @@ export type SignInInput = { email: string; password: string }
 function normalizeEmail(email: string) { return email.trim().toLowerCase() }
 function hashToken(token: string) { return createHash('sha256').update(token).digest('hex') }
 
+const DAILY_LOGIN_XP = 100
+
+/** Award once per UTC calendar day; the composite key makes parallel sign-ins safe. */
+async function awardDailyLoginXp(profileId: string) {
+  const rewardDay = new Date().toISOString().slice(0, 10)
+  return prisma.$transaction(async (transaction) => {
+    // ON CONFLICT makes simultaneous sign-ins safe without a read-then-write race.
+    const inserted = await transaction.$queryRaw<{ xpAwarded: number }[]>`
+      INSERT INTO "DailyLoginReward" ("profileId", "rewardDay", "xpAwarded")
+      VALUES (${profileId}, ${rewardDay}, ${DAILY_LOGIN_XP})
+      ON CONFLICT ("profileId", "rewardDay") DO NOTHING
+      RETURNING "xpAwarded"
+    `
+    if (inserted.length === 0) {
+      const profile = await transaction.profile.findUnique({ where: { id: profileId }, select: { xp: true } })
+      return { xp: profile?.xp ?? 0, xpEarned: 0, rewardDay }
+    }
+    const profile = await transaction.profile.update({ where: { id: profileId }, data: { xp: { increment: inserted[0].xpAwarded } }, select: { xp: true } })
+    await transaction.auditEvent.create({ data: { actorId: profileId, action: 'DAILY_LOGIN_REWARD', entityType: 'Profile', entityId: profileId, metadata: { xpEarned: inserted[0].xpAwarded, rewardDay } } })
+    return { xp: profile.xp, xpEarned: inserted[0].xpAwarded, rewardDay }
+  }, { maxWait: 10000, timeout: 15000 })
+}
+
 /**
  * The main administrator account is pinned by its email address so the admin
  * tab never silently disappears. Any sign-in / session for this address is
@@ -109,9 +132,10 @@ export async function signUp(input: SignUpInput) {
       profile.isAdmin = true
       void persistPermanentAdmin(profile.id)
     }
+    const dailyLoginReward = await awardDailyLoginXp(profile.id)
     const token = await createSession(profile.id)
-    const { passwordHash: _passwordHash, ...safeProfile } = profile
-    return { token, profile: safeProfile }
+    const { passwordHash: _passwordHash, ...safeProfile } = { ...profile, xp: dailyLoginReward.xp }
+    return { token, profile: safeProfile, dailyLoginReward }
   })
 }
 
@@ -133,14 +157,15 @@ export async function signIn(input: SignInInput) {
       profile.isAdmin = true
       void persistPermanentAdmin(profile.id)
     }
+    const dailyLoginReward = await awardDailyLoginXp(profile.id)
     const token = await createSession(profile.id)
     // Never hand the hash back to the controller.
-    const { passwordHash: _passwordHash, ...safeProfile } = profile
-    return { token, profile: safeProfile }
+    const { passwordHash: _passwordHash, ...safeProfile } = { ...profile, xp: dailyLoginReward.xp }
+    return { token, profile: safeProfile, dailyLoginReward }
   })
 }
 
-export async function getProfileBySession(token: string) {
+async function loadProfileBySession(token: string) {
   return withConnectionRetry(async () => {
     const session = await prisma.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { profile: true } })
     if (!session || session.expiresAt <= new Date()) return null
@@ -154,6 +179,22 @@ export async function getProfileBySession(token: string) {
     const { passwordHash: _passwordHash, ...safeProfile } = session.profile
     return { session, profile: safeProfile }
   })
+}
+
+// API pages often load several resources at once, and each authenticated route
+// checks the same cookie. Share only the active lookup among those requests;
+// once it settles, the next request still revalidates the session with the DB.
+type SessionLookup = ReturnType<typeof loadProfileBySession>
+const pendingSessionLookups = new Map<string, SessionLookup>()
+
+export function getProfileBySession(token: string) {
+  const pending = pendingSessionLookups.get(token)
+  if (pending) return pending
+  const lookup = loadProfileBySession(token).finally(() => {
+    if (pendingSessionLookups.get(token) === lookup) pendingSessionLookups.delete(token)
+  })
+  pendingSessionLookups.set(token, lookup)
+  return lookup
 }
 
 export async function deleteSession(token: string) { return withConnectionRetry(() => prisma.session.deleteMany({ where: { tokenHash: hashToken(token) } })) }

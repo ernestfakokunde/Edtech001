@@ -10,7 +10,7 @@
    App.css is wrapped in `@layer components` for this reason. */
 @layer theme, base, components, utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
 @import "tailwindcss";
 
 /* ===========================================================================
@@ -41,8 +41,8 @@
   --spacing: 1px;
 
   /* ── Font families ───────────────────────────────────────────────────── */
-  --font-inter: Inter, sans-serif;                     /* 2 font shorthands */
-  --font-grotesk: "Space Grotesk", sans-serif;         /* 27 + 9 + 4 shorthand + 1 font-family */
+  --font-inter: "DM Sans", sans-serif;
+  --font-grotesk: Manrope, sans-serif;
 
   /* ── Font sizes (px; numeric name === px value) ───────────────────────── */
   --text-10: 10px;   /* 30 */
@@ -224,7 +224,7 @@
    They are removed in Phase 5, once nothing references them.
    --------------------------------------------------------------------------- */
 :root {
-  font-family: Inter, sans-serif;
+  font-family: "DM Sans", sans-serif;
   color: #172033;
   background: #f8fafc;
   font-synthesis: none;

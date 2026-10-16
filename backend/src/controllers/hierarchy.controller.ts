@@ -12,7 +12,7 @@ function routeParam(request: Request, name: string) {
 }
 
 export async function listUniversities(_request: Request, response: Response) {
-  response.json({ universities: await prisma.university.findMany({ orderBy: { name: 'asc' } }) })
+  response.json({ universities: await prisma.university.findMany({ where: { slug: { not: 'quick-practice' } }, orderBy: { name: 'asc' } }) })
 }
 
 export async function listFaculties(request: Request, response: Response) {

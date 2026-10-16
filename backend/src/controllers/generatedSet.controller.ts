@@ -6,6 +6,8 @@ import { env } from '../config/env.js'
 import { fileExtension } from '../utils/file.js'
 import { extractText } from '../utils/extractText.js'
 import { generateStudyItems, AiNotConfiguredError, GenerationFailedError, isAiConfigured, listGenerationProviders, type GeneratedItem } from '../services/ai.service.js'
+import { describeConfiguredProviders } from '../services/aiProviders.js'
+import { listGenerationFailures, recordGenerationFailure } from '../services/generationDiagnostics.js'
 
 /**
  * Best-effort cleanup after any post-upload failure: removes the stored file
@@ -19,10 +21,37 @@ async function rollbackPersonalPaper(paperId: string, storedPath?: string) {
   try { await prisma.paper.delete({ where: { id: paperId } }) } catch { /* row already gone */ }
 }
 
-function setTitle(course: { code: string }, kind: 'FLASHCARD' | 'QUIZ') {
+function setTitle(course: { code: string }, kind: 'FLASHCARD' | 'QUIZ', grouped: boolean) {
   const label = kind === 'QUIZ' ? 'Quiz' : 'Flashcards'
   const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-  return `${course.code} ${label} · ${date}`
+  return `${grouped ? course.code : 'Quick practice'} ${label} · ${date}`
+}
+
+/** Internal course used to preserve Paper's required course relation for uploads
+ * that the student chooses not to group. It is hidden from the course browser. */
+async function getQuickPracticeCourse() {
+  // Do these as independent idempotent upserts. Four serial writes can exceed
+  // Prisma's 5s interactive-transaction default on a cold/remote database.
+  const university = await prisma.university.upsert({
+    where: { slug: 'quick-practice' },
+    update: {},
+    create: { name: 'Quick practice', slug: 'quick-practice' },
+  })
+  const faculty = await prisma.faculty.upsert({
+    where: { universityId_slug: { universityId: university.id, slug: 'independent-study' } },
+    update: {},
+    create: { universityId: university.id, name: 'Independent study', slug: 'independent-study' },
+  })
+  const department = await prisma.department.upsert({
+    where: { facultyId_slug: { facultyId: faculty.id, slug: 'personal' } },
+    update: {},
+    create: { facultyId: faculty.id, name: 'Personal', slug: 'personal' },
+  })
+  return prisma.course.upsert({
+    where: { departmentId_code: { departmentId: department.id, code: 'QUICK' } },
+    update: {},
+    create: { departmentId: department.id, code: 'QUICK', title: 'Quick practice' },
+  })
 }
 
 /**
@@ -32,6 +61,32 @@ function setTitle(course: { code: string }, kind: 'FLASHCARD' | 'QUIZ') {
  */
 export function listGenerationProvidersController(_request: Request, response: Response) {
   response.json({ providers: listGenerationProviders(), primary: env.ai.provider })
+}
+
+/**
+ * GET /api/generation/diagnostics — admin only.
+ *
+ * Answers "why did generation just fail?" without needing the server logs: the
+ * providers this instance actually has configured (with the model each will
+ * call and whether its key looks like the right kind of key), the primary and
+ * fallback order, and the last few failures with the upstream reason the
+ * student's copy deliberately omits. Contains no keys, no document text and no
+ * user data — see services/generationDiagnostics.ts.
+ */
+export function generationDiagnosticsController(_request: Request, response: Response) {
+  const providers = describeConfiguredProviders()
+  response.json({
+    primary: env.ai.provider,
+    fallbacks: env.ai.fallbacks,
+    providers,
+    // A configured provider whose key prefix is wrong (a `gsk_` Groq key under
+    // GROK_API_KEY, or a key pasted with quotes) fails every call with an auth
+    // error; say so here rather than leaving it to be inferred.
+    warnings: providers
+      .filter((entry) => !entry.keyLooksRight)
+      .map((entry) => `${entry.id}: the key does not have the expected prefix — get it from ${entry.expects}.`),
+    recentFailures: listGenerationFailures(),
+  })
 }
 
 const FREE_DAILY_QUIZ_LIMIT = 5
@@ -126,6 +181,37 @@ export async function listQuizAttempts(request: Request, response: Response) {
   })
 }
 
+/** List the signed-in student's saved quizzes, including their answer keys. */
+export async function listSavedQuizzes(request: Request, response: Response) {
+  const { profile } = request as AuthenticatedRequest
+  const sets = await prisma.generatedSet.findMany({
+    where: { userId: profile.id, type: 'QUIZ' },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      course: { select: { code: true, title: true } },
+      items: { orderBy: { position: 'asc' }, include: { question: true } },
+      attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { score: true, total: true, percent: true, createdAt: true } },
+    },
+  })
+  response.json({ sets })
+}
+
+/** Fetch one saved quiz and its answer key, scoped to its owner. */
+export async function getSavedQuiz(request: Request, response: Response) {
+  const { profile } = request as AuthenticatedRequest
+  const setId = Array.isArray(request.params.setId) ? request.params.setId[0] : request.params.setId
+  const set = await prisma.generatedSet.findFirst({
+    where: { id: setId, userId: profile.id, type: 'QUIZ' },
+    include: {
+      course: { select: { code: true, title: true } },
+      items: { orderBy: { position: 'asc' }, include: { question: true } },
+      attempts: { orderBy: { createdAt: 'desc' }, take: 1, select: { score: true, total: true, percent: true, createdAt: true } },
+    },
+  })
+  if (!set) { response.status(404).json({ message: 'Saved quiz not found.' }); return }
+  response.json({ set })
+}
+
 /**
  * DELETE /api/generation/attempts/:attemptId — remove one past result.
  * DELETE /api/generation/attempts — clear the whole history.
@@ -162,8 +248,8 @@ export async function generateStudySet(request: Request, response: Response) {
     provider: string
   }>
 
-  if (!courseId || (type !== 'FLASHCARD' && type !== 'QUIZ') || !length) {
-    response.status(400).json({ message: 'courseId, type, and length are required.' })
+  if ((type !== 'FLASHCARD' && type !== 'QUIZ') || !length) {
+    response.status(400).json({ message: 'type and length are required.' })
     return
   }
 
@@ -197,7 +283,9 @@ export async function generateStudySet(request: Request, response: Response) {
     }
   }
 
-  const course = await prisma.course.findUnique({ where: { id: courseId } })
+  const course = courseId
+    ? await prisma.course.findUnique({ where: { id: courseId } })
+    : await getQuickPracticeCourse()
   if (!course) {
     response.status(404).json({ message: 'Course not found.' })
     return
@@ -243,7 +331,8 @@ export async function generateStudySet(request: Request, response: Response) {
     return
   }
 
-  if (text.trim().length < 80) {
+  const hasGeminiPdf = provider === 'gemini' || (!provider && (env.ai.provider === 'gemini' || env.ai.fallbacks.includes('gemini')))
+  if (text.trim().length < 80 && !(hasGeminiPdf && extension === 'pdf')) {
     await rollbackPersonalPaper(paper.id, path)
     response.status(422).json({ message: 'No readable text was found in this file. Scanned documents and image-only PDFs cannot be processed yet.' })
     return
@@ -262,7 +351,12 @@ export async function generateStudySet(request: Request, response: Response) {
   // chain when it fails.
   let generated: GeneratedItem[]
   try {
-    generated = await generateStudyItems({ text, kind: type, length: parsedLength }, { provider: provider ?? null })
+    generated = await generateStudyItems({
+      text,
+      kind: type,
+      length: parsedLength,
+      ...(extension === 'pdf' && hasGeminiPdf ? { pdfBase64: file.buffer.toString('base64') } : {}),
+    }, { provider: provider ?? null })
   } catch (reason) {
     // Server-side detail stays here, keyed by the same code the client receives
     // so a Render log line can be matched to what the UI showed.
@@ -270,6 +364,12 @@ export async function generateStudySet(request: Request, response: Response) {
       ? 'AI_NOT_CONFIGURED'
       : reason instanceof GenerationFailedError ? reason.code : 'AI_FAILED'
     console.error(`[generate] AI generation failed (code=${code}, requested=${provider ?? 'default'}):`, reason)
+    recordGenerationFailure({
+      code,
+      requested: provider ?? null,
+      requestedItems: `${parsedLength} × ${type === 'QUIZ' ? 'quiz' : 'flashcards'}`,
+      detail: reason instanceof Error ? reason.message : String(reason),
+    })
     await rollbackPersonalPaper(paper.id, path)
     if (reason instanceof AiNotConfiguredError) {
       response.status(503).json({ code: 'AI_NOT_CONFIGURED', message: 'The study generator is not set up yet. Please try again later.' })
@@ -293,7 +393,7 @@ export async function generateStudySet(request: Request, response: Response) {
         userId: profile.id,
         courseId: course.id,
         type,
-        title: setTitle(course, type),
+        title: setTitle(course, type, Boolean(courseId)),
         requestedLength: parsedLength,
         ...(parsedTimePerQuestion ? { timePerQuestion: parsedTimePerQuestion } : {}),
         items: {

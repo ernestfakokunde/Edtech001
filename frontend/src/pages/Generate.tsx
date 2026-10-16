@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Check,
-  ChevronRight,
   Clock3,
-  FileText,
   FlipHorizontal2,
   Loader2,
   Plus,
@@ -19,8 +17,6 @@ import {
   getGenerationProviders,
   getGenerationQuota,
   getMyCourses,
-  getMyPapers,
-  getRepositoryPapers,
   MAX_UPLOAD_LABEL,
   uploadFileProblem,
   type GeneratedSet,
@@ -37,8 +33,7 @@ type CourseOption = { id: string; code: string; title: string };
 
 /**
  * The "Generate for me" screen. Course context arrives through routing
- * (`#generate/<courseId>`) from wherever the student navigated from; if that
- * context is missing, they pick a course from the ones they already have.
+ * Course grouping is optional; uploads can start immediately without a course.
  * Uploads the file as multipart/form-data and follows the backend contract for
  * POST /api/generation exactly (including timePerQuestion, shown only when
  * Quiz is selected).
@@ -50,10 +45,9 @@ export function GenerateFlow({
   courseId?: string;
   onComplete: (set: GeneratedSet) => void;
 }) {
-    const [course, setCourse] = useState<CourseOption | null>(null);
+  const [course, setCourse] = useState<CourseOption | null>(null);
   const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
   const [courseLoading, setCourseLoading] = useState(true);
-  const [pickingCourse, setPickingCourse] = useState(!courseId);
   // Inline "add a course": just a code and a title. The backend files it under
   // the student's saved school (set once on the Profile page), so no
   // University → Faculty → Department walk happens here.
@@ -80,39 +74,27 @@ export function GenerateFlow({
   useEffect(() => {
     let alive = true;
     (async () => {
-      // One pass builds the picker: saved profile courses first (so they always
-      // appear), then courses seen in the student's papers and the repository.
-      // Nothing is refetched while the student interacts with the page.
-      const [mine, repo, saved] = await Promise.allSettled([
-        getMyPapers(),
-        getRepositoryPapers({ pageSize: 200 }),
-        getMyCourses(),
+      // Upload is available immediately; load saved courses in the background
+      // only to populate the optional grouping control.
+      const [saved, providers, quotaValue] = await Promise.all([
+        getMyCourses().catch(() => null),
+        getGenerationProviders().catch(() => null),
+        getGenerationQuota().catch(() => null),
       ]);
       if (!alive) return;
-      const found: CourseOption[] = [];
-      if (saved.status === "fulfilled") {
-        setSchool(saved.value.school);
-        found.push(...saved.value.courses);
-      }
-      if (mine.status === "fulfilled") found.push(...mine.value.papers.map((paper) => paper.course));
-      if (repo.status === "fulfilled") found.push(...repo.value.papers.map((paper) => paper.course));
-      const unique = [...new Map(found.map((item) => [item.id, item])).values()];
-      const providers = await getGenerationProviders().catch(() => null);
-      const quotaValue = await getGenerationQuota().catch(() => null);
-      if (!alive) return;
       if (quotaValue) setQuota(quotaValue);
-      setCourseOptions(unique);
+      if (saved) {
+        setSchool(saved.school);
+        setCourseOptions(saved.courses);
+        const match = courseId ? saved.courses.find((item) => item.id === courseId) ?? null : null;
+        setCourse(match);
+      }
       if (providers) {
         const available = providers.providers.filter((entry) => entry.configured);
         setGenerationProviders(available);
         // Prefer the server's primary provider; otherwise fall back to the first
         // one that is ready. Empty stays empty — the backend will say so.
         setProvider(available.some((entry) => entry.id === providers.primary) ? providers.primary : available[0]?.id ?? "");
-      }
-      if (courseId) {
-        const match = unique.find((item) => item.id === courseId) ?? null;
-        setCourse(match);
-        if (match) setPickingCourse(false);
       }
       setCourseLoading(false);
     })();
@@ -143,7 +125,6 @@ export function GenerateFlow({
       const result = await addMyCourse({ code: newCourse.code.trim(), title: newCourse.title.trim() });
       const created: CourseOption = result.course;
       setCourse(created);
-      setPickingCourse(false);
       closeAddForm();
       setCourseOptions((current) => (current.some((item) => item.id === created.id) ? current : [...current, created].sort((a, b) => a.code.localeCompare(b.code))));
     } catch (reason) {
@@ -154,13 +135,13 @@ export function GenerateFlow({
   }
 
   async function submit() {
-    if (!course || !selectedFile) return;
+    if (!selectedFile) return;
     setBusy(true);
     setError("");
     try {
       const set = await generateStudySet({
         file: selectedFile,
-        courseId: course.id,
+        ...(course ? { courseId: course.id } : {}),
         type: mode === "quiz" ? "QUIZ" : "FLASHCARD",
         length,
         ...(provider ? { provider } : {}),
@@ -180,90 +161,12 @@ export function GenerateFlow({
         <div className="generate-loader">
           <span className="generate-loader-icon"><Loader2 size={28} className="spin" /></span>
           <strong>Generating your {mode === "quiz" ? "quiz" : "flashcard"} set</strong>
-          <span>Reading your document and creating {length} items with {providerLabel} — this usually takes under a minute.</span>
-          <div className="generate-loader-steps"><span className="active">Upload</span><span>Extract text</span><span>Create set</span></div>
+          <span>{mode === "quiz"
+            ? `Quiz generation usually takes less than a minute. We’re reading your material, writing exam-style questions, and checking the answer choices with ${providerLabel}. Larger files may take a little longer, so please keep this page open.`
+            : `We’re reading your material and creating ${length} study cards with ${providerLabel}. This usually takes under a minute.`}</span>
+          <div className="generate-loader-steps"><span className="active">Upload material</span><span>Review key topics</span><span>{mode === "quiz" ? "Build quiz and answers" : "Create study cards"}</span></div>
         </div>
       </main>
-    );
-  }
-
-  if (pickingCourse && !course) {
-    return (
-      <PageFrame
-        eyebrow="AI study tools"
-        title="Choose a course"
-        subtitle="Pick one of your courses, or add a new one with its code and title."
-        back="dashboard"
-      >
-        {!addingCourse && (
-          <div className="course-picker-actions">
-            <button className="secondary-button" onClick={openAddForm}>
-              <Plus size={15} /> Add a course
-            </button>
-            {school && <span className="school-chip">{school.universityName} · {school.facultyName}</span>}
-          </div>
-        )}
-
-        {addingCourse && (
-          <div className="course-creator">
-            {!school && <p className="course-school-missing">Your school isn't saved yet — add your university and faculty on your profile first.</p>}
-            <div className="course-form-grid two">
-              <input
-                value={newCourse.code}
-                onChange={(event) => setNewCourse({ ...newCourse, code: event.target.value.toUpperCase() })}
-                placeholder="Course code e.g. CSC 201"
-                disabled={!school}
-              />
-              <input
-                value={newCourse.title}
-                onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })}
-                placeholder="Course title e.g. Data Structures"
-                disabled={!school}
-              />
-            </div>
-            {addCourseError && <small className="upload-form-error">{addCourseError}</small>}
-            <div className="course-creator-actions">
-              <button className="secondary-button" onClick={closeAddForm}><X size={14} /> Cancel</button>
-              {school ? (
-                <button className="primary-button" disabled={addingCourseBusy} onClick={() => void addCourseHandler()}>
-                  {addingCourseBusy ? <Loader2 size={14} className="spin" /> : <Plus size={14} />} Save course
-                </button>
-              ) : (
-                <button className="primary-button" onClick={() => go("profile")}>Go to profile</button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {courseLoading ? (
-          <div className="repository-empty"><Loader2 size={18} className="spin" /> Loading your courses...</div>
-        ) : courseOptions.length ? (
-          <div className="course-list">
-            {courseOptions.map((item) => (
-              <button
-                className="course-row"
-                key={item.id}
-                onClick={() => { setCourse({ ...item }); setPickingCourse(false); }}
-              >
-                <div>
-                  <strong>{item.code}</strong>
-                  <span>{item.title}</span>
-                </div>
-                <div className="row-end"><ChevronRight size={18} /></div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="repository-empty">
-            <FileText size={20} />
-            <strong>No courses saved yet</strong>
-            <span>Add your first course — just a code and title — and it stays on your profile for every future session.</span>
-            <button className="primary-button" onClick={openAddForm}>
-              <Plus size={15} /> Add a course
-            </button>
-          </div>
-        )}
-      </PageFrame>
     );
   }
 
@@ -279,17 +182,37 @@ export function GenerateFlow({
       subtitle="Upload a PDF or Word document and AI will turn it into a private practice set."
       back="dashboard"
     >
-      {course && (
-        <div className="course-context"><Check size={14} /><span>Course</span><strong>{course.code} · {course.title}</strong></div>
+      <div className="length-control">
+        <label htmlFor="generation-course">Course (optional)</label>
+        <select id="generation-course" value={course?.id ?? ""} onChange={(event) => setCourse(courseOptions.find((item) => item.id === event.target.value) ?? null)}>
+          <option value="">No course · quick practice</option>
+          {courseOptions.map((item) => <option value={item.id} key={item.id}>{item.code} · {item.title}</option>)}
+        </select>
+        {courseLoading && <small>Loading saved courses… you can upload now.</small>}
+        {!courseLoading && <small>Want to group this set? <button className="text-button" onClick={openAddForm}>Add a course</button></small>}
+      </div>
+      {addingCourse && (
+        <div className="course-creator">
+          {!school && <p className="course-school-missing">Add your university and faculty on your profile to save a course. You can still continue without one.</p>}
+          <div className="course-form-grid two">
+            <input value={newCourse.code} onChange={(event) => setNewCourse({ ...newCourse, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" disabled={!school} />
+            <input value={newCourse.title} onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })} placeholder="Course title e.g. Data Structures" disabled={!school} />
+          </div>
+          {addCourseError && <small className="upload-form-error">{addCourseError}</small>}
+          <div className="course-creator-actions">
+            <button className="secondary-button" onClick={closeAddForm}><X size={14} /> Cancel</button>
+            {school ? <button className="primary-button" disabled={addingCourseBusy} onClick={() => void addCourseHandler()}>{addingCourseBusy ? <Loader2 size={14} className="spin" /> : <Plus size={14} />} Save course</button> : <button className="primary-button" onClick={() => go("profile")}>Go to profile</button>}
+          </div>
+        </div>
       )}
 
       <label className="upload-zone generate-upload">
         <Upload size={17} />
-        <span>{selectedFile ? selectedFile.name : "Choose a PDF, DOC, or DOCX file"}</span>
-        <small>{fileProblem ?? (selectedFile ? "Ready to process" : `The file is used only to generate your private practice set — PDF, DOC or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
+        <span>{selectedFile ? selectedFile.name : "Choose a PDF or DOCX file"}</span>
+        <small>{fileProblem ?? (selectedFile ? "Ready to process" : `The file is used only to generate your private practice set — PDF or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
         <input
           type="file"
-          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={(event) => { const file = event.target.files?.[0] || null; setSelectedFile(file); setError(file ? uploadFileProblem(file) ?? "" : ""); }}
         />
       </label>
@@ -310,6 +233,8 @@ export function GenerateFlow({
           </button>
         ))}
       </div>
+
+      {mode === "quiz" && <p className="quiz-generation-note">Each question has four answer choices. Your answer key and explanations are saved with the quiz, so you can review them after you finish.</p>}
 
       <div className="length-control">
         <label>Set length</label>
@@ -332,6 +257,12 @@ export function GenerateFlow({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {generationProviders.length === 0 && (
+        <div className="quota-banner exhausted" role="status">
+          The AI generator is not configured on the server. Add a valid provider API key to the backend environment and restart it.
         </div>
       )}
 
@@ -359,7 +290,7 @@ export function GenerateFlow({
 
       <button
         className="primary-button full"
-        disabled={!course || !selectedFile || fileProblem !== null || (mode === "quiz" && quota.limit !== null && (quota.remaining ?? 0) === 0)}
+        disabled={!selectedFile || fileProblem !== null || (mode === "quiz" && quota.limit !== null && (quota.remaining ?? 0) === 0)}
         onClick={() => void submit()}
       >
         <Sparkles size={16} /> Create {mode === "quiz" ? "quiz" : "flashcards"}

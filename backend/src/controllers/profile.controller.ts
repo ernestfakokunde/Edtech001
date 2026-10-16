@@ -37,9 +37,9 @@ function isControlFlow(error: unknown, message: string) {
 export async function saveSchool(request: Request, response: Response) {
   const profileId = getProfile(request).id
   const universityName = cleanInput(request.body?.universityName)
-  const facultyName = cleanInput(request.body?.facultyName)
-  if (!universityName || !facultyName) {
-    response.status(400).json({ message: 'University and faculty names are required.' })
+  const facultyName = cleanInput(request.body?.facultyName) || 'General'
+  if (!universityName) {
+    response.status(400).json({ message: 'University name is required.' })
     return
   }
 
@@ -202,15 +202,22 @@ export async function getReferralInfo(request: Request, response: Response) {
  */
 export async function listMissions(request: Request, response: Response) {
   const me = getProfile(request).id
-  const [profile, missions, claims] = await Promise.all([
+  const rewardDay = new Date().toISOString().slice(0, 10)
+  const [profile, missions, claims, dailyLoginClaims] = await Promise.all([
     prisma.profile.findUnique({ where: { id: me }, select: { xp: true, tier: true } }),
     prisma.mission.findMany({ orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }] }),
     prisma.userClaimedMission.findMany({ where: { profileId: me }, select: { missionId: true, claimedAt: true } }),
+    prisma.$queryRaw<{ xpAwarded: number; createdAt: Date }[]>`
+      SELECT "xpAwarded", "createdAt" FROM "DailyLoginReward"
+      WHERE "profileId" = ${me} AND "rewardDay" = ${rewardDay} LIMIT 1
+    `,
   ])
+  const dailyLoginClaim = dailyLoginClaims[0]
   const claimed = new Map(claims.map((claim) => [claim.missionId, claim.claimedAt]))
   response.json({
     xp: profile?.xp ?? 0,
     tier: profile?.tier ?? 'FREE',
+    dailyLogin: { xpReward: 100, claimedToday: Boolean(dailyLoginClaim), claimedAt: dailyLoginClaim?.createdAt ?? null },
     missions: missions.map((mission) => ({
       id: mission.id,
       title: mission.title,

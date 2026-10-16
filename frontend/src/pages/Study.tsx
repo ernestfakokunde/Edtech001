@@ -603,7 +603,7 @@ export function Quiz({
           );
         })}
       </div>
-      {revealed && item?.explanation && <div className="quiz-explanation">{item.explanation}</div>}
+      {revealed && item?.explanation && <div className="quiz-explanation"><strong>Why this is correct</strong><p>{item.explanation}</p></div>}
       <div className="quiz-footer">
         <button className="skip" onClick={next}>Skip question</button>
         <button className="primary-button" onClick={next}>

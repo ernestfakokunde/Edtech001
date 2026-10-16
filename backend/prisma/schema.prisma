@@ -74,6 +74,20 @@ model Profile {
   auditEvents   AuditEvent[]
   sessions      Session[]
   savedCourses  ProfileCourse[]
+  dailyLoginRewards DailyLoginReward[]
+}
+
+/// Automatic XP for a successful sign-in, at most once per UTC calendar day.
+model DailyLoginReward {
+  profileId String
+  rewardDay String   @db.VarChar(10)
+  xpAwarded Int      @default(100)
+  createdAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, rewardDay])
+  @@index([rewardDay])
 }
 
 model Session {

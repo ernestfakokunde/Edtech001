@@ -114,7 +114,9 @@ export const env = {
   supabaseBucket: cleanSecret(process.env.SUPABASE_BUCKET) ?? 'recappedu-papers',
   ai: {
     /** Preferred provider when the client does not request one. */
-    provider: knownProvider(process.env.AI_PROVIDER) ?? ('anthropic' as AiProviderId),
+    // When Gemini is the only configured key, make it the primary automatically.
+    // Keep Anthropic as the legacy default when no Gemini key is present.
+    provider: knownProvider(process.env.AI_PROVIDER) ?? (cleanSecret(process.env.GEMINI_API_KEY) ? 'gemini' as AiProviderId : 'anthropic' as AiProviderId),
     /** Providers tried in order when the primary fails. e.g. "openai,gemini" */
     fallbacks: knownProviderList(process.env.AI_FALLBACK_PROVIDERS),
     providers: {
@@ -151,7 +153,7 @@ export const env = {
         // When the primary model is rate-limited or overloaded (or the model
         // id does not exist for this key), lighter siblings take over — they
         // usually have spare capacity during demand spikes.
-        fallbackModels: commaList(process.env.GEMINI_FALLBACK_MODELS ?? 'gemini-2.5-flash-lite,gemini-2.0-flash'),
+        fallbackModels: commaList(process.env.GEMINI_FALLBACK_MODELS ?? 'gemini-3.5-flash-lite,gemini-3.8-flash'),
       } satisfies AiProviderConfig,
       // OpenAI-compatible endpoint for any other provider (DeepSeek, Mistral,
       // OpenRouter, LM Studio, Ollama, …). Needs both a base URL and API key.

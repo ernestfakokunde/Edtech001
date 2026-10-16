@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { BookOpen, Flag, History, LayoutDashboard, LogOut, Menu, ShieldCheck, Sparkles, Ticket, UserRound, X } from "lucide-react";
+import { BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import recappLogo from "../assets/recapp-logo.png";
 import type { Route } from "../types";
 import type { AuthProfile } from "../lib/api";
@@ -118,7 +118,7 @@ export function Footer() {
    slide-over drawer at ≤1020px (same breakpoint and mechanics as the admin
    board's sidebar), so the same nav works on a phone. All Tailwind utilities —
    no new rules were added to App.css. Items either switch hash route or land on
-   the profile page and scroll to a section ("profile/missions").
+   the dedicated Rewards page.
 
    Missions and Promo codes are deliberately part of the student nav: they are
    student surfaces (claim XP / redeem a code), not admin ones.
@@ -130,14 +130,13 @@ const USER_NAV: UserNavItem[] = [
   { key: "dashboard", hash: "dashboard", label: "Study desk", icon: <LayoutDashboard size={16} /> },
   { key: "hierarchy", hash: "hierarchy", label: "Repository", icon: <BookOpen size={16} /> },
   { key: "generate", hash: "generate", label: "Create a set", icon: <Sparkles size={16} /> },
-  { key: "missions", hash: "profile/missions", label: "Missions", icon: <Flag size={16} /> },
-  { key: "promo", hash: "profile/promo", label: "Promo codes", icon: <Ticket size={16} /> },
-  { key: "history", hash: "history", label: "Past results", icon: <History size={16} /> },
+  { key: "history", hash: "history", label: "My quizzes", icon: <History size={16} /> },
+  { key: "rewards", hash: "rewards", label: "Rewards", icon: <Gift size={16} /> },
   { key: "profile", hash: "profile", label: "My profile", icon: <UserRound size={16} /> },
   { key: "admin", hash: "admin", label: "Admin board", icon: <ShieldCheck size={16} />, adminOnly: true },
 ];
 
-const userNavBase = "flex w-full shrink-0 items-center gap-12 rounded-10 px-13 py-11 text-left text-13 font-medium transition-colors";
+const userNavBase = "flex w-full shrink-0 items-center gap-12 rounded-11 px-13 py-11 text-left text-13 font-medium transition-colors";
 const userNavActive = "bg-brand font-semibold text-white shadow-brand-sm";
 const userNavIdle = "text-muted hover:bg-pale hover:text-ink";
 
@@ -163,9 +162,9 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
   return (
     <aside
       aria-label="Student navigation"
-      className={`font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
+      className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
     >
-      <div className="flex h-60 items-center gap-11 border-b border-line px-16">
+      <div className="flex h-70 items-center gap-11 border-b border-line px-20">
         <img className="brand-logo h-30" src={recappLogo} alt="RecappEdu" />
         <span className="flex-1" />
         <button className="hidden h-32 w-32 shrink-0 place-items-center rounded-10 text-muted hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close navigation" onClick={onClose}>
@@ -173,7 +172,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
         </button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="flex flex-1 flex-col gap-7 overflow-y-auto p-16 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => (
           <button
             key={item.key}
@@ -186,7 +185,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
         ))}
       </nav>
 
-      <div className="flex items-center gap-11 border-t border-line px-16 py-13">
+      <div className="flex items-center gap-11 border-t border-line px-18 py-16">
         <span className="grid h-34 w-34 shrink-0 place-items-center rounded-half bg-pale text-12 font-bold text-brand">{initialsOf(profile)}</span>
         <span className="min-w-0 flex-1">
           <strong className="block truncate text-13 font-semibold text-ink">{displayNameOf(profile)}</strong>
@@ -229,8 +228,8 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
         onClose={() => setOpen(false)}
         onLogout={onLogout}
       />
-      <div className="pl-240 max-1020:pl-0">
-        <header className="sticky top-0 z-20 hidden h-58 items-center gap-10 border-b border-line bg-wash px-16 max-1020:flex">
+      <div className="user-shell-content min-h-screen">
+        <header className="sticky top-0 z-20 hidden h-64 items-center gap-10 border-b border-line bg-wash px-18 max-1020:flex">
           <button className="grid h-36 w-36 shrink-0 place-items-center rounded-9 border border-line bg-white text-muted" aria-label="Open navigation" onClick={() => setOpen(true)}>
             <Menu size={18} />
           </button>
