@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { ArrowRight, BookOpen, GraduationCap, Loader2, Plus, SkipForward, X } from "lucide-react";
-import { addMyCourse, errorMessage, saveMySchool } from "../lib/api";
+import { addMyCourse, errorMessage } from "../lib/api";
 import { go } from "../components/Layout";
 
 export function Onboarding() {
-  const [universityName, setUniversityName] = useState("");
-  const [facultyName, setFacultyName] = useState("");
   const [courses, setCourses] = useState<{ code: string; title: string }[]>([]);
   const [course, setCourse] = useState({ code: "", title: "" });
   const [saving, setSaving] = useState(false);
@@ -20,10 +18,8 @@ export function Onboarding() {
   }
 
   async function finish() {
-    if (!universityName.trim()) { setError("Enter your university to continue."); return; }
     setSaving(true); setError("");
     try {
-      await saveMySchool({ universityName: universityName.trim(), ...(facultyName.trim() ? { facultyName: facultyName.trim() } : {}) });
       for (const item of courses) await addMyCourse(item);
       go("dashboard");
     } catch (reason) {
@@ -37,9 +33,7 @@ export function Onboarding() {
         <div className="onboarding-brand"><span className="onboarding-mark"><GraduationCap size={19} /></span> RecappEdu <span className="onboarding-step">SETUP · 1 MIN</span></div>
         <p className="eyebrow">A little setup, then you’re in</p>
         <h1>Make RecappEdu yours.</h1>
-        <p className="onboarding-intro">Add your university so we can organize your papers and courses. You can change these details any time.</p>
-        <label className="onboarding-field"><span>University <b>Required</b></span><input autoFocus value={universityName} onChange={(event) => setUniversityName(event.target.value)} placeholder="e.g. University of Lagos" /></label>
-        <label className="onboarding-field"><span>Faculty <b>Optional</b></span><input value={facultyName} onChange={(event) => setFacultyName(event.target.value)} placeholder="e.g. Faculty of Science" /></label>
+        <p className="onboarding-intro">Add courses if you like, or skip this and start practising right away. You can organize your courses later.</p>
         <section className="onboarding-courses">
           <div className="onboarding-course-heading"><span className="onboarding-course-icon"><BookOpen size={16} /></span><div><strong>Add your courses</strong><small>Optional · you can do this later</small></div></div>
           <div className="onboarding-course-form"><input value={course.code} onChange={(event) => setCourse({ ...course, code: event.target.value })} placeholder="Course code" /><input value={course.title} onChange={(event) => setCourse({ ...course, title: event.target.value })} placeholder="Course name" /><button className="secondary-button" onClick={addCourse} type="button" aria-label="Add course"><Plus size={16} /></button></div>

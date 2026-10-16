@@ -5,9 +5,8 @@ import { supabase } from '../lib/supabase.js'
 import { env } from '../config/env.js'
 import { fileExtension } from '../utils/file.js'
 import { extractText } from '../utils/extractText.js'
-import { generateStudyItems, AiNotConfiguredError, GenerationFailedError, isAiConfigured, listGenerationProviders, type GeneratedItem } from '../services/ai.service.js'
-import { describeConfiguredProviders } from '../services/aiProviders.js'
-import { listGenerationFailures, recordGenerationFailure } from '../services/generationDiagnostics.js'
+import { generateStudyItems, AiNotConfiguredError, GenerationFailedError, isAiConfigured, type GeneratedItem } from '../services/ai.service.js'
+import { recordGenerationFailure } from '../services/generationDiagnostics.js'
 
 /**
  * Best-effort cleanup after any post-upload failure: removes the stored file
@@ -51,41 +50,6 @@ async function getQuickPracticeCourse() {
     where: { departmentId_code: { departmentId: department.id, code: 'QUICK' } },
     update: {},
     create: { departmentId: department.id, code: 'QUICK', title: 'Quick practice' },
-  })
-}
-
-/**
- * GET /api/generation/providers — which AI providers this server supports and
- * which have credentials configured right now. The UI uses this to show the
- * available provider choices (or a "no provider configured" warning).
- */
-export function listGenerationProvidersController(_request: Request, response: Response) {
-  response.json({ providers: listGenerationProviders(), primary: env.ai.provider })
-}
-
-/**
- * GET /api/generation/diagnostics — admin only.
- *
- * Answers "why did generation just fail?" without needing the server logs: the
- * providers this instance actually has configured (with the model each will
- * call and whether its key looks like the right kind of key), the primary and
- * fallback order, and the last few failures with the upstream reason the
- * student's copy deliberately omits. Contains no keys, no document text and no
- * user data — see services/generationDiagnostics.ts.
- */
-export function generationDiagnosticsController(_request: Request, response: Response) {
-  const providers = describeConfiguredProviders()
-  response.json({
-    primary: env.ai.provider,
-    fallbacks: env.ai.fallbacks,
-    providers,
-    // A configured provider whose key prefix is wrong (a `gsk_` Groq key under
-    // GROK_API_KEY, or a key pasted with quotes) fails every call with an auth
-    // error; say so here rather than leaving it to be inferred.
-    warnings: providers
-      .filter((entry) => !entry.keyLooksRight)
-      .map((entry) => `${entry.id}: the key does not have the expected prefix — get it from ${entry.expects}.`),
-    recentFailures: listGenerationFailures(),
   })
 }
 
@@ -240,23 +204,15 @@ export async function generateStudySet(request: Request, response: Response) {
     return
   }
 
-  const { courseId, type, length, timePerQuestion, provider } = request.body as Partial<{
+  const { courseId, type, length, timePerQuestion } = request.body as Partial<{
     courseId: string
     type: 'FLASHCARD' | 'QUIZ'
     length: string
     timePerQuestion: string
-    provider: string
   }>
 
   if ((type !== 'FLASHCARD' && type !== 'QUIZ') || !length) {
     response.status(400).json({ message: 'type and length are required.' })
-    return
-  }
-
-  // A client may pick which configured provider to use; validate the value at
-  // runtime rather than trusting a compile-time union.
-  if (provider !== undefined && (typeof provider !== 'string' || provider.trim() === '')) {
-    response.status(400).json({ message: 'provider must be a non-empty string when given.' })
     return
   }
 
@@ -331,7 +287,7 @@ export async function generateStudySet(request: Request, response: Response) {
     return
   }
 
-  const hasGeminiPdf = provider === 'gemini' || (!provider && (env.ai.provider === 'gemini' || env.ai.fallbacks.includes('gemini')))
+  const hasGeminiPdf = env.ai.provider === 'gemini' || env.ai.fallbacks.includes('gemini')
   if (text.trim().length < 80 && !(hasGeminiPdf && extension === 'pdf')) {
     await rollbackPersonalPaper(paper.id, path)
     response.status(422).json({ message: 'No readable text was found in this file. Scanned documents and image-only PDFs cannot be processed yet.' })
@@ -339,16 +295,15 @@ export async function generateStudySet(request: Request, response: Response) {
   }
 
   if (!isAiConfigured()) {
-    console.warn('[generate] no AI provider API key is set; generation is unavailable.')
+    console.warn('[generate] Practice generation is not configured.')
     await rollbackPersonalPaper(paper.id, path)
-    response.status(503).json({ message: 'The AI service is not configured on this server. Please try again later.' })
+    response.status(503).json({ message: 'Practice generation is temporarily unavailable. Please try again later.' })
     return
   }
 
   // 12–13. Send the extracted text to the AI, then parse and strictly validate
-  // its JSON response before writing anything to the database. A client may
-  // request a specific provider; the service falls back through the configured
-  // chain when it fails.
+  // its JSON response before writing anything to the database. The server
+  // chooses the configured generation service automatically.
   let generated: GeneratedItem[]
   try {
     generated = await generateStudyItems({
@@ -356,27 +311,27 @@ export async function generateStudySet(request: Request, response: Response) {
       kind: type,
       length: parsedLength,
       ...(extension === 'pdf' && hasGeminiPdf ? { pdfBase64: file.buffer.toString('base64') } : {}),
-    }, { provider: provider ?? null })
+    })
   } catch (reason) {
     // Server-side detail stays here, keyed by the same code the client receives
     // so a Render log line can be matched to what the UI showed.
     const code = reason instanceof AiNotConfiguredError
       ? 'AI_NOT_CONFIGURED'
       : reason instanceof GenerationFailedError ? reason.code : 'AI_FAILED'
-    console.error(`[generate] AI generation failed (code=${code}, requested=${provider ?? 'default'}):`, reason)
+    console.error(`[generate] Practice generation failed (code=${code}).`)
     recordGenerationFailure({
       code,
-      requested: provider ?? null,
+      requested: null,
       requestedItems: `${parsedLength} × ${type === 'QUIZ' ? 'quiz' : 'flashcards'}`,
       detail: reason instanceof Error ? reason.message : String(reason),
     })
     await rollbackPersonalPaper(paper.id, path)
     if (reason instanceof AiNotConfiguredError) {
-      response.status(503).json({ code: 'AI_NOT_CONFIGURED', message: 'The study generator is not set up yet. Please try again later.' })
+      response.status(503).json({ code: 'AI_NOT_CONFIGURED', message: 'Practice generation is temporarily unavailable. Please try again later.' })
     } else if (reason instanceof GenerationFailedError && reason.code === 'AI_BAD_KEY') {
-      response.status(502).json({ code: 'AI_BAD_KEY', message: 'The study generator is unavailable right now. Please try again later.' })
+      response.status(502).json({ code: 'AI_BAD_KEY', message: 'Practice generation is temporarily unavailable. Please try again later.' })
     } else if (reason instanceof GenerationFailedError && reason.code === 'AI_BUSY') {
-      response.status(502).json({ code: 'AI_BUSY', message: 'The study generator is busy right now. Please try again in a moment.' })
+      response.status(502).json({ code: 'AI_BUSY', message: 'Practice creation is taking longer than expected. Please try again shortly.' })
     } else {
       response.status(502).json({ code: 'AI_FAILED', message: 'We could not create your study set. Please try again.' })
     }

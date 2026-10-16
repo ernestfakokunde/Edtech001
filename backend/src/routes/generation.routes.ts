@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { clearQuizAttempts, deleteQuizAttempt, generateStudySet, generationDiagnosticsController, generationQuotaController, getSavedQuiz, listGenerationProvidersController, listQuizAttempts, listSavedQuizzes, recordQuizAttempt } from '../controllers/generatedSet.controller.js'
-import { requireAdmin, requireAuth } from '../middleware/auth.js'
+import { clearQuizAttempts, deleteQuizAttempt, generateStudySet, generationQuotaController, getSavedQuiz, listQuizAttempts, listSavedQuizzes, recordQuizAttempt } from '../controllers/generatedSet.controller.js'
+import { requireAuth } from '../middleware/auth.js'
 import { createDocumentUpload } from '../utils/upload.js'
 
 // Limits, accepted extensions and the 413/415 mapping live in utils/upload.ts
@@ -9,9 +9,6 @@ const upload = createDocumentUpload()
 
 export const generationRouter = Router()
 generationRouter.use(requireAuth)
-generationRouter.get('/providers', listGenerationProvidersController)
-// Why the last generations failed — admin only (services/generationDiagnostics.ts).
-generationRouter.get('/diagnostics', requireAdmin, generationDiagnosticsController)
 generationRouter.get('/quota', generationQuotaController)
 generationRouter.get('/sets', listSavedQuizzes)
 generationRouter.get('/sets/:setId', getSavedQuiz)

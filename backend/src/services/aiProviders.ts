@@ -265,7 +265,7 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
       attempts.push(`${models[index]} failed: ${detail}`)
       const retryable = (status === undefined || status === 404 || (typeof status === 'number' && RETRYABLE_STATUS.has(status)))
       if (!retryable) throw error
-      console.warn(`[generate] Gemini model "${models[index]}" unavailable — trying the next one`)
+      console.warn('[generate] Trying an alternate model after a temporary generation failure.')
     }
   }
   throw new AiProviderTransportError(

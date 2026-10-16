@@ -14,13 +14,11 @@ import {
   addMyCourse,
   errorMessage,
   generateStudySet,
-  getGenerationProviders,
   getGenerationQuota,
   getMyCourses,
   MAX_UPLOAD_LABEL,
   uploadFileProblem,
   type GeneratedSet,
-  type GenerationProvider,
   type GenerationQuota,
   type MySchool,
 } from "../lib/api";
@@ -62,23 +60,16 @@ export function GenerateFlow({
   const [timePerQuestion, setTimePerQuestion] = useState<30 | 60>(30);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  // AI providers available on this server. `provider` is the one the user
-  // picked; only shown when the server has more than one configured.
-  const [generationProviders, setGenerationProviders] = useState<GenerationProvider[]>([]);
-  const [provider, setProvider] = useState("");
   // Daily quiz quota for FREE accounts (PREMIUM = unlimited).
   const [quota, setQuota] = useState<GenerationQuota>({ tier: "FREE", limit: null, used: 0, remaining: null, resetsAt: "" });
-
-  const providerLabel = generationProviders.find((entry) => entry.id === provider)?.label ?? "AI";
 
   useEffect(() => {
     let alive = true;
     (async () => {
       // Upload is available immediately; load saved courses in the background
       // only to populate the optional grouping control.
-      const [saved, providers, quotaValue] = await Promise.all([
+      const [saved, quotaValue] = await Promise.all([
         getMyCourses().catch(() => null),
-        getGenerationProviders().catch(() => null),
         getGenerationQuota().catch(() => null),
       ]);
       if (!alive) return;
@@ -88,13 +79,6 @@ export function GenerateFlow({
         setCourseOptions(saved.courses);
         const match = courseId ? saved.courses.find((item) => item.id === courseId) ?? null : null;
         setCourse(match);
-      }
-      if (providers) {
-        const available = providers.providers.filter((entry) => entry.configured);
-        setGenerationProviders(available);
-        // Prefer the server's primary provider; otherwise fall back to the first
-        // one that is ready. Empty stays empty — the backend will say so.
-        setProvider(available.some((entry) => entry.id === providers.primary) ? providers.primary : available[0]?.id ?? "");
       }
       setCourseLoading(false);
     })();
@@ -144,7 +128,6 @@ export function GenerateFlow({
         ...(course ? { courseId: course.id } : {}),
         type: mode === "quiz" ? "QUIZ" : "FLASHCARD",
         length,
-        ...(provider ? { provider } : {}),
         ...(mode === "quiz" ? { timePerQuestion } : {}),
       });
       onComplete(set);
@@ -162,8 +145,8 @@ export function GenerateFlow({
           <span className="generate-loader-icon"><Loader2 size={28} className="spin" /></span>
           <strong>Generating your {mode === "quiz" ? "quiz" : "flashcard"} set</strong>
           <span>{mode === "quiz"
-            ? `Quiz generation usually takes less than a minute. We’re reading your material, writing exam-style questions, and checking the answer choices with ${providerLabel}. Larger files may take a little longer, so please keep this page open.`
-            : `We’re reading your material and creating ${length} study cards with ${providerLabel}. This usually takes under a minute.`}</span>
+            ? "Quiz generation usually takes less than a minute. We’re reading your material, writing exam-style questions, and checking the answer choices. Larger files may take a little longer, so please keep this page open."
+            : `We’re reading your material and creating ${length} study cards. This usually takes under a minute.`}</span>
           <div className="generate-loader-steps"><span className="active">Upload material</span><span>Review key topics</span><span>{mode === "quiz" ? "Build quiz and answers" : "Create study cards"}</span></div>
         </div>
       </main>
@@ -247,25 +230,6 @@ export function GenerateFlow({
         </div>
       </div>
 
-      {generationProviders.length > 1 && (
-        <div className="length-control">
-          <label>Generation engine</label>
-          <div className="generation-providers">
-            {generationProviders.map((entry) => (
-              <button key={entry.id} className={provider === entry.id ? "selected" : ""} onClick={() => setProvider(entry.id)}>
-                {entry.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {generationProviders.length === 0 && (
-        <div className="quota-banner exhausted" role="status">
-          The AI generator is not configured on the server. Add a valid provider API key to the backend environment and restart it.
-        </div>
-      )}
-
       {mode === "quiz" && (
         <div className="length-control">
           <label>Time per question</label>
@@ -282,7 +246,8 @@ export function GenerateFlow({
       {mode === "quiz" && quota.limit !== null && (
         <div className={`quota-banner ${quota.remaining === 0 ? "exhausted" : ""}`}>
           <Clock3 size={14} />
-          <span>Free plan: {quota.remaining ?? 0} of {quota.limit} quiz generations left today{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}. Premium users get unlimited quizzes.</span>
+          <span>Free plan: {quota.remaining ?? 0} of {quota.limit} quiz generations left today{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}. Pro includes unlimited quizzes.</span>
+          <button type="button" onClick={() => go("profile")}>Go Pro</button>
         </div>
       )}
 

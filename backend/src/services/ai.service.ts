@@ -1,5 +1,5 @@
 import { env, type AiProviderId } from '../config/env.js'
-import { getConfiguredProviders, listProviderInfo, AiProviderTransportError, type AiProvider } from './aiProviders.js'
+import { getConfiguredProviders, AiProviderTransportError, type AiProvider } from './aiProviders.js'
 
 export type GeneratedSetKind = 'FLASHCARD' | 'QUIZ'
 
@@ -40,8 +40,8 @@ export class AiNotConfiguredError extends Error {
   constructor(requested?: string | null) {
     super(
       requested
-        ? `The "${requested}" provider is not configured on this server. Ask an admin to enable it, or pick one of the configured providers.`
-        : 'The AI service is not configured. Ask an admin to set an API key for Anthropic, OpenAI, Grok, Gemini, or a custom provider.',
+        ? 'Practice generation is temporarily unavailable. Please try again later.'
+        : 'Practice generation is temporarily unavailable. Please try again later.',
     )
     this.name = 'AiNotConfiguredError'
   }
@@ -52,16 +52,9 @@ export type GenerationOptions = {
   provider?: string | null
 }
 
-export type ProviderListing = ReturnType<typeof listProviderInfo>
-
 /** True when at least one AI provider has credentials configured. */
 export function isAiConfigured(): boolean {
   return getConfiguredProviders().length > 0
-}
-
-/** Every supported provider and whether it can be used right now (GET /api/generation/providers). */
-export function listGenerationProviders(): ProviderListing {
-  return listProviderInfo()
 }
 
 export class GenerationFailedError extends Error {
@@ -117,11 +110,11 @@ export async function generateStudyItems(input: { text: string; kind: GeneratedS
       } catch (reason) {
         const detail = reason instanceof Error ? reason.message : String(reason)
         if (attempt === 1 && !(reason instanceof AiProviderTransportError)) {
-          console.warn(`[generate] provider "${provider.id}" returned an unusable reply — asking once more before failing over: ${detail}`)
+          console.warn('[generate] The response was incomplete; trying again.')
           continue
         }
         failures.push(`[${provider.label} / ${provider.model}] ${detail}`)
-        console.warn(`[generate] provider "${provider.id}" failed — ${detail}`)
+        console.warn('[generate] Practice generation attempt failed; trying another route.')
       }
     }
   }

@@ -386,14 +386,17 @@ h3 {
 }
 .primary-button,
 .secondary-button {
-  min-height: 45px;
-  padding: 0 18px;
+  min-height: 40px;
+  max-width: 100%;
+  padding: 0 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  border-radius: 11px;
-  font-size: 13px;
+  gap: 7px;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: normal;
   font-weight: 700;
   transition: 0.18s;
 }
@@ -940,6 +943,15 @@ select {
   color: var(--muted);
   font-size: 13px;
 }
+.dashboard-pro-card { display: flex; align-items: center; gap: 17px; margin: 0 0 22px; padding: 20px 22px; border: 1px solid #cddcff; border-radius: 18px; background: linear-gradient(110deg, #eef4ff, #fafbff 70%); box-shadow: 0 10px 28px #1d4ed80c; }
+.dashboard-pro-icon { width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 14px; color: #fff; background: #2858dc; }
+.dashboard-pro-copy { flex: 1; }
+.dashboard-pro-copy .eyebrow { margin: 0 0 4px; color: #315bca; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.dashboard-pro-copy h2 { margin: 0; color: var(--ink); font: 700 18px "Space Grotesk", sans-serif; }
+.dashboard-pro-copy p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.dashboard-pro-card > .primary-button { flex: 0 0 auto; }
+.dashboard-pro-error { flex-basis: 100%; color: #b91c1c; }
+@media (max-width: 640px) { .dashboard-pro-card { align-items: flex-start; flex-wrap: wrap; } .dashboard-pro-copy { min-width: calc(100% - 65px); } .dashboard-pro-card > .primary-button { width: 100%; justify-content: center; } }
 /* ── Dashboard: "Create your first practice" banner ──────────────────
    The main use of the product in one screen, for a student who has not sat a
    quiz yet (Dashboard.tsx hides it as soon as `stats.attempts` is non-zero).
@@ -1298,6 +1310,12 @@ select {
 .profile-card input:disabled { color: #94a3b8; background: #f8fafc; }
 .profile-card .field small { display: block; margin-top: 6px; color: #94a3b8; font-size: 10px; }
 .profile-card .primary-button { margin-top: 5px; }
+.profile-identity > .primary-button, .school-card > .primary-button { width: fit-content; min-width: 120px; }
+.pro-upgrade-box { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 22px; padding: 17px; border: 1px solid #dbeafe; border-radius: 13px; background: #f5f8ff; }
+.pro-upgrade-box strong { color: var(--ink); font-size: 13px; }
+.pro-upgrade-box p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+.pro-upgrade-box .primary-button { flex: 0 0 auto; margin: 0; }
+@media (max-width: 580px) { .pro-upgrade-box { align-items: stretch; flex-direction: column; } }
 .profile-help { margin: -9px 0 22px; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .profile-select-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .select-wrap { position: relative; }
@@ -1312,7 +1330,7 @@ select {
 .course-form-grid.two { grid-template-columns: 0.9fr 1.6fr; margin-bottom: 0; }
 .profile-saved-note { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: #047857; font-size: 10px; font-weight: 700; }
 .profile-saved-note.pending { color: #b45309; }
-.profile-course-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.profile-course-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
 .course-count { color: var(--muted); font-size: 10px; font-weight: 700; }
 .my-course-list { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
 .my-course-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
@@ -1403,8 +1421,9 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
   border-color: #fcd34d;
   box-shadow: 0 2px 6px rgba(180, 83, 9, 0.15);
 }
-.redeem-row { display: flex; gap: 10px; align-items: center; }
-.redeem-row input { flex: 1; font-family: ui-monospace, monospace; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.redeem-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.redeem-row input { flex: 1 1 180px; min-width: 0; font-family: ui-monospace, monospace; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.redeem-row .primary-button { flex: 0 0 auto; }
 @media (max-width: 760px) {
   .admin-mission-create { grid-template-columns: 1fr 1fr; }
   .admin-promo-create { grid-template-columns: 1fr; }
@@ -1574,8 +1593,8 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 }
 .generate-upload:hover { border-color: var(--blue); background: #eff6ff; }
 .generate-upload input { position: absolute; opacity: 0; pointer-events: none; }
-.generate-upload span { color: var(--ink); font-size: 13px; }
-.generate-upload small { max-width: 330px; line-height: 1.5; }
+.generate-upload span { display: block; width: 100%; color: var(--ink); font-size: 13px; }
+.generate-upload small { display: block; width: 100%; max-width: 420px; line-height: 1.5; font-weight: 500; }
 
 .choice-grid {
   display: grid;
@@ -1621,25 +1640,6 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 }
 .lengths button:hover { border-color: #93c5fd; }
 .lengths button.selected { color: #fff; border-color: var(--blue); background: var(--blue); box-shadow: 0 8px 18px #1d4ed826; }
-
-/* AI provider picker — same pill language as .lengths, but wraps freely. */
-.generation-providers { display: flex; flex-wrap: wrap; gap: 8px; }
-.generation-providers button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 38px;
-  padding: 0 14px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-  font: 600 12px "Space Grotesk", sans-serif;
-  cursor: pointer;
-  transition: 0.15s;
-}
-.generation-providers button:hover { border-color: #93c5fd; }
-.generation-providers button.selected { color: #fff; border-color: var(--blue); background: var(--blue); box-shadow: 0 8px 18px #1d4ed826; }
 
 /* ── Loading / progress spinner ────────────────────────────────── */
 .spin { animation: spin 1s linear infinite; }
@@ -1977,8 +1977,10 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 .danger-card input { border-color: #fecaca; }
 
 /* Free-plan quiz quota banner (Generate.tsx) */
-.quota-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 11px 13px; color: var(--blue); border: 1px solid #dbeafe; border-radius: 11px; background: #f8fbff; font-size: 11px; }
+.quota-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; padding: 11px 13px; color: var(--blue); border: 1px solid #dbeafe; border-radius: 11px; background: #f8fbff; font-size: 11px; }
+.quota-banner span { flex: 1 1 240px; min-width: 0; line-height: 1.5; }
 .quota-banner.exhausted { color: #b45309; border-color: #fde68a; background: #fffbeb; }
+.quota-banner button { flex: 0 0 auto; margin-left: auto; padding: 7px 12px; border: 0; border-radius: 8px; color: #fff; background: #2858dc; font-size: 11px; font-weight: 700; cursor: pointer; }
 
 /* ── Global moderation: comfortable middle sizes ─────────────────── */
 .screen-wrap { max-width: 1020px; margin-inline: auto; padding: 44px clamp(20px, 4vw, 40px) 64px; }

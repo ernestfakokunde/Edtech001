@@ -8,10 +8,11 @@ import {
   Layers3,
   Plus,
   Sparkles,
+  Crown,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { displayNameOf, go, type ProfileIdentity } from "../components/Layout";
-import { addMyCourse, errorMessage, getMyCourses, type MySchool } from "../lib/api";
+import { addMyCourse, errorMessage, getMyCourses, getProPricing, startProCheckout, type MySchool } from "../lib/api";
 import { getQuizStats } from "../lib/results";
 import practiceArt from "../assets/brand1.png";
 
@@ -25,6 +26,9 @@ export function Dashboard({ profile }: { profile: ProfileIdentity }) {
   const [courseMessage, setCourseMessage] = useState("");
   const [courseError, setCourseError] = useState("");
   const [savingCourse, setSavingCourse] = useState(false);
+  const [proPrice, setProPrice] = useState<number | null>(null);
+  const [proBusy, setProBusy] = useState(false);
+  const [proError, setProError] = useState("");
   useEffect(() => {
     setStats(getQuizStats());
     // Each block is independent and best-effort: a failing call leaves its card
@@ -32,7 +36,14 @@ export function Dashboard({ profile }: { profile: ProfileIdentity }) {
     getMyCourses()
       .then((result) => { setSchool(result.school); setCourses(result.courses); })
       .catch(() => { /* the courses card falls back to its empty state */ });
+    getProPricing().then((price) => setProPrice(price.available ? price.amountNaira : null)).catch(() => undefined);
   }, []);
+
+  async function upgrade() {
+    setProError(""); setProBusy(true);
+    try { const checkout = await startProCheckout(); window.location.assign(checkout.authorizationUrl); }
+    catch (reason) { setProError(errorMessage(reason, "Pro checkout is not available yet.")); setProBusy(false); }
+  }
 
   /* Nothing has been practised on this device yet, so the desk opens with the
      one thing the product is for. It retires itself after the first saved quiz
@@ -83,6 +94,13 @@ export function Dashboard({ profile }: { profile: ProfileIdentity }) {
         <p className="eyebrow">Your study desk</p>
         <h1>Welcome back, {displayNameOf(profile)}</h1>
         <p>{school ? `${school.facultyName} · ${school.universityName}` : "Add your school on your profile to file papers by course."}</p>
+      </section>
+
+      <section className="dashboard-pro-card">
+        <div className="dashboard-pro-icon"><Crown size={20} /></div>
+        <div className="dashboard-pro-copy"><span className="eyebrow">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get unlimited quiz generations for 90 days{proPrice !== null ? ` for ₦${proPrice.toLocaleString()}` : ""}.</p></div>
+        <button className="primary-button" disabled={proBusy} onClick={() => void upgrade()}>{proBusy ? "Opening checkout…" : <>Go Pro <ArrowRight size={16} /></>}</button>
+        {proError && <small className="dashboard-pro-error">{proError}</small>}
       </section>
 
       <section className="metric-grid">

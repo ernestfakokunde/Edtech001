@@ -117,10 +117,9 @@ export async function listMyCourses(request: Request, response: Response) {
 }
 
 /**
- * POST /api/profile/courses — add a course with just a code and title. The
- * course is filed under a stable "General" department of the student's saved
- * faculty (same convention as typed uploads), a course that already exists for
- * that code is linked instead of duplicated, and the per-student cap holds.
+ * POST /api/profile/courses — add a course with just a code and title. School
+ * details are optional; quick practice courses go under a private shared
+ * placeholder when the student has not chosen a university.
  */
 export async function addMyCourse(request: Request, response: Response) {
   const profileId = getProfile(request).id
@@ -135,11 +134,20 @@ export async function addMyCourse(request: Request, response: Response) {
     const course = await prisma.$transaction(
       async (transaction) => {
         const profile = await transaction.profile.findUnique({ where: { id: profileId }, select: { facultyId: true } })
-        if (!profile?.facultyId) throw new Error('SCHOOL_MISSING')
+        let facultyId = profile?.facultyId
+        if (!facultyId) {
+          const university = await transaction.university.upsert({ where: { slug: 'quick-practice' }, update: {}, create: { name: 'Quick practice', slug: 'quick-practice' } })
+          const faculty = await transaction.faculty.upsert({
+            where: { universityId_slug: { universityId: university.id, slug: 'independent-study' } },
+            update: {},
+            create: { universityId: university.id, name: 'Independent study', slug: 'independent-study' },
+          })
+          facultyId = faculty.id
+        }
         const department = await transaction.department.upsert({
-          where: { facultyId_slug: { facultyId: profile.facultyId, slug: 'general' } },
+          where: { facultyId_slug: { facultyId, slug: 'general' } },
           update: {},
-          create: { facultyId: profile.facultyId, name: 'General', slug: 'general' },
+          create: { facultyId, name: 'General', slug: 'general' },
         })
         const saved = await transaction.course.upsert({
           where: { departmentId_code: { departmentId: department.id, code } },
@@ -159,7 +167,6 @@ export async function addMyCourse(request: Request, response: Response) {
     await recordProfileAudit(request, 'PROFILE_COURSE_ADDED', 'Course', course.id, { code })
     response.status(201).json({ course: { id: course.id, code: course.code, title: course.title } })
   } catch (error) {
-    if (isControlFlow(error, 'SCHOOL_MISSING')) { response.status(400).json({ message: 'Add your university and faculty in your profile first.' }); return }
     if (isControlFlow(error, 'COURSE_LIMIT')) { response.status(409).json({ message: `You can save up to ${MAX_SAVED_COURSES} courses. Remove one first.` }); return }
     response.status(500).json({ message: 'Could not save the course.' })
   }

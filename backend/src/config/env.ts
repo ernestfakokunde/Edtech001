@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 // loads the real .env (if any) is already in process.env. Calling config()
 // again would re-inject the on-disk file OVER values a script stamped first
 // (dotenv never overrides), which is exactly how a stale GEMINI_API_KEY /
-// GROQ_API_KEY leaked into the offline ai-multiprovider-check. So: only load
+// GROQ_API_KEY leaked into an offline legacy verification script. So: only load
 // a .env file when nothing was pre-loaded (real `node dist/server.js` boot
 // without tsx, where process.env is still empty).
 if (!process.env.DOTENV_PRELOADED && !process.env.TSX_VERSION && !process.env.DATABASE_URL) {
@@ -109,6 +109,11 @@ export const env = {
   databaseUrl: cleanSecret(process.env.DATABASE_URL),
   sessionSecret: cleanSecret(process.env.SESSION_SECRET) ?? 'development-only-change-me',
   cookieSameSite: cookieSameSite(process.env.COOKIE_SAME_SITE),
+  paystack: {
+    secretKey: cleanSecret(process.env.PAYSTACK_SECRET_KEY),
+    semesterPriceKobo: Number(process.env.PRO_SEMESTER_PRICE_KOBO ?? 0),
+    frontendReturnUrl: cleanSecret(process.env.PAYMENT_RETURN_URL) ?? `${frontendOrigins[0] ?? 'http://localhost:5173'}/#profile`,
+  },
   supabaseUrl: cleanSecret(process.env.SUPABASE_URL),
   supabaseServiceRoleKey: cleanSecret(process.env.SUPABASE_SERVICE_ROLE_KEY),
   supabaseBucket: cleanSecret(process.env.SUPABASE_BUCKET) ?? 'recappedu-papers',

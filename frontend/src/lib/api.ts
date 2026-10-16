@@ -80,10 +80,6 @@ export type SavedQuiz = GeneratedSet & {
   attempts: { score: number; total: number; percent: number; createdAt: string }[];
 }
 
-// AI providers usable for generation. `configured` mirrors the backend: an
-// API key is set for it, so it can serve POST /api/generation right now.
-export type GenerationProvider = { id: string; label: string; configured: boolean }
-
 // One finished quiz run, as returned by GET /api/generation/attempts.
 export type QuizAttempt = {
   id: string; userId: string; setId: string; score: number; total: number; percent: number; createdAt: string;
@@ -292,6 +288,11 @@ export function removeMyCourse(courseId: string) {
   return request<void>(`/api/profile/courses/${encodeURIComponent(courseId)}`, { method: 'DELETE' })
 }
 
+export type ProPricing = { available: boolean; amountNaira: number | null; durationDays: number; currency: string }
+export function getProPricing() { return request<ProPricing>('/api/payments/pricing', { method: 'GET' }) }
+export function startProCheckout() { return request<{ authorizationUrl: string }>('/api/payments/checkout', { method: 'POST', body: JSON.stringify({}) }) }
+export function getPaymentStatus(reference: string) { return request<{ status: 'PENDING' | 'SUCCESS' | 'FAILED'; createdAt: string; tier?: 'FREE' | 'PREMIUM'; premiumUntil?: string | null }>(`/api/payments/status?reference=${encodeURIComponent(reference)}`, { method: 'GET' }) }
+
 export function getUniversities() { return request<{ universities: University[] }>('/api/hierarchy/universities', { method: 'GET' }) }
 export function getFaculties(universityId: string) { return request<{ faculties: Faculty[] }>(`/api/hierarchy/universities/${universityId}/faculties`, { method: 'GET' }) }
 export function getDepartments(facultyId: string) { return request<{ departments: Department[] }>(`/api/hierarchy/faculties/${facultyId}/departments`, { method: 'GET' }) }
@@ -367,7 +368,7 @@ export function getPaperDownloadUrl(paperId: string) { return request<{ url: str
 
 // POST /api/generation — multipart/form-data, never set Content-Type manually:
 // the browser adds the multipart boundary itself when a FormData is the body.
-export async function generateStudySet(input: { file: File; courseId?: string; type: "FLASHCARD" | "QUIZ"; length: number; timePerQuestion?: 30 | 60; provider?: string }) {
+export async function generateStudySet(input: { file: File; courseId?: string; type: "FLASHCARD" | "QUIZ"; length: number; timePerQuestion?: 30 | 60 }) {
   const problem = uploadFileProblem(input.file)
   if (problem) throw new Error(problem)
   const buildGenerationForm = () => {
@@ -376,7 +377,6 @@ export async function generateStudySet(input: { file: File; courseId?: string; t
     if (input.courseId) next.append('courseId', input.courseId)
     next.append('type', input.type)
     next.append('length', String(input.length))
-    if (input.provider) next.append('provider', input.provider)
     if (input.type === 'QUIZ') {
       next.append('timePerQuestion', String(input.timePerQuestion ?? 30))
     }
@@ -397,20 +397,13 @@ export async function generateStudySet(input: { file: File; courseId?: string; t
 
 /**
  * Maps the backend's stable generation error codes to short, user-safe copy.
- * Raw provider detail (keys, model names, HTTP bodies) never reaches the UI —
- * it stays in the server logs for the admin to fix.
+ * Internal generation details never reach the UI; students get short guidance.
  */
 function friendlyGenerationError(code: string | undefined, message: string | undefined): string {
-  if (code === 'AI_BUSY') return 'The study generator is busy right now. Please try again in a moment.'
-  if (code === 'AI_BAD_KEY' || code === 'AI_NOT_CONFIGURED') return 'The study generator is unavailable right now. Please try again later.'
+  if (code === 'AI_BUSY') return 'Practice creation is taking longer than expected. Please try again shortly.'
+  if (code === 'AI_BAD_KEY' || code === 'AI_NOT_CONFIGURED') return 'Practice generation is temporarily unavailable. Please try again later.'
   if (message && message.trim() && message.length < 160 && !/AIza|sk-ant|sk-|Bearer|http/i.test(message)) return message
-  return 'We could not create your study set. Please try again.'
-}
-
-// GET /api/generation/providers — which AI providers this server can generate
-// with, so the UI can let the user pick one (see Generate.tsx).
-export function getGenerationProviders() {
-  return request<{ providers: GenerationProvider[]; primary: string }>('/api/generation/providers', { method: 'GET' })
+  return 'We could not create your practice set. Please try again.'
 }
 
 // Quiz history: record one finished run (server derives percent), list past

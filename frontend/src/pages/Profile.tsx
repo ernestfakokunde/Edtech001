@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Check, GraduationCap, Plus, Save, Trash2, UserRound } from "lucide-react";
+import { BookOpen, Check, GraduationCap, Plus, Save, Trash2, UserRound, Sparkles, Loader2, Crown } from "lucide-react";
 import { PageFrame } from "../components/Layout";
 import {
-  addMyCourse, deleteAccount, errorMessage, getCurrentProfile, getMyCourses, removeMyCourse, saveMySchool, updateProfile, type AuthProfile,
+  addMyCourse, deleteAccount, errorMessage, getCurrentProfile, getMyCourses, removeMyCourse, saveMySchool, updateProfile, type AuthProfile, getProPricing, startProCheckout, getPaymentStatus,
 } from "../lib/api";
 import type { MySchool, SavedCourse } from "../lib/api";
 
@@ -27,6 +27,8 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [proPrice, setProPrice] = useState<number | null>(null);
+  const [proBusy, setProBusy] = useState(false);
 
   useEffect(() => {
     getCurrentProfile().then((result) => setProfile({
@@ -37,7 +39,25 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
       premiumUntil: result.profile.premiumUntil ?? null,
     })).catch(() => setError("Could not load your profile."));
     getMyCourses().then((result) => { setSchool(result.school); setSchoolForm(result.school ? { universityName: result.school.universityName, facultyName: result.school.facultyName } : { universityName: "", facultyName: "" }); setCourses(result.courses); }).catch(() => setError("Could not load your school details."));
+    getProPricing().then((price) => { setProPrice(price.available ? price.amountNaira : null); }).catch(() => undefined);
+    const match = `${window.location.search}&${window.location.hash}`.match(/[?&]reference=([^&]+)/);
+    if (match) {
+      const reference = decodeURIComponent(match[1]);
+      getPaymentStatus(reference).then(async (result) => {
+        if (result.status === "SUCCESS") {
+          setProfile((current) => ({ ...current, tier: result.tier ?? "FREE", premiumUntil: result.premiumUntil ?? null }));
+          setMessage("Your Pro plan is active.");
+        } else if (result.status === "PENDING") setMessage("Payment received. Your Pro access will appear as soon as confirmation completes.");
+        else setError("That payment was not completed. You can try again.");
+      }).catch(() => setMessage("We’re checking your payment. Refresh this page shortly."));
+    }
   }, []);
+
+  async function upgradeToPro() {
+    setError(""); setProBusy(true);
+    try { const result = await startProCheckout(); window.location.assign(result.authorizationUrl); }
+    catch (reason) { setError(errorMessage(reason, "Could not start checkout. Please try again.")); setProBusy(false); }
+  }
 
   async function saveProfile() {
     setError(""); setMessage("");
@@ -48,16 +68,15 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
   // the same university or faculty never duplicates rows.
   async function saveSchool() {
     setError(""); setMessage("");
-    if (!schoolForm.universityName.trim() || !schoolForm.facultyName.trim()) { setError("Enter your university and faculty names."); return; }
+    if (!schoolForm.universityName.trim()) { setError("Enter your university name."); return; }
     try {
       const result = await saveMySchool({ universityName: schoolForm.universityName.trim(), facultyName: schoolForm.facultyName.trim() });
       setSchool(result.school); setSchoolForm({ universityName: result.school.universityName, facultyName: result.school.facultyName });
-      setMessage("School saved. Courses you add are filed under it automatically.");
+      setMessage("School details saved.");
     }
     catch (reason) { setError(errorMessage(reason, "Could not save your school.")); }
   }
-  // Adding a course is just a code and a title — the backend files it under the
-  // saved faculty's General department and links (never duplicates) by code.
+  // Add a course by code and title; school details are optional.
   async function addCourse() {
     setError(""); setMessage("");
     if (!courseForm.code.trim() || !courseForm.title.trim()) { setError("Enter the course code and title."); return; }
@@ -89,9 +108,9 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
 
   return <PageFrame eyebrow="Account" title="Your profile" subtitle="Manage your personal details, school, courses, and account." back="dashboard">
     <div className="profile-layout">
-      <section className="profile-card profile-identity"><div className="profile-card-heading"><span className="profile-icon"><UserRound size={20} /></span><div><p className="eyebrow">Account</p><h2>Personal details</h2></div><div className={`profile-tier-chip ${tierLabel(profile.tier, profile.premiumUntil) === "Free" ? "" : "pro"}`}>{tierLabel(profile.tier, profile.premiumUntil)}</div></div><label className="field"><span>Display name</span><input value={profile.displayName} onChange={(event) => setProfile({ ...profile, displayName: event.target.value })} placeholder="How should we call you?" /></label><label className="field"><span>Username</span><input value={profile.username} onChange={(event) => setProfile({ ...profile, username: event.target.value })} placeholder="e.g. ernest_ade" /><small>3-24 lowercase letters, numbers, or underscores.</small></label><label className="field"><span>Email</span><input value={profile.email} disabled /></label><button className="primary-button" onClick={() => void saveProfile()}><Save size={16} /> Save profile</button></section>
-      <section className="profile-card school-card"><div className="profile-card-heading"><span className="profile-icon blue"><GraduationCap size={20} /></span><div><p className="eyebrow">My school</p><h2>University & faculty</h2></div></div><p className="profile-help">Enter these once — every course you add afterwards is filed under them automatically, here and on the Generate screen.</p><label className="field"><span>University</span><input value={schoolForm.universityName} onChange={(event) => setSchoolForm({ ...schoolForm, universityName: event.target.value })} placeholder="e.g. University of Lagos" /></label><label className="field"><span>Faculty</span><input value={schoolForm.facultyName} onChange={(event) => setSchoolForm({ ...schoolForm, facultyName: event.target.value })} placeholder="e.g. Faculty of Science" /></label><button className="primary-button" onClick={() => void saveSchool()}><Save size={16} /> {school ? "Update school" : "Save school"}</button>{school && <small className="profile-saved-note"><Check size={13} /> Saved: {school.universityName} · {school.facultyName}</small>}</section>
-      <section className="profile-card courses-card"><div className="profile-card-heading"><span className="profile-icon blue"><BookOpen size={20} /></span><div><p className="eyebrow">My courses</p><h2>Courses you generate against</h2></div></div><p className="profile-help">Up to {MAX_SAVED_COURSES} courses. They appear automatically when you generate quizzes or flashcards — just a code and a title, no hierarchy needed.</p><div className="course-form-grid two"><input value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" disabled={!school} /><input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Course title e.g. Data Structures" disabled={!school} /></div><div className="profile-course-actions"><button className="secondary-button" disabled={!school || !courseForm.code.trim() || !courseForm.title.trim() || courses.length >= MAX_SAVED_COURSES} onClick={() => void addCourse()}><Plus size={15} /> Add course</button><span className="course-count">{courses.length} of {MAX_SAVED_COURSES}</span></div>{!school && <small className="profile-saved-note pending">Save your university and faculty above first.</small>}{courses.length > 0 && <ul className="my-course-list">{courses.map((course) => <li className="my-course-row" key={course.id}><div><strong>{course.code}</strong><span>{course.title}</span></div><button className="ghost-button danger" aria-label={`Remove ${course.code}`} onClick={() => void removeCourse(course.id)}><Trash2 size={14} /></button></li>)}</ul>}</section>
+      <section className="profile-card profile-identity"><div className="profile-card-heading"><span className="profile-icon"><UserRound size={20} /></span><div><p className="eyebrow">Account</p><h2>Personal details</h2></div><div className={`profile-tier-chip ${tierLabel(profile.tier, profile.premiumUntil) === "Free" ? "" : "pro"}`}>{tierLabel(profile.tier, profile.premiumUntil)}</div></div><label className="field"><span>Display name</span><input value={profile.displayName} onChange={(event) => setProfile({ ...profile, displayName: event.target.value })} placeholder="How should we call you?" /></label><label className="field"><span>Username</span><input value={profile.username} onChange={(event) => setProfile({ ...profile, username: event.target.value })} placeholder="e.g. ernest_ade" /><small>3-24 lowercase letters, numbers, or underscores.</small></label><label className="field"><span>Email</span><input value={profile.email} disabled /></label><button className="primary-button" onClick={() => void saveProfile()}><Save size={16} /> Save profile</button>{profile.tier !== "PREMIUM" && <div className="pro-upgrade-box"><div className="pro-upgrade-icon"><Crown size={18} /></div><div className="pro-upgrade-copy"><strong>Go Pro for a semester</strong><p>Unlimited quiz practice for 90 days{proPrice !== null ? ` · ₦${proPrice.toLocaleString()}` : ""}.</p></div><button className="primary-button" disabled={proBusy} onClick={() => void upgradeToPro()}>{proBusy ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />} Go Pro</button></div>}</section>
+      <section className="profile-card school-card"><div className="profile-card-heading"><span className="profile-icon blue"><GraduationCap size={20} /></span><div><p className="eyebrow">Optional</p><h2>School details</h2></div></div><p className="profile-help">Add your university and faculty if you want to browse or share papers in the course repository.</p><label className="field"><span>University</span><input value={schoolForm.universityName} onChange={(event) => setSchoolForm({ ...schoolForm, universityName: event.target.value })} placeholder="e.g. University of Lagos" /></label><label className="field"><span>Faculty</span><input value={schoolForm.facultyName} onChange={(event) => setSchoolForm({ ...schoolForm, facultyName: event.target.value })} placeholder="e.g. Faculty of Science" /></label><button className="primary-button" onClick={() => void saveSchool()}><Save size={16} /> {school ? "Update details" : "Save details"}</button>{school && <small className="profile-saved-note"><Check size={13} /> Saved: {school.universityName} · {school.facultyName}</small>}</section>
+      <section className="profile-card courses-card"><div className="profile-card-heading"><span className="profile-icon blue"><BookOpen size={20} /></span><div><p className="eyebrow">My courses</p><h2>Saved courses</h2></div></div><p className="profile-help">Up to {MAX_SAVED_COURSES} courses for quick access. Add just a code and a name; you can use these while practising without entering school details.</p><div className="course-form-grid two"><input value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" /><input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Course title e.g. Data Structures" /></div><div className="profile-course-actions"><button className="secondary-button" disabled={!courseForm.code.trim() || !courseForm.title.trim() || courses.length >= MAX_SAVED_COURSES} onClick={() => void addCourse()}><Plus size={15} /> Add course</button><span className="course-count">{courses.length} of {MAX_SAVED_COURSES}</span></div>{courses.length > 0 && <ul className="my-course-list">{courses.map((course) => <li className="my-course-row" key={course.id}><div><strong>{course.code}</strong><span>{course.title}</span></div><button className="ghost-button danger" aria-label={`Remove ${course.code}`} onClick={() => void removeCourse(course.id)}><Trash2 size={14} /></button></li>)}</ul>}</section>
     <section className="profile-card danger-card"><div className="profile-card-heading"><span className="profile-icon red"><Trash2 size={20} /></span><div><p className="eyebrow">Danger zone</p><h2>Delete your account</h2></div></div><p className="profile-help">This removes your account, papers, study sets and history permanently. The deletion is recorded in the admin logs. To confirm, type <strong>delete</strong> below.</p><label className="field"><input value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} placeholder="Type 'delete' to confirm" /></label><button className="danger-button" disabled={deleting} onClick={() => void confirmDeletion()}>{deleting ? "Deleting…" : "Permanently delete account"}</button></section>
     </div>{message && <p className="profile-feedback success"><Check size={15} /> {message}</p>}{error && <p className="profile-feedback error">{error}</p>}
   </PageFrame>;
