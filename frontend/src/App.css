@@ -1896,6 +1896,53 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
   .first-practice-art { display: none; }
 }
 
+/* Phone layout: keep every page inside the viewport and give content a clear,
+   consistent gutter. Several feature screens contain wide grids and forms;
+   min-width: 0 lets those children shrink instead of pushing the document
+   sideways while scrolling. */
+@media (max-width: 680px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 320px;
+    overflow-x: clip;
+  }
+
+  .screen-wrap,
+  .player-wrap,
+  .dashboard-shell {
+    width: 100%;
+    min-width: 0;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .user-shell-content,
+  .user-shell-content > * {
+    min-width: 0;
+  }
+
+  .profile-layout,
+  .admin-shell,
+  .repository-paper-grid,
+  .dashboard-course-grid,
+  .metric-grid {
+    min-width: 0;
+  }
+
+  .topbar nav {
+    min-width: 0;
+  }
+
+  .page-heading,
+  .screen-wrap h1,
+  .screen-wrap h2,
+  .dashboard-greeting h1 {
+    overflow-wrap: anywhere;
+  }
+}
+
 /* ── Past results history ────────────────────────────────────────── */
 .history-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .history-summary > div { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; text-align: center; }
@@ -2014,5 +2061,73 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 .player-top { max-width: 800px; }
 .result-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .result-actions .primary-button, .result-actions .secondary-button { flex: 1 1 180px; }
+
+/* Landing page phone layout. Keep the content edge aligned with the compact
+   app header, and remove desktop hero sizing that leaves excessive space. */
+@media (max-width: 680px) {
+  body:has(> #root) header.sticky {
+    height: 58px;
+    padding-inline: 16px;
+  }
+
+  body:has(> #root) header.sticky nav {
+    flex: 1;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-right: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  body:has(> #root) header.sticky nav::-webkit-scrollbar { display: none; }
+  body:has(> #root) header.sticky nav button { flex: 0 0 auto; padding-block: 16px; font-size: 11px; }
+
+  .hero-grid {
+    width: 100%;
+    min-height: auto;
+    padding: 38px 20px 42px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
+
+  .hero-copy { max-width: none; }
+  .hero-copy .eyebrow { margin-bottom: 13px; font-size: 9px; }
+  .hero-copy h1 {
+    max-width: 16ch;
+    margin-bottom: 16px;
+    font-size: clamp(36px, 10vw, 48px);
+    line-height: 1.02;
+  }
+  .hero-copy .lede { margin: 0; font-size: 15px; line-height: 1.6; }
+  .hero-actions { align-items: stretch; flex-direction: column; gap: 10px; margin-top: 22px; }
+  .hero-actions button { width: 100%; min-height: 48px; }
+  .home-auth-links { flex-wrap: wrap; gap: 8px 12px; margin-top: 18px; font-size: 11px; }
+
+  .hero-panel {
+    max-width: none;
+    padding: 20px;
+    border-radius: 20px;
+    transform: none;
+  }
+  .progress-ring { width: 126px; height: 126px; margin: 24px auto 18px; }
+  .panel-footer { margin-top: 12px; }
+
+  .brand-carousel { padding: 0 18px 44px; }
+  .carousel-viewport { border-radius: 18px; }
+  .carousel-slide img { height: 190px; }
+  .carousel-slide figcaption { padding: 15px 16px; }
+  .carousel-slide figcaption strong { font-size: 18px; line-height: 1.25; }
+  .carousel-slide figcaption span { font-size: 12px; }
+
+  .path-section,
+  .how-section { padding: 40px 20px; }
+  .section-heading h2 { margin-bottom: 24px; font-size: 29px; line-height: 1.1; }
+  .path-grid,
+  .steps { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .path-grid button { min-height: 160px; padding: 18px; }
+  .path-grid strong { font-size: 21px; }
+  .steps > div { padding-top: 14px; }
+  .steps h3 { margin: 12px 0 7px; }
+}
 }
 
