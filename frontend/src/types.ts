@@ -16,6 +16,8 @@ export type Route =
   | "rewards"
   | "onboarding"
   | "profile"
+  | "privacy"
+  | "terms"
   | "admin"
   | "admin-users"
   | "admin-admins"

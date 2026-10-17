@@ -22,6 +22,7 @@ import { AdminPage } from "./pages/Admin";
 import { ResultsHistory } from "./pages/History";
 import { Onboarding } from "./pages/Onboarding";
 import { RewardsPage } from "./pages/Rewards";
+import { PrivacyPage, TermsPage } from "./pages/Legal";
 
 const protectedRoutes: Route[] = [
   "dashboard",
@@ -59,6 +60,8 @@ const adminRoutes: Route[] = [
    per page, so the title is set here on every route change. */
 const ROUTE_TITLES: Record<Route, string> = {
   home: "Turn past papers into practice",
+  privacy: "Privacy policy",
+  terms: "Terms of use",
   dashboard: "Dashboard",
   login: "Sign in",
   signup: "Create your account",
@@ -193,7 +196,7 @@ function App() {
     go(`material/${encodeURIComponent(paper.id)}`);
   };
   const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "flashcards", "quiz", "results", "profile"];
-  const showHeader = !["login", "signup", "onboarding", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
+  const showHeader = !["login", "signup", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   // The rail replaces the old standalone dashboard top line, so the dashboard
   // no longer shows the global header — and its footer never made sense there.
   const showFooter = ["home", "hierarchy", "courses"].includes(route);
@@ -207,6 +210,8 @@ function App() {
   const page = (
     <>
       {route === "home" && <Home />}
+      {route === "privacy" && <PrivacyPage />}
+      {route === "terms" && <TermsPage />}
       {route === "dashboard" && <Dashboard profile={profile} />}
       {route === "login" && <AuthPage mode="login" onAuthenticated={signedIn} notice={authNotice} />}
       {route === "signup" && <AuthPage mode="signup" onAuthenticated={signedIn} />}

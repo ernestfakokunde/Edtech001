@@ -118,6 +118,11 @@ export function Footer() {
           <button onClick={() => go("personal")}>Practise with a PDF <ArrowUpRight size={14} /></button>
           <button onClick={() => go("signup")}>Create an account <ArrowUpRight size={14} /></button>
         </div>
+        <nav className="site-footer-legal" aria-label="Policies">
+          <button onClick={() => go("privacy")}>Privacy</button>
+          <button onClick={() => go("terms")}>Terms</button>
+          <a href="mailto:ernest.dev10@gmail.com">Contact</a>
+        </nav>
       </div>
       <div className="site-footer-bottom">
         <span>© 2026 RecappEdu</span>
