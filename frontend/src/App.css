@@ -2131,3 +2131,38 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 }
 }
 
+
+/* Landing navigation and footer */
+.site-footer {
+  padding: 34px clamp(20px, 5vw, 64px) 18px;
+  color: #dbeafe;
+  background: #0f1d3a;
+}
+.site-footer-main, .site-footer-bottom { max-width: 1120px; margin-inline: auto; }
+.site-footer-main { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding-bottom: 26px; }
+.site-footer-brand .brand-logo { height: 34px; filter: brightness(0) invert(1); }
+.site-footer-brand p { margin: 10px 0 0; color: #a9b9d5; font-size: 13px; }
+.site-footer-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+.site-footer-links button { display: inline-flex; align-items: center; gap: 7px; padding: 10px 13px; border: 1px solid #ffffff24; border-radius: 10px; color: #f8fbff; font-size: 12px; font-weight: 600; transition: background .18s, border-color .18s; }
+.site-footer-links button:hover { border-color: #93c5fd80; background: #ffffff12; }
+.site-footer-bottom { display: flex; justify-content: space-between; gap: 12px; padding-top: 16px; border-top: 1px solid #ffffff20; color: #9aacc9; font-size: 11px; }
+.site-header nav { min-width: 0; }
+@media (max-width: 680px) {
+  .site-header { height: 60px !important; gap: 10px; padding-inline: 14px !important; }
+  .site-header > .wordmark { flex: 0 0 auto; }
+  .site-header > .wordmark .brand-logo { width: 132px; height: auto; max-height: 31px; }
+  .site-header nav { display: none; }
+  .site-header > .avatar { flex: 0 0 35px; }
+  .hero-grid { padding: 34px 20px 38px; gap: 26px; }
+  .hero-copy .eyebrow { margin-bottom: 14px; font-size: 9px; letter-spacing: .1em; }
+  .hero-copy h1 { max-width: 15ch; margin-bottom: 16px; font-size: clamp(35px, 9.2vw, 44px); line-height: 1.05; }
+  .hero-copy .lede { font-size: 15px; line-height: 1.65; }
+  .hero-actions { margin-top: 22px; }
+  .home-auth-links { gap: 8px 12px; font-size: 11px; }
+  .hero-panel { padding: 19px; }
+  .site-footer { padding: 28px 20px 16px; }
+  .site-footer-main { align-items: flex-start; flex-direction: column; gap: 20px; padding-bottom: 20px; }
+  .site-footer-links { justify-content: flex-start; }
+  .site-footer-links button { padding: 9px 10px; font-size: 11px; }
+  .site-footer-bottom { flex-direction: column; gap: 6px; }
+}

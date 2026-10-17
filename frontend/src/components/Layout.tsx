@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import recappLogo from "../assets/recapp-logo.png";
 import type { Route } from "../types";
 import type { AuthProfile } from "../lib/api";
@@ -41,7 +41,7 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
   const adminActive = route === "admin";
 
   return (
-    <header className="sticky top-0 z-30 w-full h-64 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash">
+    <header className="site-header sticky top-0 z-30 w-full h-64 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash">
       <button className="wordmark" onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>
         {/* The brand lock-up (mark + wordmark) ships as one image so the site
             always shows the artwork exactly as it was drawn. */}
@@ -107,13 +107,25 @@ export function PageFrame({
 
 export function Footer() {
   return (
-    <footer className="w-full pt-26 pb-35 px-[clamp(16px,4vw,44px)] flex justify-between text-slate-icon text-11 border-t border-line max-680:flex-col max-680:items-start max-680:gap-9">
-      <span>© 2026 RecappEdu</span>
-      <span>Structured practice, one course at a time.</span>
+    <footer className="site-footer">
+      <div className="site-footer-main">
+        <div className="site-footer-brand">
+          <img className="brand-logo" src={recappLogo} alt="RecappEdu" />
+          <p>Make every study session count.</p>
+        </div>
+        <div className="site-footer-links" aria-label="Explore RecappEdu">
+          <button onClick={() => go("hierarchy")}>Browse courses <ArrowUpRight size={14} /></button>
+          <button onClick={() => go("personal")}>Practise with a PDF <ArrowUpRight size={14} /></button>
+          <button onClick={() => go("signup")}>Create an account <ArrowUpRight size={14} /></button>
+        </div>
+      </div>
+      <div className="site-footer-bottom">
+        <span>© 2026 RecappEdu</span>
+        <span>Structured practice, one course at a time.</span>
+      </div>
     </footer>
   );
-}
-/* ───────────────────────────────────────────────────────────────────────────
+}/* ───────────────────────────────────────────────────────────────────────────
    Student navigation (Phase 6). A fixed left rail on desktop that becomes a
    slide-over drawer at ≤1020px (same breakpoint and mechanics as the admin
    board's sidebar), so the same nav works on a phone. All Tailwind utilities —
