@@ -15,7 +15,7 @@ export type AiProvider = {
   id: AiProviderId
   label: string
   model: string
-  complete(system: string, userText: string, document?: { pdfBase64: string }): Promise<{ text: string; model: string }>
+  complete(system: string, userText: string, document?: { pdfBase64: string }, format?: 'json' | 'text'): Promise<{ text: string; model: string }>
 }
 
 /** Thrown when a provider's HTTP call fails (transport error, non-2xx, or an empty body). */
@@ -40,6 +40,7 @@ type ProviderInput = {
     system: string,
     userText: string,
     document?: { pdfBase64: string },
+    format?: 'json' | 'text',
   ) => Promise<{ text: string; model: string }>
 }
 
@@ -191,7 +192,7 @@ async function completeOpenAiCompatible(
 }
 
 /** Google Gemini generateContent API — https://ai.google.dev/api/generate-content */
-async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] }, system: string, userText: string, document?: { pdfBase64: string }): Promise<{ text: string; model: string }> {
+async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] }, system: string, userText: string, document?: { pdfBase64: string }, format: 'json' | 'text' = 'json'): Promise<{ text: string; model: string }> {
   const ai = new GoogleGenAI({ apiKey: config.apiKey })
   const generateWithModel = async (model: string): Promise<string> => {
     try {
@@ -207,8 +208,8 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
         config: {
           maxOutputTokens: MAX_TOKENS,
           temperature: 0,
-          responseMimeType: 'application/json',
-          responseSchema: {
+          responseMimeType: format === 'json' ? 'application/json' : 'text/plain',
+          ...(format === 'json' ? { responseSchema: {
             type: Type.ARRAY,
             items: {
               type: Type.OBJECT,
@@ -222,7 +223,7 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
               // require options at generation time rather than dropping it later.
               required: ['prompt', 'answer', 'explanation', 'options'],
             },
-          },
+          } } : {}),
         },
       })
       const text = response.text ?? ''
@@ -282,12 +283,13 @@ function makeProvider(input: ProviderInput): AiProvider {
     id: input.id,
     label: input.config.label,
     model: input.config.model,
-    complete: (system, userText, document) =>
+    complete: (system, userText, document, format = 'json') =>
       input.complete(
         { apiKey: input.config.apiKey!, model: input.config.model, baseUrl: input.config.baseUrl!, fallbackModels: input.config.fallbackModels },
         system,
         userText,
         input.id === 'gemini' ? document : undefined,
+        format,
       ),
   }
 }
