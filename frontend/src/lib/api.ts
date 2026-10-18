@@ -395,6 +395,26 @@ export async function generateStudySet(input: { file: File; courseId?: string; t
   return body.set!
 }
 
+export type LearnChatMessage = { role: "user" | "assistant"; content: string }
+export async function uploadLearnDocument(file: File): Promise<{ title: string; documentText: string; truncated: boolean }> {
+  const problem = uploadFileProblem(file)
+  if (problem) throw new Error(problem)
+  if (!file.name.toLowerCase().endsWith(".pdf")) throw new Error("Learn with AI currently supports PDF files.")
+  const makeForm = () => { const form = new FormData(); form.append("file", file); return form }
+  const send = async () => fetchWithOfflineMessage(`${API_URL}/api/learn/document`, {
+    method: "POST", credentials: "include", body: makeForm(), headers: { [CSRF_HEADER]: await getCsrfToken() },
+  }, UPLOAD_INTERRUPTED_HINT)
+  let response = await send()
+  if (response.status === 403) { csrfToken = null; response = await send() }
+  const body = await response.json().catch(() => ({})) as { title?: string; documentText?: string; truncated?: boolean; message?: string }
+  if (!response.ok) throw apiError(response, body.message)
+  if (!body.documentText || !body.title) throw new Error("We could not read this PDF. Try another file.")
+  return { title: body.title, documentText: body.documentText, truncated: Boolean(body.truncated) }
+}
+export function askLearnTutor(input: { documentText?: string; topic?: string; question: string; history: LearnChatMessage[] }) {
+  return request<{ answer: string }>("/api/learn/chat", { method: "POST", body: JSON.stringify(input) })
+}
+
 /**
  * Maps the backend's stable generation error codes to short, user-safe copy.
  * Internal generation details never reach the UI; students get short guidance.

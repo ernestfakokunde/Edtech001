@@ -18,8 +18,8 @@ export function Home() {
             learn from a shared archive.
           </p>
           <div className="hero-actions">
-            <button className="primary-button" onClick={() => go("personal")}>
-              Use my own PDF <ArrowRight size={17} />
+            <button className="primary-button" onClick={() => go("learn")}>
+              Learn with my PDF <ArrowRight size={17} />
             </button>
             <button
               className="secondary-button"
@@ -68,12 +68,12 @@ export function Home() {
           <h2>Start with what you have.</h2>
         </div>
         <div className="path-grid">
-          <button onClick={() => go("personal")}>
+          <button onClick={() => go("learn")}>
             <span className="path-number">01</span>
-            <strong>My own PDF</strong>
+            <strong>Learn with AI</strong>
             <p>
-              Upload a paper privately and let AI turn it into flashcards or a
-              quiz immediately.
+              Upload your notes and ask an AI tutor to explain concepts, answer
+              questions, and help you revise.
             </p>
             <ArrowRight size={17} />
           </button>

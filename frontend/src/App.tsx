@@ -23,10 +23,12 @@ import { ResultsHistory } from "./pages/History";
 import { Onboarding } from "./pages/Onboarding";
 import { RewardsPage } from "./pages/Rewards";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
+import { LearnWithAI } from "./pages/Learn";
 
 const protectedRoutes: Route[] = [
   "dashboard",
   "personal",
+  "learn",
   "hierarchy",
   "generate",
   "flashcards",
@@ -66,6 +68,7 @@ const ROUTE_TITLES: Record<Route, string> = {
   login: "Sign in",
   signup: "Create your account",
   personal: "Practise from my PDF",
+  learn: "Learn with AI",
   hierarchy: "Browse courses",
   material: "Material",
   courses: "Courses",
@@ -195,7 +198,7 @@ function App() {
     setSelectedMaterial(paper);
     go(`material/${encodeURIComponent(paper.id)}`);
   };
-  const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "flashcards", "quiz", "results", "profile"];
+  const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "learn", "flashcards", "quiz", "results", "profile"];
   const showHeader = !["login", "signup", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   // The rail replaces the old standalone dashboard top line, so the dashboard
   // no longer shows the global header — and its footer never made sense there.
@@ -216,6 +219,7 @@ function App() {
       {route === "login" && <AuthPage mode="login" onAuthenticated={signedIn} notice={authNotice} />}
       {route === "signup" && <AuthPage mode="signup" onAuthenticated={signedIn} />}
       {route === "personal" && <PersonalPractice />}
+      {route === "learn" && <LearnWithAI />}
       {route === "hierarchy" && <Hierarchy onMaterial={chooseMaterial} />}
       {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="app-shell auth-loading"><span>Loading material...</span></div>)}
       {route === "generate" && (

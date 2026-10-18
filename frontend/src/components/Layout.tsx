@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import recappLogo from "../assets/recapp-logo.png";
 import type { Route } from "../types";
 import type { AuthProfile } from "../lib/api";
@@ -146,6 +146,7 @@ type UserNavItem = { key: string; hash: string; label: string; icon: ReactNode; 
 const USER_NAV: UserNavItem[] = [
   { key: "dashboard", hash: "dashboard", label: "Study desk", icon: <LayoutDashboard size={16} /> },
   { key: "hierarchy", hash: "hierarchy", label: "Repository", icon: <BookOpen size={16} /> },
+  { key: "learn", hash: "learn", label: "Learn with AI", icon: <MessageCircle size={16} /> },
   { key: "generate", hash: "generate", label: "Create a set", icon: <Sparkles size={16} /> },
   { key: "history", hash: "history", label: "My quizzes", icon: <History size={16} /> },
   { key: "rewards", hash: "rewards", label: "Rewards", icon: <Gift size={16} /> },

@@ -15,6 +15,7 @@ import { prisma } from './lib/prisma.js'
 import { compileOriginMatchers } from './utils/origin.js'
 import { persistPermanentAdmin, RECAPP_ADMIN_EMAIL } from './services/auth.service.js'
 import { paymentRouter } from './routes/payment.routes.js'
+import { learnRouter } from './routes/learn.routes.js'
 
 function logAiConfiguration() {
   if (env.ai.providers.gemini.apiKey) console.log('[config] Practice generation is ready.')
@@ -49,7 +50,9 @@ app.use(cors({
   origin: (origin, callback) => callback(null, !origin || allowedFrontendOrigins.some((matches) => matches(origin))),
   credentials: true,
 }))
-app.use(express.json())
+// Learn with AI sends extracted PDF text (up to 60k characters) alongside each
+// chat turn, so allow a bounded payload above Express's 100kb default.
+app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
 app.use(requireCsrf)
 
@@ -66,6 +69,7 @@ app.use('/api/admin', adminRouter)
 
 app.use('/api/papers', paperRouter)
 app.use('/api/generation', generationRouter)
+app.use('/api/learn', learnRouter)
 
 // The error middleware lives in middleware/errorHandler.ts so the upload
 // contract can be regression-checked (scripts/upload-error-check.ts) without
