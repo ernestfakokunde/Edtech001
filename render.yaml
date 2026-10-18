@@ -67,10 +67,15 @@ services:
       - key: COOKIE_SAME_SITE
         value: none
       # --- Pro checkout ----------------------------------------------------
+      # In the Paystack Dashboard, register https://recappedu-api.onrender.com/api/payments/webhook
+      # for charge.success and charge.failed events.
+      # Paste the sk_live_ key from Paystack Dashboard ? Settings ? API Keys.
       - key: PAYSTACK_SECRET_KEY
         sync: false
       - key: PRO_SEMESTER_PRICE_KOBO
         sync: false
+      - key: PAYMENT_RETURN_URL
+        value: "https://recapp-pi.vercel.app/#profile"
       # --- File storage (paper uploads) ------------------------------------
       - key: SUPABASE_URL
         sync: false
