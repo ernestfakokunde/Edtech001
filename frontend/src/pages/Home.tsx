@@ -1,6 +1,7 @@
 import { ArrowRight, Brain, Sparkles } from "lucide-react";
 import { BrandCarousel } from "../components/BrandCarousel";
 import { go } from "../components/Layout";
+import recappLogo from "../assets/recapp-logo.png";
 
 export function Home() {
   return (
@@ -128,6 +129,25 @@ export function Home() {
           </div>
         </div>
       </section>
+      <footer className="site-footer">
+        <div className="site-footer-main">
+          <div className="site-footer-brand">
+            <img className="brand-logo" src={recappLogo} alt="RecappEdu" />
+            <p>Study smarter, one paper at a time.</p>
+          </div>
+          <nav className="site-footer-links" aria-label="Footer navigation">
+            <button type="button" onClick={() => go("login")}>Sign in</button>
+            <button type="button" onClick={() => go("signup")}>Create account</button>
+          </nav>
+        </div>
+        <div className="site-footer-bottom">
+          <span>© {new Date().getFullYear()} RecappEdu. All rights reserved.</span>
+          <div className="site-footer-legal">
+            <button type="button" onClick={() => go("privacy")}>Privacy policy</button>
+            <button type="button" onClick={() => go("terms")}>Terms of use</button>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
