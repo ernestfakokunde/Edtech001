@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, Search, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import recappLogo from "../assets/recapp-logo.png";
 import type { Route } from "../types";
 import type { AuthProfile } from "../lib/api";
@@ -244,7 +244,6 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
 }) {
   const [open, setOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [search, setSearch] = useState("");
   const profileMenuRef = useRef<HTMLDivElement>(null);
   // Any navigation closes the drawer so a tap on a nav item reveals the page.
   useEffect(() => { setOpen(false); }, [route, sub]);
@@ -255,15 +254,6 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
     document.addEventListener("mousedown", closeMenus);
     return () => document.removeEventListener("mousedown", closeMenus);
   }, []);
-
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const phrase = search.trim();
-    if (!phrase) return;
-    sessionStorage.setItem("recappedu_global_search", phrase);
-    setSearch("");
-    go("hierarchy");
-  }
 
   return (
     <div className="min-h-screen">
@@ -287,10 +277,6 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
             <small className="hidden text-10 text-muted max-680:block">Study smarter</small>
           </div>
           <div className="ml-auto flex items-center gap-10">
-            <form className="hidden items-center gap-8 rounded-10 border border-line bg-white px-10 max-860:flex" onSubmit={submitSearch}>
-              <Search size={15} className="shrink-0 text-muted" />
-              <input className="h-32 w-180 border-0 bg-transparent text-11 outline-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search repository" aria-label="Search repository" />
-            </form>
             <div className="relative" ref={profileMenuRef}>
               <button className="flex items-center gap-8 rounded-10 px-4 py-4 hover:bg-pale" aria-label="Open profile menu" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((value) => !value)}>
                 <span className="grid h-32 w-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand">{initialsOf(profile)}</span>
