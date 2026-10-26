@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import { Header, Footer, UserShell, go } from "./components/Layout";
+import { Header, UserShell, go } from "./components/Layout";
 import { Home } from "./pages/Home";
 import { AuthPage } from "./pages/Auth";
 import { Dashboard } from "./pages/Dashboard";
@@ -200,10 +200,6 @@ function App() {
   };
   const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "learn", "flashcards", "quiz", "results", "profile"];
   const showHeader = !["login", "signup", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
-  // The rail replaces the old standalone dashboard top line, so the dashboard
-  // no longer shows the global header — and its footer never made sense there.
-  const showFooter = ["home", "hierarchy", "courses"].includes(route);
-
   if (authStatus === "checking" && protectedRoutes.includes(route)) {
     return <div className="app-shell auth-loading"><span>Checking your session...</span></div>;
   }
@@ -296,7 +292,6 @@ function App() {
         ? <UserShell route={route} sub={sub} profile={profile} isAdmin={isAdmin} onLogout={() => void signOut()}>{page}</UserShell>
         : page}
       {adminRoutes.includes(route) && isAdmin && <AdminPage section={adminSection(route)} />}
-      {showFooter && <Footer />}
     </div>
   );
 }

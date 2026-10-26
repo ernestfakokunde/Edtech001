@@ -113,6 +113,21 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
       <section className="profile-card courses-card"><div className="profile-card-heading"><span className="profile-icon blue"><BookOpen size={20} /></span><div><p className="eyebrow">My courses</p><h2>Saved courses</h2></div></div><p className="profile-help">Up to {MAX_SAVED_COURSES} courses for quick access. Add just a code and a name; you can use these while practising without entering school details.</p><div className="course-form-grid two"><input value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" /><input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Course title e.g. Data Structures" /></div><div className="profile-course-actions"><button className="secondary-button" disabled={!courseForm.code.trim() || !courseForm.title.trim() || courses.length >= MAX_SAVED_COURSES} onClick={() => void addCourse()}><Plus size={15} /> Add course</button><span className="course-count">{courses.length} of {MAX_SAVED_COURSES}</span></div>{courses.length > 0 && <ul className="my-course-list">{courses.map((course) => <li className="my-course-row" key={course.id}><div><strong>{course.code}</strong><span>{course.title}</span></div><button className="ghost-button danger" aria-label={`Remove ${course.code}`} onClick={() => void removeCourse(course.id)}><Trash2 size={14} /></button></li>)}</ul>}</section>
     <section className="profile-card danger-card"><div className="profile-card-heading"><span className="profile-icon red"><Trash2 size={20} /></span><div><p className="eyebrow">Danger zone</p><h2>Delete your account</h2></div></div><p className="profile-help">Deleting your account removes your profile, papers, study sets and account history. Some deletion records may be retained for up to 6 months under our data retention policy. To confirm, type <strong>delete</strong> below.</p><label className="field"><input value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} placeholder="Type 'delete' to confirm" /></label><button className="danger-button" disabled={deleting} onClick={() => void confirmDeletion()}>{deleting ? "Deleting…" : "Permanently delete account"}</button></section>
     </div>{message && <p className="profile-feedback success"><Check size={15} /> {message}</p>}{error && <p className="profile-feedback error">{error}</p>}
+    <section className="profile-card plan-details">
+      <div className="profile-card-heading"><span className="profile-icon gold"><Crown size={20} /></span><div><p className="eyebrow">Plans</p><h2>Free vs Pro</h2></div><span className="plan-details-current">{isProActive(profile.tier, profile.premiumUntil) ? "Your plan: Pro" : "Your plan: Free"}</span></div>
+      <p className="profile-help">Compare what is included before you decide whether Pro is right for your study routine.</p>
+      <div className="plan-comparison">
+        <div className={`plan-option ${!isProActive(profile.tier, profile.premiumUntil) ? "current" : ""}`}>
+          <div className="plan-option-heading"><strong>Free</strong><span>Get started</span></div>
+          <ul><li><Check size={14} /> Daily quiz generations</li><li><Check size={14} /> Flashcard practice</li><li><Check size={14} /> Course repository access</li><li><Check size={14} /> Upload and save study materials</li></ul>
+        </div>
+        <div className={`plan-option pro ${isProActive(profile.tier, profile.premiumUntil) ? "current" : ""}`}>
+          <div className="plan-option-heading"><strong>Pro</strong><span>{proPrice !== null ? formatProPrice(proPrice) : "90-day access"}</span></div>
+          <ul><li><Check size={14} /> Unlimited quiz generations</li><li><Check size={14} /> Flashcard practice</li><li><Check size={14} /> Course repository access</li><li><Check size={14} /> Upload and save study materials</li></ul>
+        </div>
+      </div>
+      {!isProActive(profile.tier, profile.premiumUntil) && <button className="primary-button plan-details-action" disabled={proBusy} onClick={() => void upgradeToPro()}>{proBusy ? "Opening checkout…" : <><Crown size={16} /> Upgrade to Pro</>}</button>}
+    </section>
     <section className="profile-card profile-policy-links"><div><p className="eyebrow">Your information</p><h2>Privacy and terms</h2><p className="profile-help">See how your information and study materials are handled, and the rules for sharing papers with the community.</p></div><div><button className="secondary-button" onClick={() => go("privacy")}>Read privacy policy</button><button className="secondary-button" onClick={() => go("terms")}>Read terms of use</button></div></section>
   </PageFrame>;
 }
@@ -131,5 +146,3 @@ function isProActive(tier: "FREE" | "PREMIUM", premiumUntil: string | null) {
 function formatProPrice(naira: number) {
   return `₦${naira.toLocaleString()} (about $${((naira / 1000) * 0.7).toFixed(2)})`;
 }
-
-
