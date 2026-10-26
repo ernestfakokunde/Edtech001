@@ -86,6 +86,15 @@ export function Home() {
             </p>
             <ArrowRight size={17} />
           </button>
+          <button onClick={() => go("generate")}>
+            <span className="path-number">03</span>
+            <strong>Create a study set</strong>
+            <p>
+              Turn your course material into focused flashcards or a quiz you
+              can practise at your own pace.
+            </p>
+            <ArrowRight size={17} />
+          </button>
         </div>
       </section>
       <section className="how-section" id="how-it-works">

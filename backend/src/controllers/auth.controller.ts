@@ -21,7 +21,6 @@ export async function signup(request: Request, response: Response) {
   } catch (error) {
     if (isDuplicateEmail(error)) { response.status(409).json({ message: 'An account with that email already exists.' }); return }
     if (isDatabaseError(error)) { response.status(503).json({ message: 'The database is temporarily unavailable. Please try again in a moment.' }); return }
-    // Anything else is unexpected: log the real cause, never the raw message.
     console.error('[auth/signup]', error)
     response.status(500).json({ message: 'Could not create your account. Please try again.' })
   }
@@ -37,8 +36,6 @@ export async function login(request: Request, response: Response) {
   } catch (error) {
     if (isDatabaseError(error)) { response.status(503).json({ message: 'The database is temporarily unavailable. Please try again in a moment.' }); return }
     if (error instanceof Error && error.message === 'Invalid login credentials') { response.status(401).json({ message: 'That email and password do not match an account.' }); return }
-    // Unexpected failures are logged server-side and reported generically, so no
-    // internal/Prisma message ever reaches the browser.
     console.error('[auth/login]', error)
     response.status(500).json({ message: 'We could not sign you in right now. Please try again in a moment.' })
   }

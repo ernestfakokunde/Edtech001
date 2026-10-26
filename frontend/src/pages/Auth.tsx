@@ -137,8 +137,14 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
               onSubmit={async (event) => {
                 event.preventDefault();
                 setError("");
-                setLoading(true);
                 const form = new FormData(event.currentTarget);
+                const password = String(form.get("password"));
+                const confirmPassword = String(form.get("confirmPassword"));
+                if (isSignup && password !== confirmPassword) {
+                  setError("Passwords do not match.");
+                  return;
+                }
+                setLoading(true);
                 try {
                   /* The auth response already carries the full profile, so the app
                      can move on immediately instead of calling /api/auth/me again
@@ -146,12 +152,12 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
                   const result = await (isSignup
                     ? signup({
                         email: String(form.get("email")),
-                        password: String(form.get("password")),
+                      password,
                         displayName: String(form.get("displayName")),
                       })
                     : login({
                         email: String(form.get("email")),
-                        password: String(form.get("password")),
+                      password,
                       }));
                   setSubmitted(true);
                   onAuthenticated?.(result.profile);
@@ -203,6 +209,23 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
                   />
                 </div>
               </label>
+              {isSignup && (
+                <label className={label}>
+                  Confirm password
+                  <div className={fieldBox}>
+                    <LockKeyhole size={16} className="text-slate-icon" />
+                    <input
+                      className={fieldInput}
+                      name="confirmPassword"
+                      type="password"
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      placeholder="Re-enter your password"
+                    />
+                  </div>
+                </label>
+              )}
               {isSignup && (
                 <label className="flex items-start gap-8 text-muted text-11 font-normal leading-140">
                   <input className="mt-2 accent-brand" type="checkbox" required />{" "}

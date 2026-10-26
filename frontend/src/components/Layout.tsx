@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, Search, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import recappLogo from "../assets/recapp-logo.png";
 import type { Route } from "../types";
 import type { AuthProfile } from "../lib/api";
@@ -8,7 +8,7 @@ export function go(route: Route | string) {
   window.location.hash = route;
 }
 
-export type ProfileIdentity = Pick<AuthProfile, "displayName" | "username" | "email"> | null | undefined;
+export type ProfileIdentity = Pick<AuthProfile, "displayName" | "username" | "email" | "tier" | "premiumUntil"> | null | undefined;
 
 /** Two-letter monogram for a profile ("Ernest Fakokunde" → "EF", "ada@x.com" → "AD"). */
 export function initialsOf(profile: ProfileIdentity) {
@@ -25,6 +25,32 @@ export function displayNameOf(profile: ProfileIdentity) {
   return (profile?.displayName || profile?.username || profile?.email?.split("@")[0] || "Student").trim();
 }
 
+function planLabel(profile: ProfileIdentity) {
+  if (profile?.tier === "PREMIUM") {
+    const until = profile.premiumUntil ? new Date(profile.premiumUntil) : null;
+    if (!until || until > new Date()) {
+      return until ? `Pro until ${until.toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : "Pro";
+    }
+  }
+  return "Free";
+}
+
+function pageTitle(route: Route) {
+  const titles: Partial<Record<Route, string>> = {
+    dashboard: "Study desk",
+    hierarchy: "Browse courses",
+    material: "Paper details",
+    learn: "Learn with AI",
+    generate: "Practice sets",
+    history: "My quizzes",
+    rewards: "Rewards",
+    profile: "My profile",
+    privacy: "Privacy policy",
+    terms: "Terms of use",
+  };
+  return titles[route] ?? "RecappEdu";
+}
+
 /* Phase 4 conversion — the `.topbar`, `.topbar nav`, `.topbar nav button`,
    `.menu-button`, `.page-heading`, `.page-subtitle`, `.screen-wrap h1` and
    `footer` rules (plus their 1160/860/680 overrides) were Layout.tsx-exclusive,
@@ -39,6 +65,7 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
   const isApplicationRoute = route !== "home" && route !== "login" && route !== "signup";
   const myCoursesActive = route === "hierarchy" || route === "material";
   const adminActive = route === "admin";
+  const isAuthenticated = Boolean(profile);
 
   return (
     <header className="site-header sticky top-0 z-30 w-full h-64 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash">
@@ -47,27 +74,36 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
             always shows the artwork exactly as it was drawn. */}
         <img className="brand-logo" src={recappLogo} alt="RecappEdu" />
       </button>
-      <nav className="flex gap-30 ml-auto mr-34 max-1160:gap-18 max-680:gap-8 max-680:overflow-x-auto">
-        <button
-          className={`${navButton} ${myCoursesActive ? navButtonActive : ""}`}
-          onClick={() => go("hierarchy")}
-        >
-          My courses
-        </button>
-        <button className={navButton} onClick={() => go("hierarchy")}>Repository</button>
-        <button className={navButton} onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>My sets</button>
-        {isAdmin && (
-          <button
-            className={`${navButton} ${adminActive ? navButtonActive : ""}`}
-            onClick={() => go("admin")}
-          >
-            Admin
+      {isAuthenticated ? (
+        <>
+          <nav className="flex gap-30 ml-auto mr-34 max-1160:gap-18 max-680:gap-8 max-680:overflow-x-auto">
+            <button
+              className={`${navButton} ${myCoursesActive ? navButtonActive : ""}`}
+              onClick={() => go("hierarchy")}
+            >
+              My courses
+            </button>
+            <button className={navButton} onClick={() => go("hierarchy")}>Repository</button>
+            <button className={navButton} onClick={() => go("history")}>My sets</button>
+            {isAdmin && (
+              <button
+                className={`${navButton} ${adminActive ? navButtonActive : ""}`}
+                onClick={() => go("admin")}
+              >
+                Admin
+              </button>
+            )}
+          </nav>
+          <button className="avatar" aria-label="Open profile" onClick={() => go("profile")}>
+            {initialsOf(profile)}
           </button>
-        )}
-      </nav>
-      <button className="avatar" aria-label="Open profile" onClick={() => go("profile")}>
-        {initialsOf(profile)}
-      </button>
+        </>
+      ) : (
+        <nav className="flex items-center gap-16 ml-auto">
+          <button className={navButton} onClick={() => go("login")}>Log in</button>
+          <button className="primary-button py-10 px-16 text-12" onClick={() => go("signup")}>Sign up</button>
+        </nav>
+      )}
       <button className="hidden" aria-label="Open menu">
         <Menu size={20} />
       </button>
@@ -105,32 +141,7 @@ export function PageFrame({
   );
 }
 
-export function Footer() {
-  return (
-    <footer className="site-footer">
-      <div className="site-footer-main">
-        <div className="site-footer-brand">
-          <img className="brand-logo" src={recappLogo} alt="RecappEdu" />
-          <p>Make every study session count.</p>
-        </div>
-        <div className="site-footer-links" aria-label="Explore RecappEdu">
-          <button onClick={() => go("hierarchy")}>Browse courses <ArrowUpRight size={14} /></button>
-          <button onClick={() => go("personal")}>Practise with a PDF <ArrowUpRight size={14} /></button>
-          <button onClick={() => go("signup")}>Create an account <ArrowUpRight size={14} /></button>
-        </div>
-        <nav className="site-footer-legal" aria-label="Policies">
-          <button onClick={() => go("privacy")}>Privacy</button>
-          <button onClick={() => go("terms")}>Terms</button>
-          <a href="mailto:ernest.dev10@gmail.com">Contact</a>
-        </nav>
-      </div>
-      <div className="site-footer-bottom">
-        <span>© 2026 RecappEdu</span>
-        <span>Structured practice, one course at a time.</span>
-      </div>
-    </footer>
-  );
-}/* ───────────────────────────────────────────────────────────────────────────
+/* ───────────────────────────────────────────────────────────────────────────
    Student navigation (Phase 6). A fixed left rail on desktop that becomes a
    slide-over drawer at ≤1020px (same breakpoint and mechanics as the admin
    board's sidebar), so the same nav works on a phone. All Tailwind utilities —
@@ -147,7 +158,7 @@ const USER_NAV: UserNavItem[] = [
   { key: "dashboard", hash: "dashboard", label: "Study desk", icon: <LayoutDashboard size={16} /> },
   { key: "hierarchy", hash: "hierarchy", label: "Repository", icon: <BookOpen size={16} /> },
   { key: "learn", hash: "learn", label: "Learn with AI", icon: <MessageCircle size={16} /> },
-  { key: "generate", hash: "generate", label: "Create a set", icon: <Sparkles size={16} /> },
+  { key: "generate", hash: "generate", label: "Practice sets", icon: <Sparkles size={16} /> },
   { key: "history", hash: "history", label: "My quizzes", icon: <History size={16} /> },
   { key: "rewards", hash: "rewards", label: "Rewards", icon: <Gift size={16} /> },
   { key: "profile", hash: "profile", label: "My profile", icon: <UserRound size={16} /> },
@@ -208,6 +219,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
         <span className="min-w-0 flex-1">
           <strong className="block truncate text-13 font-semibold text-ink">{displayNameOf(profile)}</strong>
           <small className="block truncate text-11 text-muted">{profile?.email ?? "Signed in"}</small>
+          <small className={`profile-tier-chip mt-5 ${planLabel(profile) === "Free" ? "" : "pro"}`} title="Your current plan">{planLabel(profile)}</small>
         </span>
         <button className="grid h-32 w-32 shrink-0 place-items-center rounded-10 text-muted transition-colors hover:bg-pale hover:text-ink" aria-label="Log out" onClick={onLogout}>
           <LogOut size={15} />
@@ -231,8 +243,27 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   // Any navigation closes the drawer so a tap on a nav item reveals the page.
   useEffect(() => { setOpen(false); }, [route, sub]);
+  useEffect(() => {
+    function closeMenus(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) setProfileMenuOpen(false);
+    }
+    document.addEventListener("mousedown", closeMenus);
+    return () => document.removeEventListener("mousedown", closeMenus);
+  }, []);
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const phrase = search.trim();
+    if (!phrase) return;
+    sessionStorage.setItem("recappedu_global_search", phrase);
+    setSearch("");
+    go("hierarchy");
+  }
 
   return (
     <div className="min-h-screen">
@@ -247,15 +278,31 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
         onLogout={onLogout}
       />
       <div className="user-shell-content min-h-screen">
-        <header className="sticky top-0 z-20 hidden h-64 items-center gap-10 border-b border-line bg-wash px-18 max-1020:flex">
-          <button className="grid h-36 w-36 shrink-0 place-items-center rounded-9 border border-line bg-white text-muted" aria-label="Open navigation" onClick={() => setOpen(true)}>
+        <header className="sticky top-0 z-20 flex h-64 items-center gap-10 border-b border-line bg-white px-18">
+          <button className="hidden h-36 w-36 shrink-0 place-items-center rounded-9 border border-line bg-white text-muted max-1020:grid" aria-label="Open navigation" onClick={() => setOpen(true)}>
             <Menu size={18} />
           </button>
-          <img className="brand-logo h-24" src={recappLogo} alt="RecappEdu" />
-          <button className="ml-auto grid h-32 w-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand" aria-label="Open profile" onClick={() => go("profile")}>
-            {initialsOf(profile)}
-          </button>
-          <button className="shrink-0 rounded-9 border border-line bg-white px-10 py-7 text-11 font-bold text-muted" onClick={onLogout}>Log out</button>
+          <div className="ml-12 min-w-0">
+            <strong className="block truncate text-13 font-semibold text-ink">{pageTitle(route)}</strong>
+            <small className="hidden text-10 text-muted max-680:block">Study smarter</small>
+          </div>
+          <div className="ml-auto flex items-center gap-10">
+            <form className="hidden items-center gap-8 rounded-10 border border-line bg-white px-10 max-860:flex" onSubmit={submitSearch}>
+              <Search size={15} className="shrink-0 text-muted" />
+              <input className="h-32 w-180 border-0 bg-transparent text-11 outline-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search repository" aria-label="Search repository" />
+            </form>
+            <div className="relative" ref={profileMenuRef}>
+              <button className="flex items-center gap-8 rounded-10 px-4 py-4 hover:bg-pale" aria-label="Open profile menu" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((value) => !value)}>
+                <span className="grid h-32 w-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand">{initialsOf(profile)}</span>
+                <span className="hidden max-w-130 text-left max-860:block"><strong className="block truncate text-11 font-semibold text-ink">{displayNameOf(profile)}</strong><small className="block truncate text-10 text-muted">{planLabel(profile)}</small></span>
+              </button>
+              {profileMenuOpen && <div className="absolute right-0 top-42 z-50 w-220 rounded-12 border border-line bg-white p-8 shadow-card">
+                <div className="border-b border-line px-8 pb-8"><strong className="block truncate text-12 text-ink">{displayNameOf(profile)}</strong><small className="block truncate text-10 text-muted">{profile?.email ?? "Signed in"}</small><span className={`profile-tier-chip mt-5 ${planLabel(profile) === "Free" ? "" : "pro"}`}>{planLabel(profile)}</span></div>
+                <button className="flex w-full items-center gap-8 rounded-8 px-8 py-9 text-left text-11 text-muted hover:bg-pale hover:text-ink" onClick={() => { setProfileMenuOpen(false); go("profile"); }}><UserRound size={14} /> Profile settings</button>
+                <button className="flex w-full items-center gap-8 rounded-8 px-8 py-9 text-left text-11 text-muted hover:bg-pale hover:text-ink" onClick={onLogout}><LogOut size={14} /> Log out</button>
+              </div>}
+            </div>
+          </div>
         </header>
         {children}
       </div>

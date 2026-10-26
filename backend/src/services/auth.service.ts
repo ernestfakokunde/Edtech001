@@ -157,6 +157,7 @@ export async function signIn(input: SignInInput) {
       profile.isAdmin = true
       void persistPermanentAdmin(profile.id)
     }
+
     const dailyLoginReward = await awardDailyLoginXp(profile.id)
     const token = await createSession(profile.id)
     // Never hand the hash back to the controller.

@@ -67,15 +67,17 @@ export function Hierarchy({
       subtitle="Search the shared repository by paper name, course, level, or description."
       back="dashboard"
     >
-      <RepositoryBrowser onMaterial={onMaterial} />
-      <RepositoryUpload onUploaded={() => setPaperRefresh((value) => value + 1)} />
-      <MyPapers refreshKey={paperRefresh} />
+      <div className="repository-page-sections">
+        <RepositoryBrowser onMaterial={onMaterial} />
+        <RepositoryUpload onUploaded={() => setPaperRefresh((value) => value + 1)} />
+        <MyPapers refreshKey={paperRefresh} />
+      </div>
     </PageFrame>
   );
 }
 
 function RepositoryBrowser({ onMaterial }: { onMaterial: (paper: RepositoryPaper) => void }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => sessionStorage.getItem("recappedu_global_search") ?? "");
   const [level, setLevel] = useState("");
   const [universityId, setUniversityId] = useState("");
   const [facultyId, setFacultyId] = useState("");
@@ -86,6 +88,7 @@ function RepositoryBrowser({ onMaterial }: { onMaterial: (paper: RepositoryPaper
   const [repositoryPapers, setRepositoryPapers] = useState<Awaited<ReturnType<typeof getRepositoryPapers>>["papers"]>([]);
   const [pages, setPages] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(false);
+  useEffect(() => { sessionStorage.removeItem("recappedu_global_search"); }, []);
   useEffect(() => { getUniversities().then((result) => setUniversities(result.universities)).catch(() => setUniversities([])); }, []);
   useEffect(() => { setFaculties([]); setDepartments([]); setFacultyId(""); setDepartmentId(""); if (universityId) getFaculties(universityId).then((result) => setFaculties(result.faculties)).catch(() => setFaculties([])); }, [universityId]);
   useEffect(() => { setDepartments([]); setDepartmentId(""); if (facultyId) getDepartments(facultyId).then((result) => setDepartments(result.departments)).catch(() => setDepartments([])); }, [facultyId]);

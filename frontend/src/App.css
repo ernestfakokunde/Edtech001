@@ -78,9 +78,9 @@ button, input, select, textarea { font-family: "DM Sans", sans-serif; }
 .daily-login-xp { margin-left: auto; color: #15803d; font: 700 17px 'Space Grotesk', sans-serif; white-space: nowrap; }
 .daily-login-status { display: flex; align-items: center; gap: 7px; margin-top: 14px; color: #64748b; font-size: 12px; }
 .daily-login-status.earned { color: #15803d; font-weight: 700; }
-.rewards-grid { display: grid; grid-template-columns: 1.1fr .9fr; align-items: start; gap: 16px; }
+.rewards-grid { display: grid; grid-template-columns: 1.1fr .9fr; align-items: start; gap: 22px; }
 .rewards-grid > .profile-card, .rewards-side .profile-card { margin: 0; }
-.rewards-side { display: grid; gap: 16px; }
+.rewards-side { display: grid; gap: 22px; }
 .rewards-empty { padding: 18px 12px; color: var(--muted); font-size: 12px; }
 @media (max-width: 760px) {
   .rewards-grid { grid-template-columns: 1fr; }
@@ -158,7 +158,7 @@ button, input, select, textarea { font-family: "DM Sans", sans-serif; }
 .path-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
+  gap: 20px;
 }
 .path-grid button {
   min-height: 180px;
@@ -1050,7 +1050,7 @@ select {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: 18px;
   margin-bottom: 31px;
 }
 .metric-card {
@@ -1156,7 +1156,7 @@ select {
 .dashboard-course-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 18px;
 }
 .dashboard-empty { min-height: 145px; display: grid; place-items: center; align-content: center; gap: 7px; padding: 18px; color: var(--muted); border: 1px dashed #bfdbfe; border-radius: 16px; background: #f8fbff; text-align: center; }
 .dashboard-empty svg { color: var(--blue); }
@@ -1296,7 +1296,7 @@ select {
 .dashboard-quick-actions strong { color: var(--ink); font-size: 12px; }
 .dashboard-quick-actions small { margin-top: 3px; color: var(--muted); font-size: 10px; }
 
-.profile-layout { display: grid; grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr); gap: 18px; }
+.profile-layout { display: grid; grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr); gap: 22px; }
 .profile-card { padding: 25px; border: 1px solid var(--line); border-radius: 17px; background: #fff; box-shadow: 0 14px 30px #1d4ed80b; }
 .profile-card-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
 .profile-card-heading .eyebrow { margin: 0 0 4px; }
@@ -1315,7 +1315,21 @@ select {
 .pro-upgrade-box strong { color: var(--ink); font-size: 13px; }
 .pro-upgrade-box p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
 .pro-upgrade-box .primary-button { flex: 0 0 auto; margin: 0; }
+.plan-details { grid-column: 1 / -1; margin-top: 22px; }
+.plan-details-current { margin-left: auto; padding: 6px 10px; border-radius: 999px; color: var(--blue); background: #eef4ff; font-size: 10px; font-weight: 800; }
+.plan-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.plan-option { padding: 17px; border: 1px solid var(--line); border-radius: 13px; background: #fcfdff; }
+.plan-option.current { border-color: #93c5fd; box-shadow: 0 0 0 2px #dbeafe; }
+.plan-option.pro { background: linear-gradient(135deg, #f5f8ff, #fff); }
+.plan-option-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.plan-option-heading strong { color: var(--ink); font: 700 16px "Space Grotesk", sans-serif; }
+.plan-option-heading span { color: var(--muted); font-size: 10px; font-weight: 700; }
+.plan-option ul { display: grid; gap: 9px; margin: 15px 0 0; padding: 0; color: var(--muted); font-size: 11px; list-style: none; }
+.plan-option li { display: flex; align-items: center; gap: 7px; }
+.plan-option li svg { flex: 0 0 auto; color: #047857; }
+.plan-details-action { margin-top: 16px; }
 @media (max-width: 580px) { .pro-upgrade-box { align-items: stretch; flex-direction: column; } }
+@media (max-width: 640px) { .plan-comparison { grid-template-columns: 1fr; } .plan-details-current { align-self: flex-start; } }
 .profile-help { margin: -9px 0 22px; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .profile-select-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .select-wrap { position: relative; }
@@ -1479,6 +1493,7 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 .admin-dialog-close { position: absolute; top: 17px; right: 17px; color: var(--muted); }
 .admin-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 .repository-browser { display: grid; gap: 14px; }
+.repository-page-sections { display: grid; gap: 22px; }
 .repository-upload-panel { padding: 20px; border: 1px solid #dbeafe; border-radius: 14px; background: #f8fbff; max-width: 860px; }
 .repository-upload-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .repository-upload-heading h2 { margin: 2px 0 6px; font: 700 19px "Space Grotesk", sans-serif; }
@@ -1557,10 +1572,10 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 @media (max-width: 760px) {
   .dashboard-shell { padding-top: 28px; }
   .dashboard-greeting { margin-top: 38px; }
-  .metric-grid { gap: 8px; }
+  .metric-grid { gap: 14px; }
   .metric-card { padding: 13px 12px; }
   .metric-card strong { font-size: 18px; }
-  .dashboard-course-grid { gap: 8px; }
+  .dashboard-course-grid { gap: 14px; }
 }
 /* ── Generate for me ───────────────────────────────────────────── */
 .primary-button.full { width: 100%; }
@@ -2022,12 +2037,14 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 .danger-card { border-color: #fecaca; background: #fffafa; }
 .danger-card .profile-card-heading h2 { color: #b91c1c; }
 .danger-card input { border-color: #fecaca; }
+.danger-card .danger-button { margin-top: 8px; }
 
 /* Free-plan quiz quota banner (Generate.tsx) */
 .quota-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; padding: 11px 13px; color: var(--blue); border: 1px solid #dbeafe; border-radius: 11px; background: #f8fbff; font-size: 11px; }
 .quota-banner span { flex: 1 1 240px; min-width: 0; line-height: 1.5; }
 .quota-banner.exhausted { color: #b45309; border-color: #fde68a; background: #fffbeb; }
 .quota-banner button { flex: 0 0 auto; margin-left: auto; padding: 7px 12px; border: 0; border-radius: 8px; color: #fff; background: #2858dc; font-size: 11px; font-weight: 700; cursor: pointer; }
+.dashboard-quota-banner { margin: -8px 0 24px; }
 
 /* ── Global moderation: comfortable middle sizes ─────────────────── */
 .screen-wrap { max-width: 1020px; margin-inline: auto; padding: 44px clamp(20px, 4vw, 40px) 64px; }
@@ -2052,7 +2069,7 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 .score-ring { width: 120px; height: 120px; border-width: 8px; }
 .score-ring strong { font-size: 28px; }
 .generate-upload { min-height: 110px; padding: 18px; }
-.profile-layout { max-width: 1020px; gap: 16px; }
+.profile-layout { max-width: 1020px; gap: 22px; }
 .profile-card { padding: 20px; border-radius: 14px; }
 .paper-upload-fields { grid-template-columns: repeat(auto-fit, minmax(150px, 200px)); justify-content: start; }
 .repository-filters { max-width: 860px; }
@@ -2186,7 +2203,7 @@ button.admin-action { border: 0; padding: 0; background: none; cursor: pointer; 
 .legal-contact strong { color: #172033; font-size: 13px; }
 .legal-contact span { color: #64748b; font-size: 12px; line-height: 1.5; }
 .legal-contact button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; color: #1d4ed8; font-size: 12px; font-weight: 700; }
-.profile-policy-links { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+.profile-policy-links { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-top: 22px; }
 .profile-policy-links h2 { margin: 0; font-size: 18px; }
 .profile-policy-links .profile-help { max-width: 570px; margin-bottom: 0; }
 .profile-policy-links > div:last-child { display: flex; flex-wrap: wrap; gap: 8px; }
