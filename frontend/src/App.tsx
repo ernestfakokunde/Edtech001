@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { Header, UserShell, go } from "./components/Layout";
 import { Home } from "./pages/Home";
@@ -122,14 +122,25 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [authNotice, setAuthNotice] = useState("");
+  const [routeLoading, setRouteLoading] = useState(false);
+  const routeProgressTimer = useRef<number | null>(null);
 
   useEffect(() => {
     const onHashChange = () => {
+      setRouteLoading(true);
       setRoute(hashRoute());
       setSub(hashSub());
+      if (routeProgressTimer.current !== null) window.clearTimeout(routeProgressTimer.current);
+      routeProgressTimer.current = window.setTimeout(() => {
+        setRouteLoading(false);
+        routeProgressTimer.current = null;
+      }, 280);
     };
     window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      if (routeProgressTimer.current !== null) window.clearTimeout(routeProgressTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -201,7 +212,7 @@ function App() {
   const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "learn", "flashcards", "quiz", "results", "profile"];
   const showHeader = !["login", "signup", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   if (authStatus === "checking" && protectedRoutes.includes(route)) {
-    return <div className="app-shell auth-loading"><span>Checking your session...</span></div>;
+    return <div className="app-shell auth-loading"><div className="loading-card"><span className="loading-orb" aria-hidden="true" /><strong>Checking your session</strong><span>Getting your study desk ready…</span></div></div>;
   }
 
   // Every signed-in destination except the admin board and the study players
@@ -217,7 +228,7 @@ function App() {
       {route === "personal" && <PersonalPractice />}
       {route === "learn" && <LearnWithAI />}
       {route === "hierarchy" && <Hierarchy onMaterial={chooseMaterial} />}
-      {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="app-shell auth-loading"><span>Loading material...</span></div>)}
+      {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="app-shell auth-loading"><div className="loading-card"><span className="loading-orb" aria-hidden="true" /><strong>Loading material</strong><span>Opening the paper details…</span></div></div>)}
       {route === "generate" && (
         <GenerateFlow
           courseId={routeParts()[1]}
@@ -287,6 +298,7 @@ function App() {
 
   return (
     <div className="app-shell">
+      {routeLoading && <div className="route-progress" role="status" aria-label="Loading page"><span /></div>}
       {showHeader && <Header route={route} isAdmin={isAdmin} profile={profile} />}
       {studentRoutes.includes(route)
         ? <UserShell route={route} sub={sub} profile={profile} isAdmin={isAdmin} onLogout={() => void signOut()}>{page}</UserShell>
@@ -299,7 +311,11 @@ function App() {
 function MissingSet({ back }: { back: Route }) {
   return (
     <div className="app-shell auth-loading">
-      <span>This study set is not loaded on this device.</span>
+      <div className="loading-card">
+        <span className="loading-orb" aria-hidden="true" />
+        <strong>This study set is not loaded on this device.</strong>
+        <span>Generate a fresh practice set to continue.</span>
+      </div>
       <button className="primary-button" onClick={() => go(back)}>Generate a set</button>
     </div>
   );
