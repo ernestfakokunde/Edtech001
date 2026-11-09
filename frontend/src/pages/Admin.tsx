@@ -276,11 +276,11 @@ export function AdminPage({ section }: { section: string }) {
   }, [section, submissionsPage, submissionStatus, submissionSearch]);
 
   return (
-    <div className="min-h-screen bg-wash">
+    <div className="admin-app-shell min-h-screen bg-wash">
       <AdminSidebar section={section} open={navOpen} onClose={() => setNavOpen(false)} />
       {navOpen && <div className="fixed inset-0 z-30 bg-backdrop max-1020:block hidden" onClick={() => setNavOpen(false)} />}
-      <div className="pl-240 max-1020:pl-0">
-        <header className="sticky top-0 z-20 flex h-64 items-center gap-12 border-b border-line bg-wash px-20 max-680:px-14">
+      <div className="admin-content pl-240 max-1020:pl-0">
+        <header className="admin-topbar sticky top-0 z-20 flex h-64 items-center gap-12 border-b border-line bg-wash px-20 max-680:px-14">
           <button className="hidden max-1020:grid h-36 w-36 shrink-0 place-items-center rounded-10 border border-line bg-white text-ink" aria-label="Open admin menu" onClick={() => setNavOpen(true)}>
             <Menu size={18} />
           </button>
@@ -298,7 +298,24 @@ export function AdminPage({ section }: { section: string }) {
 
           {section === "overview" && (
             <div className="flex flex-col gap-18">
-              <div className="grid grid-cols-2 gap-12 max-680:grid-cols-1">
+              <div className="admin-overview-heading">
+                <div>
+                  <p className="admin-date-label">Monday, November 9</p>
+                  <h2>Good day, Admin <span aria-hidden="true">👋</span></h2>
+                  <p>Here&apos;s what&apos;s happening across your learning community.</p>
+                </div>
+                <div className="admin-overview-actions">
+                  <div className="admin-period-switcher" aria-label="Dashboard date range">
+                    <button className="active">7D</button>
+                    <button>30D</button>
+                    <button>90D</button>
+                  </div>
+                  <button className="admin-add-button" onClick={() => go("admin-submissions")}>
+                    <Plus size={16} /> Review submissions
+                  </button>
+                </div>
+              </div>
+              <div className="admin-overview-metrics grid grid-cols-2 gap-12 max-680:grid-cols-1">
                 <Metric icon={<Users size={16} />} value={summary ? String(summary.users) : "—"} label="Students on the platform" tone="blue" />
                 <Metric icon={<Clock3 size={16} />} value={summary ? String(summary.pending) : "—"} label="Submissions awaiting review" tone="amber" />
                 <Metric icon={<Check size={16} />} value={summary ? String(summary.approved) : "—"} label="Approved papers" tone="green" />
@@ -648,7 +665,7 @@ function Metric({ icon, value, label, tone }: { icon: ReactNode; value: string; 
 
 function AdminSidebar({ section, open, onClose }: { section: string; open: boolean; onClose: () => void }) {
   return (
-    <aside className={`font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
+    <aside className={`admin-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
       <div className="flex h-60 items-center gap-11 border-b border-line px-16">
         <span className="grid h-34 w-34 shrink-0 place-items-center rounded-11 bg-brand text-white shadow-brand-sm"><ShieldCheck size={17} /></span>
         <p className="m-0 min-w-0 truncate text-[15px] font-semibold text-ink">Admin board</p>

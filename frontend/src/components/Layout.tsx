@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import recappLogo from "../assets/recapp-logo.png";
 import type { Route } from "../types";
 import type { AuthProfile } from "../lib/api";
@@ -9,6 +9,10 @@ export function go(route: Route | string) {
 }
 
 export type ProfileIdentity = Pick<AuthProfile, "displayName" | "username" | "email" | "tier" | "premiumUntil"> | null | undefined;
+
+function scrollToHomeSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 /** Two-letter monogram for a profile ("Ernest Fakokunde" → "EF", "ada@x.com" → "AD"). */
 export function initialsOf(profile: ProfileIdentity) {
@@ -62,6 +66,9 @@ const navButton = "py-30 px-0 text-muted text-13 border-b-2 border-transparent h
 const navButtonActive = "text-ink border-brand";
 
 export function Header({ route, isAdmin = false, profile }: { route: Route; isAdmin?: boolean; profile?: ProfileIdentity }) {
+  if (route === "home") {
+    return <header className="site-header sticky top-0 z-30 w-full h-64 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash"><button className="wordmark" onClick={() => go("home")}><img className="brand-logo" src={recappLogo} alt="RecappEdu" /></button><nav className="home-nav-links" aria-label="Main navigation"><button onClick={() => scrollToHomeSection("how-it-works")}>How it works</button><button onClick={() => scrollToHomeSection("pricing")}>Pricing</button></nav><div className="home-nav-actions"><button className="home-nav-signin" onClick={() => go("login")}>Sign in</button><button className="primary-button" onClick={() => go("signup")}>Get started <ArrowUpRight size={15} /></button></div></header>
+  }
   const isApplicationRoute = route !== "home" && route !== "login" && route !== "signup";
   const myCoursesActive = route === "hierarchy" || route === "material";
   const adminActive = route === "admin";
@@ -165,7 +172,7 @@ const USER_NAV: UserNavItem[] = [
   { key: "admin", hash: "admin", label: "Admin board", icon: <ShieldCheck size={16} />, adminOnly: true },
 ];
 
-const userNavBase = "flex w-full shrink-0 items-center gap-12 rounded-11 px-13 py-11 text-left text-13 font-medium transition-colors";
+const userNavBase = "flex w-full shrink-0 items-center gap-11 rounded-9 px-12 py-10 text-left text-13 font-medium transition-colors";
 const userNavActive = "bg-brand font-semibold text-white shadow-brand-sm";
 const userNavIdle = "text-muted hover:bg-pale hover:text-ink";
 
@@ -193,7 +200,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
       aria-label="Student navigation"
       className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
     >
-      <div className="flex h-70 items-center gap-11 border-b border-line px-20">
+      <div className="flex h-64 items-center gap-11 border-b border-line px-18">
         <img className="brand-logo h-30" src={recappLogo} alt="RecappEdu" />
         <span className="flex-1" />
         <button className="hidden h-32 w-32 shrink-0 place-items-center rounded-10 text-muted hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close navigation" onClick={onClose}>
@@ -201,7 +208,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
         </button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-7 overflow-y-auto p-16 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto p-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((item) => (
           <button
             key={item.key}
@@ -214,7 +221,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
         ))}
       </nav>
 
-      <div className="flex items-center gap-11 border-t border-line px-18 py-16">
+      <div className="flex items-center gap-10 border-t border-line px-16 py-14">
         <span className="grid h-34 w-34 shrink-0 place-items-center rounded-half bg-pale text-12 font-bold text-brand">{initialsOf(profile)}</span>
         <span className="min-w-0 flex-1">
           <strong className="block truncate text-13 font-semibold text-ink">{displayNameOf(profile)}</strong>
