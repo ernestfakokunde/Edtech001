@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
-import recappLogo from "../assets/recapp-logo.png";
+import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, Moon, ShieldCheck, Sparkles, Sun, UserRound, X } from "lucide-react";
+import { BrandLogo } from "./BrandLogo";
 import type { Route } from "../types";
 import type { AuthProfile } from "../lib/api";
 
@@ -29,6 +29,17 @@ export function displayNameOf(profile: ProfileIdentity) {
   return (profile?.displayName || profile?.username || profile?.email?.split("@")[0] || "Student").trim();
 }
 
+export function ThemeToggle() {
+  const [dark, setDark] = useState(() => document.documentElement.dataset.theme !== "light");
+  const toggle = () => setDark((value) => {
+    const next = !value;
+    document.documentElement.dataset.theme = next ? "dark" : "light";
+    window.localStorage.setItem("recappedu-theme", next ? "dark" : "light");
+    return next;
+  });
+  return <button className="grid size-36 place-items-center rounded-9 border border-line bg-surface text-muted transition hover:bg-pale hover:text-ink" onClick={toggle} aria-label={`Switch to ${dark ? "light" : "dark"} mode`} title={`Switch to ${dark ? "light" : "dark"} mode`}>{dark ? <Sun size={16} /> : <Moon size={16} />}</button>;
+}
+
 function planLabel(profile: ProfileIdentity) {
   if (profile?.tier === "PREMIUM") {
     const until = profile.premiumUntil ? new Date(profile.premiumUntil) : null;
@@ -43,7 +54,7 @@ function pageTitle(route: Route) {
   const titles: Partial<Record<Route, string>> = {
     dashboard: "Study desk",
     hierarchy: "Browse courses",
-    material: "Paper details",
+    material: "Study material",
     learn: "Learn with AI",
     generate: "Practice sets",
     history: "My quizzes",
@@ -67,19 +78,36 @@ const navButtonActive = "text-ink border-brand";
 
 export function Header({ route, isAdmin = false, profile }: { route: Route; isAdmin?: boolean; profile?: ProfileIdentity }) {
   if (route === "home") {
-    return <header className="site-header sticky top-0 z-30 w-full h-64 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash"><button className="wordmark" onClick={() => go("home")}><img className="brand-logo" src={recappLogo} alt="RecappEdu" /></button><nav className="home-nav-links" aria-label="Main navigation"><button onClick={() => scrollToHomeSection("how-it-works")}>How it works</button><button onClick={() => scrollToHomeSection("pricing")}>Pricing</button></nav><div className="home-nav-actions"><button className="home-nav-signin" onClick={() => go("login")}>Sign in</button><button className="primary-button" onClick={() => go("signup")}>Get started <ArrowUpRight size={15} /></button></div></header>
+    return (
+      <header className="site-header home-header sticky top-0 z-30 w-full border-b border-white/10 bg-[#08090fe8] backdrop-blur-xl">
+        <div className="mx-auto grid h-76 max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center gap-20 px-[clamp(20px,6vw,88px)] max-1160:px-[clamp(14px,3vw,28px)] max-680:grid-cols-[1fr_auto]">
+          <button className="wordmark flex w-fit items-center" onClick={() => go("home")} aria-label="RecappEdu home">
+            <BrandLogo className="h-36 max-[480px]:h-30" />
+          </button>
+          <nav className="flex items-center gap-[clamp(20px,3vw,42px)] max-680:hidden [&>button]:relative [&>button]:py-12 [&>button]:text-12 [&>button]:font-medium [&>button]:text-[#b5b0c3] [&>button]:transition-colors [&>button:hover]:text-white" aria-label="Main navigation">
+            <button onClick={() => scrollToHomeSection("how-it-works")}>How it works</button>
+            <button onClick={() => scrollToHomeSection("pricing")}>Pricing</button>
+          </nav>
+          <div className="flex items-center justify-self-end gap-14 max-680:gap-9">
+            <ThemeToggle />
+            <button className="text-12 font-semibold text-[#c2bdce] transition-colors hover:text-white max-[480px]:hidden" onClick={() => go("login")}>Sign in</button>
+            <button className="primary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 bg-[#a855f7] px-16 text-12 font-bold text-white shadow-[0_8px_24px_#a855f733] transition hover:-translate-y-1 max-[380px]:px-11" onClick={() => go("signup")}><span className="max-[380px]:hidden">Get started</span><span className="hidden max-[380px]:inline">Start</span><ArrowUpRight size={15} /></button>
+          </div>
+        </div>
+      </header>
+    );
   }
-  const isApplicationRoute = route !== "home" && route !== "login" && route !== "signup";
+  const isApplicationRoute = route !== "login" && route !== "signup";
   const myCoursesActive = route === "hierarchy" || route === "material";
   const adminActive = route === "admin";
   const isAuthenticated = Boolean(profile);
 
   return (
     <header className="site-header sticky top-0 z-30 w-full h-64 px-[clamp(16px,4vw,44px)] max-1160:px-[clamp(14px,3vw,28px)] flex items-center justify-between border-b border-[#e2e8f0bf] bg-wash">
-      <button className="wordmark" onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>
+      <button className="wordmark flex items-center gap-10 font-grotesk text-18 font-bold" onClick={() => go(isApplicationRoute ? "dashboard" : "home")}>
         {/* The brand lock-up (mark + wordmark) ships as one image so the site
             always shows the artwork exactly as it was drawn. */}
-        <img className="brand-logo" src={recappLogo} alt="RecappEdu" />
+        <BrandLogo />
       </button>
       {isAuthenticated ? (
         <>
@@ -101,14 +129,15 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
               </button>
             )}
           </nav>
-          <button className="avatar" aria-label="Open profile" onClick={() => go("profile")}>
+      <div className="flex items-center gap-10"><ThemeToggle /><button className="avatar size-35 rounded-full bg-pale text-12 font-bold text-brand" aria-label="Open profile" onClick={() => go("profile")}>
             {initialsOf(profile)}
-          </button>
+      </button></div>
         </>
       ) : (
-        <nav className="flex items-center gap-16 ml-auto">
+        <nav className="ml-auto flex items-center gap-12">
+          <ThemeToggle />
           <button className={navButton} onClick={() => go("login")}>Log in</button>
-          <button className="primary-button py-10 px-16 text-12" onClick={() => go("signup")}>Sign up</button>
+          <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none py-10 px-16 text-12" onClick={() => go("signup")}>Sign up</button>
         </nav>
       )}
       <button className="hidden" aria-label="Open menu">
@@ -132,16 +161,16 @@ export function PageFrame({
   back?: Route;
 }) {
   return (
-    <main className="screen-wrap">
+    <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere] [&>label]:mb-8 [&>label]:block [&>label]:text-12 [&>label]:font-semibold [&>label]:text-muted">
       {back && (
-        <button className="back-link" onClick={() => go(back)}>
+        <button className="mb-35 inline-flex items-center gap-7 text-12 font-semibold text-muted hover:text-brand" onClick={() => go(back)}>
           Back
         </button>
       )}
       <div className="mb-29 max-680:mb-18">
-        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-        <h1 className="m-0 mb-8 text-[clamp(26px,3.4vw,34px)]">{title}</h1>
-        {subtitle && <p className="text-muted text-13 leading-160">{subtitle}</p>}
+        {eyebrow && <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">{eyebrow}</p>}
+        <h1 className="m-0 mb-8 text-[clamp(26px,3.4vw,34px)] font-extrabold leading-[1.12]">{title}</h1>
+        {subtitle && <p className="max-w-640 text-muted text-14 leading-160">{subtitle}</p>}
       </div>
       {children}
     </main>
@@ -198,10 +227,10 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
   return (
     <aside
       aria-label="Student navigation"
-      className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
+      className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-[240px] flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
     >
       <div className="flex h-64 items-center gap-11 border-b border-line px-18">
-        <img className="brand-logo h-30" src={recappLogo} alt="RecappEdu" />
+        <BrandLogo className="h-30" />
         <span className="flex-1" />
         <button className="hidden h-32 w-32 shrink-0 place-items-center rounded-10 text-muted hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close navigation" onClick={onClose}>
           <X size={16} />
@@ -226,7 +255,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
         <span className="min-w-0 flex-1">
           <strong className="block truncate text-13 font-semibold text-ink">{displayNameOf(profile)}</strong>
           <small className="block truncate text-11 text-muted">{profile?.email ?? "Signed in"}</small>
-          <small className={`profile-tier-chip mt-5 ${planLabel(profile) === "Free" ? "" : "pro"}`} title="Your current plan">{planLabel(profile)}</small>
+          <small className={`mt-5 inline-flex shrink-0 items-center gap-6 whitespace-nowrap rounded-full border border-ghost-border bg-pale px-12 py-5 text-11 font-bold tracking-[.02em] text-brand ${planLabel(profile) === "Free" ? "" : "border-amber-300 bg-gradient-to-br from-amber-100 to-amber-200 text-amber-800 shadow-[0_2px_6px_rgba(180,83,9,.15)]"}`} title="Your current plan">{planLabel(profile)}</small>
         </span>
         <button className="grid h-32 w-32 shrink-0 place-items-center rounded-10 text-muted transition-colors hover:bg-pale hover:text-ink" aria-label="Log out" onClick={onLogout}>
           <LogOut size={15} />
@@ -274,7 +303,7 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
         onClose={() => setOpen(false)}
         onLogout={onLogout}
       />
-      <div className="user-shell-content min-h-screen">
+      <div className="user-shell-content ml-[240px] min-h-screen max-1020:ml-0">
         <header className="sticky top-0 z-20 flex h-64 items-center gap-10 border-b border-line bg-white px-18">
           <button className="hidden h-36 w-36 shrink-0 place-items-center rounded-9 border border-line bg-white text-muted max-1020:grid" aria-label="Open navigation" onClick={() => setOpen(true)}>
             <Menu size={18} />
@@ -284,13 +313,14 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
             <small className="hidden text-10 text-muted max-680:block">Study smarter</small>
           </div>
           <div className="ml-auto flex items-center gap-10">
+            <ThemeToggle />
             <div className="relative" ref={profileMenuRef}>
               <button className="flex items-center gap-8 rounded-10 px-4 py-4 hover:bg-pale" aria-label="Open profile menu" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((value) => !value)}>
                 <span className="grid h-32 w-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand">{initialsOf(profile)}</span>
                 <span className="hidden max-w-130 text-left max-860:block"><strong className="block truncate text-11 font-semibold text-ink">{displayNameOf(profile)}</strong><small className="block truncate text-10 text-muted">{planLabel(profile)}</small></span>
               </button>
               {profileMenuOpen && <div className="absolute right-0 top-42 z-50 w-220 rounded-12 border border-line bg-white p-8 shadow-card">
-                <div className="border-b border-line px-8 pb-8"><strong className="block truncate text-12 text-ink">{displayNameOf(profile)}</strong><small className="block truncate text-10 text-muted">{profile?.email ?? "Signed in"}</small><span className={`profile-tier-chip mt-5 ${planLabel(profile) === "Free" ? "" : "pro"}`}>{planLabel(profile)}</span></div>
+                <div className="border-b border-line px-8 pb-8"><strong className="block truncate text-12 text-ink">{displayNameOf(profile)}</strong><small className="block truncate text-10 text-muted">{profile?.email ?? "Signed in"}</small><span className={`mt-5 inline-flex shrink-0 items-center gap-6 whitespace-nowrap rounded-full border border-ghost-border bg-pale px-12 py-5 text-11 font-bold tracking-[.02em] text-brand ${planLabel(profile) === "Free" ? "" : "border-amber-300 bg-gradient-to-br from-amber-100 to-amber-200 text-amber-800 shadow-[0_2px_6px_rgba(180,83,9,.15)]"}`}>{planLabel(profile)}</span></div>
                 <button className="flex w-full items-center gap-8 rounded-8 px-8 py-9 text-left text-11 text-muted hover:bg-pale hover:text-ink" onClick={() => { setProfileMenuOpen(false); go("profile"); }}><UserRound size={14} /> Profile settings</button>
                 <button className="flex w-full items-center gap-8 rounded-8 px-8 py-9 text-left text-11 text-muted hover:bg-pale hover:text-ink" onClick={onLogout}><LogOut size={14} /> Log out</button>
               </div>}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { Header, UserShell, go } from "./components/Layout";
 import { Home } from "./pages/Home";
@@ -24,6 +24,7 @@ import { Onboarding } from "./pages/Onboarding";
 import { RewardsPage } from "./pages/Rewards";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
 import { LearnWithAI } from "./pages/Learn";
+import { AnimatePresence, motion } from "motion/react";
 
 const protectedRoutes: Route[] = [
   "dashboard",
@@ -212,7 +213,7 @@ function App() {
   const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "learn", "flashcards", "quiz", "results", "profile"];
   const showHeader = !["login", "signup", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   if (authStatus === "checking" && protectedRoutes.includes(route)) {
-    return <div className="app-shell auth-loading"><div className="loading-card"><span className="loading-orb" aria-hidden="true" /><strong>Checking your session</strong><span>Getting your study desk ready…</span></div></div>;
+    return <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted"><div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted"><motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" /><strong>Checking your session</strong><span>Getting your study desk ready…</span></div></div>;
   }
 
   // Every signed-in destination except the admin board and the study players
@@ -228,7 +229,7 @@ function App() {
       {route === "personal" && <PersonalPractice />}
       {route === "learn" && <LearnWithAI />}
       {route === "hierarchy" && <Hierarchy onMaterial={chooseMaterial} />}
-      {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="app-shell auth-loading"><div className="loading-card"><span className="loading-orb" aria-hidden="true" /><strong>Loading material</strong><span>Opening the paper details…</span></div></div>)}
+      {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted"><div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted"><motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" /><strong>Loading material</strong><span>Opening the paper details…</span></div></div>)}
       {route === "generate" && (
         <GenerateFlow
           courseId={routeParts()[1]}
@@ -257,6 +258,7 @@ function App() {
           <Quiz
             set={generatedSet}
             onExit={() => { setQuizResult(null); go("dashboard"); }}
+            onCreateNew={() => { setGeneratedSet(null); setQuizResult(null); go("generate"); }}
             onFinish={(score, total) => {
               /* Persist the run locally (offline-safe; this is what the dashboard
                  + history page read) and mirror it to the server, which also
@@ -297,12 +299,14 @@ function App() {
   );
 
   return (
-    <div className="app-shell">
-      {routeLoading && <div className="route-progress" role="status" aria-label="Loading page"><span /></div>}
+    <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_32%),var(--color-wash)] text-ink">
+      <AnimatePresence>{routeLoading && <motion.div key="route-loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-x-0 top-0 z-[100] h-3 overflow-hidden bg-[#393759]" role="status" aria-label="Loading page"><motion.span className="block h-full w-[40%] bg-gradient-to-r from-violet-400 via-indigo-200 to-cyan-200 shadow-[0_0_14px_#9b83f5]" initial={{ x: "-100%" }} animate={{ x: "250%" }} transition={{ duration: .8, repeat: Infinity, ease: "easeInOut" }} /></motion.div>}</AnimatePresence>
       {showHeader && <Header route={route} isAdmin={isAdmin} profile={profile} />}
-      {studentRoutes.includes(route)
-        ? <UserShell route={route} sub={sub} profile={profile} isAdmin={isAdmin} onLogout={() => void signOut()}>{page}</UserShell>
-        : page}
+      {!adminRoutes.includes(route) && <AnimatePresence mode="wait" initial={false}><motion.div key={route} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: .2, ease: "easeOut" }} className="min-h-screen">
+        {studentRoutes.includes(route)
+          ? <UserShell route={route} sub={sub} profile={profile} isAdmin={isAdmin} onLogout={() => void signOut()}>{page}</UserShell>
+          : page}
+      </motion.div></AnimatePresence>}
       {adminRoutes.includes(route) && isAdmin && <AdminPage section={adminSection(route)} />}
     </div>
   );
@@ -310,13 +314,13 @@ function App() {
 
 function MissingSet({ back }: { back: Route }) {
   return (
-    <div className="app-shell auth-loading">
-      <div className="loading-card">
-        <span className="loading-orb" aria-hidden="true" />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted">
+      <div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted">
+        <motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" />
         <strong>This study set is not loaded on this device.</strong>
         <span>Generate a fresh practice set to continue.</span>
       </div>
-      <button className="primary-button" onClick={() => go(back)}>Generate a set</button>
+      <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go(back)}>Generate a set</button>
     </div>
   );
 }

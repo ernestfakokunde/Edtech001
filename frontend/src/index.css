@@ -1,11 +1,11 @@
 /* Layer order, declared FIRST so it cannot be reordered by Tailwind's own
    expansion or by the minifier (CSS layer order is fixed by the first
    appearance of each name).  components sits between base and utilities:
-     - ABOVE base  → App.css's class rules still beat Tailwind's preflight
+     - ABOVE base  â†’ App.css's class rules still beat Tailwind's preflight
                      (e.g. preflight resets `h1{font-size:inherit}`, so if
                      components ranked below base, every heading in the app
                      would lose its font size).
-     - BELOW utilities → a Tailwind utility can override a legacy App.css
+     - BELOW utilities â†’ a Tailwind utility can override a legacy App.css
                      class, which is what makes the Phase 3+ conversion safe.
    App.css is wrapped in `@layer components` for this reason. */
 @layer theme, base, components, utilities;
@@ -14,7 +14,7 @@
 @import "tailwindcss";
 
 /* ===========================================================================
-   Design tokens — Tailwind v4 CSS-first theme (`@theme`, not tailwind.config.js)
+   Design tokens â€” Tailwind v4 CSS-first theme (`@theme`, not tailwind.config.js)
    Phase 2 of the styling refactor. Every value below was measured from
    src/App.css (Phase 1 inventory: docs/phase-1-css-inventory.md) and is listed
    with the number of declarations it replaces.
@@ -37,14 +37,14 @@
    no existing class changes meaning.
    =========================================================================== */
 @theme {
-  /* ── Spacing: number === px (see note above) ─────────────────────────── */
+  /* â”€â”€ Spacing: number === px (see note above) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --spacing: 1px;
 
-  /* ── Font families ───────────────────────────────────────────────────── */
+  /* â”€â”€ Font families â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --font-inter: "DM Sans", sans-serif;
   --font-grotesk: Manrope, sans-serif;
 
-  /* ── Font sizes (px; numeric name === px value) ───────────────────────── */
+  /* â”€â”€ Font sizes (px; numeric name === px value) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --text-10: 10px;   /* 30 */
   --text-11: 11px;   /* 47 */
   --text-12: 12px;   /* 40 */
@@ -59,7 +59,7 @@
   --text-23: 23px;   /*  3 */
   /* one-off sizes (22, 24, 25, 27, 28, 31, 34, 35, 37, 38px, 4 clamps) stay literals */
 
-  /* ── Line heights (unitless ratios; name = ratio x 100) ──────────────── */
+  /* â”€â”€ Line heights (unitless ratios; name = ratio x 100) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   /* leading-145 === line-height: 1.45 */
   --leading-100: 1;      /*  2 */
   --leading-140: 1.4;    /*  2 */
@@ -70,7 +70,7 @@
   --leading-170: 1.7;    /*  2 */
   /* one-off ratios (0.98, 1.1, 1.65) stay literals */
 
-  /* ── Border radii (px; numeric name === px value) ────────────────────── */
+  /* â”€â”€ Border radii (px; numeric name === px value) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --radius-8: 8px;       /*  5 */
   --radius-9: 9px;       /* 14  most-used radius in the app */
   --radius-10: 10px;     /* 12 */
@@ -91,31 +91,31 @@
   --radius-half: 50%;    /*  8 */
   /* 25px (1 use, .hero-panel) and `inherit` (1 use) are not tokens */
 
-  /* ── Colours — brand ──────────────────────────────────────────────────
+  /* â”€â”€ Colours â€” brand â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      Named by ROLE, never by hue, so a future rebrand is a one-line change.
      `--color-white` intentionally restates Tailwind's white (#fff) so the
      token set stays self-contained for the many `background: #fff` surfaces. */
-  --color-brand: #1d4ed8;      /* 5 literal + var(--blue) x69 */
-  --color-brand-deep: #1e3a8a; /* 5  points badges, quiz explanation */
-  --color-ink: #0f172a;        /* 2 literal + var(--ink) x26 */
-  --color-muted: #64748b;      /* 2 literal + var(--muted) x61 */
-  --color-line: #e7edf6;       /* 2 literal + var(--line) x49 — borders */
-  --color-wash: #f8faff;       /* 1 + var(--wash) x2 — app background */
-  --color-pale: #eff6ff;       /* 7 + var(--pale) x18 — tinted surface */
-  --color-surface: #fff;       /* 61 — cards, buttons, inputs */
-  --color-white: #fff;         /* 61 — see note above */
+  --color-brand: #a895ff;      /* primary action / pixel accent */
+  --color-brand-deep: var(--theme-link); /* high-contrast links and key labels */
+  --color-ink: var(--theme-ink);
+  --color-muted: var(--theme-muted);
+  --color-line: var(--theme-line);
+  --color-wash: var(--theme-wash);
+  --color-pale: var(--theme-pale);
+  --color-surface: var(--theme-surface);
+  --color-white: #fff;
 
-  /* ─ Colours — neutral / misc ────────────────────────────────────────── */
+  /* â”€ Colours â€” neutral / misc â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --color-slate-icon: #94a3b8;      /* 22  muted icons, scrollbar, empty states */
   --color-outline: #93c5fd;         /* 21  dashed/hover borders, focus rings */
   --color-focus-ring: #dbeafe;      /* 20  box-shadow focus rings */
   --color-line-soft: #dbe5f3;       /*  1  .profile-add-row */
-  --color-ghost-surface: #f8fbff;   /* 12  dashed buttons, empty panels */
-  --color-ghost-border: #bfdbfe;    /* 11  matching borders + icon colour */
-  --color-panel: #f1f5fb;           /*  2  .path-section, loader steps */
+  --color-ghost-surface: var(--theme-pale);
+  --color-ghost-border: var(--theme-line);
+  --color-panel: var(--theme-surface);
   --color-heading: #172033;         /*  1  index.css :root base colour */
 
-  /* ── Colours — success / warning / danger ────────────────────────────
+  /* â”€â”€ Colours â€” success / warning / danger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      Two green families coexist: a light/mint family for confirmations and a
      deep family for text. They are NOT interchangeable, so they are
      tokenised separately on purpose.                                       */
@@ -147,9 +147,9 @@
   --color-slate-500: #475569;       /* 1  .admin-role */
   --color-slate-300: #cbd5e1;       /* 1  .course-option svg */
   --color-online: #4ade80;          /* 1  .status-dot:before */
-  --color-link-course: #2563eb;     /* 1  .profile-course-list */
+  --color-link-course: var(--theme-link); /* course links */
 
-  /* ── Colours — gradients / translucent overlays (verbatim) ───────────── */
+  /* â”€â”€ Colours â€” gradients / translucent overlays (verbatim) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --color-hero-from: #173c9e;       /* .hero-panel 145deg */
   --color-hero-via: #477ce0;        /* .hero-panel mid stop */
   --color-backdrop: #0f172a66;      /* .admin-dialog-backdrop */
@@ -157,7 +157,7 @@
   --color-overlay-fill: #ffffff33;  /* 1  .set-track */
   --color-overlay-ring: #ffffff35;  /* 1  .progress-ring */
 
-  /* ── Shadows (verbatim; names reflect measured elevation/role) ────────
+  /* â”€â”€ Shadows (verbatim; names reflect measured elevation/role) â”€â”€â”€â”€â”€â”€â”€â”€
      Names are shape-descriptive because Tailwind's own `shadow-sm/md/lg/xl`
      carry different values; those defaults are unused. */
   --shadow-focus: 0 0 0 3px #dbeafe;              /* 7 */
@@ -175,16 +175,16 @@
   --shadow-results: 0 18px 34px #0f172a0d;        /* 1 */
   --shadow-flashcard: 0 20px 36px #0f172a10;      /* 1 */
   --shadow-flashcard-hover: 0 24px 42px #0f172a16;/* 1 */
-  /* `box-shadow: none` (2 uses) → Tailwind `shadow-none`; not a token. */
+  /* `box-shadow: none` (2 uses) â†’ Tailwind `shadow-none`; not a token. */
 }
 
 /* ---------------------------------------------------------------------------
-   Responsive breakpoints — `@custom-variant`, NOT numeric `--breakpoint-*`.
+   Responsive breakpoints â€” `@custom-variant`, NOT numeric `--breakpoint-*`.
    `--breakpoint-*` tokens drive Tailwind's `sm:`/`md:` prefixes, which are
    MIN-width queries; all 8 queries in App.css are MAX-width, so those tokens
    would not express them at all. Tailwind's built-in `max-sm:` variant is also
    wrong here: it compiles to `@media (width < 680px)` (strictly less-than),
-   whereas the app uses `@media (max-width: 680px)` (inclusive) — a real 1px
+   whereas the app uses `@media (max-width: 680px)` (inclusive) â€” a real 1px
    difference at the boundary. These five variants reproduce the authored
    queries byte-for-byte, so `max-760:grid-cols-1` is exactly equivalent to
    being inside `@media (max-width: 760px) { ... }`.
@@ -224,18 +224,95 @@
    They are removed in Phase 5, once nothing references them.
    --------------------------------------------------------------------------- */
 :root {
+  color-scheme: dark;
+  --theme-ink: #f2efff;
+  --theme-muted: #b9b6c4;
+  --theme-link: #c3b5ff;
+  --theme-line: #34333c;
+  --theme-wash: #0d0d11;
+  --theme-pale: #1b1a20;
+  --theme-surface: #17171c;
   font-family: "DM Sans", sans-serif;
-  color: #172033;
-  background: #f8fafc;
+  color: var(--theme-ink);
+  background: var(--theme-wash);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --theme-ink: #172033;
+  --theme-muted: #64748b;
+  --theme-link: #2563eb;
+  --theme-line: #e7edf6;
+  --theme-wash: #f8faff;
+  --theme-pale: #eff6ff;
+  --theme-surface: #fff;
+}
+html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(--theme-ink); }
+@layer utilities {
+  :root[data-theme="dark"] .bg-white { background-color: var(--theme-surface) !important; }
+  :root[data-theme="dark"] .bg-wash { background-color: var(--theme-wash) !important; }
+  :root[data-theme="dark"] .border-line { border-color: var(--theme-line) !important; }
+  :root[data-theme="dark"] .primary-button { background: linear-gradient(115deg, #9b83f5, #7056cf) !important; box-shadow: 0 8px 24px #8874ed45 !important; }
+  :root[data-theme="dark"] .primary-button:hover { background: linear-gradient(115deg, #b3a2ff, #816be0) !important; }
+  :root[data-theme="dark"] .site-header:not(.home-header) { background-color: #10101aee; border-color: #343247; }
+  :root[data-theme="dark"] [class*="bg-[#f8fbff]"], :root[data-theme="dark"] [class*="bg-[#f7faff]"], :root[data-theme="dark"] [class*="bg-[#eff6ff]"], :root[data-theme="dark"] [class*="bg-[#f5f9ff]"], :root[data-theme="dark"] [class*="bg-[#edf5ff]"] { background-color: #211f28 !important; }
+  :root[data-theme="dark"] [class*="bg-blue-"]:not(.primary-button), :root[data-theme="dark"] [class*="bg-indigo-"]:not(.primary-button), :root[data-theme="dark"] [class*="bg-sky-"]:not(.primary-button), :root[data-theme="dark"] [class*="bg-[#eaf2ff]"], :root[data-theme="dark"] [class*="bg-[#e7efff]"], :root[data-theme="dark"] [class*="bg-[#dbeafe]"], :root[data-theme="dark"] [class*="bg-[#f8fafc]"], :root[data-theme="dark"] [class*="bg-[#f6f8fc]"], :root[data-theme="dark"] [class*="bg-[#fbfdff]"], :root[data-theme="dark"] [class*="bg-[#fafaff]"] { background-color: #211f28 !important; }
+  :root[data-theme="dark"] [class*="bg-[#2563eb]"]:not(.primary-button), :root[data-theme="dark"] [class*="bg-[#1d4ed8]"]:not(.primary-button), :root[data-theme="dark"] [class*="bg-[#2858dc]"], :root[data-theme="dark"] [class*="bg-[#1f55ca]"], :root[data-theme="dark"] [class*="bg-[#2864e8]"] { background: linear-gradient(125deg, #302b3e, #24232b) !important; }
+  :root[data-theme="dark"] [class*="[&>button]:bg-[#2858dc]"] > button { background: linear-gradient(115deg, #9b83f5, #7056cf) !important; }
+  :root[data-theme="dark"] [class*="bg-[linear-gradient"][class*="#fff"], :root[data-theme="dark"] [class*="bg-[linear-gradient"][class*="#fafbff"], :root[data-theme="dark"] [class*="bg-[linear-gradient"][class*="#eef4ff"], :root[data-theme="dark"] [class*="bg-[linear-gradient"][class*="#f5f8ff"], :root[data-theme="dark"] [class*="bg-[linear-gradient"][class*="#f1f0ff"] { background: linear-gradient(125deg, #211f28, #18181e 78%) !important; }
+  :root[data-theme="dark"] select, :root[data-theme="dark"] option { color-scheme: dark; background-color: #17171c; color: #f2efff; }
+  :root[data-theme="dark"] [class*="border-[#dbeafe]"], :root[data-theme="dark"] [class*="border-[#dbe7f8]"], :root[data-theme="dark"] [class*="border-[#eeede6]"], :root[data-theme="dark"] [class*="border-[#cddcff]"], :root[data-theme="dark"] [class*="border-[#bfdbfe]"], :root[data-theme="dark"] [class*="border-[#93c5fd]"] { border-color: #403e49 !important; }
+  :root[data-theme="dark"] [class*="text-[#64748b]"], :root[data-theme="dark"] [class*="text-[#334155]"], :root[data-theme="dark"] [class*="text-[#41433f]"], :root[data-theme="dark"] [class*="text-[#1d2939]"] { color: #b4b1d0 !important; }
+  /* Keep blue links and labels readable on dark surfaces across every route. */
+  :root[data-theme="dark"] [class*="text-blue-"], :root[data-theme="dark"] [class*="text-indigo-"], :root[data-theme="dark"] [class*="text-sky-"], :root[data-theme="dark"] [class*="text-[#2563eb]"], :root[data-theme="dark"] [class*="text-[#1d4ed8]"], :root[data-theme="dark"] [class*="text-[#4f46e5]"], :root[data-theme="dark"] [class*="text-[#3b82f6]"], :root[data-theme="dark"] [class*="text-[#60a5fa]"], :root[data-theme="dark"] [class*="text-[#315bca]"], :root[data-theme="dark"] [class*="text-[#312e81]"] { color: #c3b5ff !important; }
+  :root[data-theme="dark"] .dark-home [class*="bg-[#1e3a8a]"], :root[data-theme="dark"] .dark-home [class*="bg-[#172554]"] { background: linear-gradient(115deg, #38325c, #292846 65%, #293b51) !important; }
+  :root[data-theme="dark"] .dark-home [class*="text-[#2563eb]"] { color: #c3b5ff !important; }
+  :root[data-theme="dark"] .dark-home [class*="bg-white"], :root[data-theme="dark"] .dark-home [class*="bg-[#edf5ff]"], :root[data-theme="dark"] .dark-home [class*="bg-[#eff6ff]"], :root[data-theme="dark"] .dark-home [class*="bg-[#f5f9ff]"] { background-color: #171621 !important; }
+  :root[data-theme="dark"] .dark-home > section[class*="bg-[#edf5ff]"] { background: transparent !important; }
+  :root[data-theme="dark"] .dark-home [class*="border-[#dbe7f8]"], :root[data-theme="dark"] .dark-home [class*="border-[#dbeafe]"], :root[data-theme="dark"] .dark-home [class*="border-[#93c5fd]"], :root[data-theme="dark"] .dark-home [class*="border-[#d6e3f5]"], :root[data-theme="dark"] .dark-home [class*="border-[#eef2f7]"] { border-color: #443b5f !important; }
+  :root[data-theme="dark"] .dark-home [class*="text-blue-"], :root[data-theme="dark"] .dark-home [class*="text-[#334155]"], :root[data-theme="dark"] .dark-home [class*="text-[#64748b]"], :root[data-theme="dark"] .dark-home [class*="text-[#4f46e5]"] { color: #c3b5ff !important; }
+  :root[data-theme="dark"] .dark-home [class*="bg-[#0f172a]"] { background-color: #12121b !important; }
+  :root[data-theme="light"] .dark-home { background-color: #f8faff; background-image: radial-gradient(ellipse at 75% 32%, #d8b4fe66, transparent 42%), linear-gradient(135deg, #fff, #f3f6ff 55%); color: #172033; }
+  :root[data-theme="light"] .home-header { background-color: #ffffffed; border-color: #e7edf6; }
+  :root[data-theme="light"] .dark-home h1 { color: #172033; }
+  :root[data-theme="light"] .dark-home .hero-headline { color: #172033 !important; }
+  :root[data-theme="light"] .dark-home .hero-headline-highlight { background-color: #e9e3ff !important; color: #5a438f !important; }
+  :root[data-theme="light"] .dark-home .hero-eyebrow { color: #6652a8 !important; }
+  :root[data-theme="light"] .dark-home .hero-description { color: #555469 !important; }
+  :root[data-theme="light"] .dark-home .pricing-headline { color: #172033 !important; }
+  :root[data-theme="light"] .dark-home .pricing-highlight { background-color: #e9e3ff !important; color: #5a438f !important; }
+  :root[data-theme="light"] .home-header [class*="text-[#b5b0c3]"], :root[data-theme="light"] .home-header [class*="text-[#c2bdce]"] { color: #535166 !important; }
+  :root[data-theme="light"] .home-footer { background: linear-gradient(180deg, #f0eef8, #e6e8f2); border-color: #d9d9e8; color: #172033; }
+  :root[data-theme="light"] .home-footer [class*="text-white"] { color: #24213a !important; }
+  :root[data-theme="light"] .home-footer [class*="text-[#aaa5b7]"], :root[data-theme="light"] .home-footer [class*="text-[#858096]"] { color: #5c5a70 !important; }
+  :root[data-theme="light"] .home-footer [class*="border-white"] { border-color: #d4d3e2 !important; }
+  :root[data-theme="light"] .study-preview-card { background: #fff !important; border-color: #ded9ec !important; color: #211d30 !important; box-shadow: 0 24px 64px #30224d20, 0 0 38px #7652aa12 !important; }
+  :root[data-theme="light"] .study-preview-card [class*="border-white"] { border-color: #e8e4f0 !important; }
+  :root[data-theme="light"] .study-preview-card [class*="bg-[#342a4c]"], :root[data-theme="light"] .study-preview-card [class*="bg-[#352a4e]"], :root[data-theme="light"] .study-preview-card [class*="bg-[#38304d]"] { background-color: #f0ebfa !important; }
+  :root[data-theme="light"] .study-preview-card [class*="bg-[#29233a]"], :root[data-theme="light"] .study-preview-card [class*="bg-[#201f2c]"], :root[data-theme="light"] .study-preview-card [class*="bg-[#242230]"] { background-color: #f8f6fb !important; }
+  :root[data-theme="light"] .study-preview-card [class*="text-[#f3f0ff]"], :root[data-theme="light"] .study-preview-card [class*="text-12"] { color: #211d30 !important; }
+  :root[data-theme="light"] .study-preview-card [class*="text-[#aaa6bd]"], :root[data-theme="light"] .study-preview-card [class*="text-[#aaa3bd]"], :root[data-theme="light"] .study-preview-card [class*="text-[#b1adc2]"], :root[data-theme="light"] .study-preview-card [class*="text-[#b8b2c9]"] { color: #686477 !important; }
+  :root[data-theme="light"] .study-preview-card [class*="text-[#c8afff]"], :root[data-theme="light"] .study-preview-card [class*="text-[#c5a7ff]"], :root[data-theme="light"] .study-preview-card [class*="text-[#d5c4ff]"], :root[data-theme="light"] .study-preview-card [class*="text-[#d6c6ff]"], :root[data-theme="light"] .study-preview-card [class*="text-[#d2b8ff]"], :root[data-theme="light"] .study-preview-card [class*="text-[#c7a2ff]"], :root[data-theme="light"] .study-preview-card [class*="text-[#c6a6ff]"] { color: #6948a8 !important; }
+  :root[data-theme="light"] .study-preview-card [class*="border-[#544773]"] { border-color: #d9cdec !important; }
+  :root[data-theme="light"] .study-preview-card [class*="bg-[#373348]"] { background-color: #e5e0ed !important; }
+  :root[data-theme="light"] .study-preview-card [class*="bg-[#a78bfa]"] { background-color: #8563cf !important; }
+  :root[data-theme="light"] .study-preview-card [class*="border-[#171621]"] { border-color: #fff !important; }
+  :root[data-theme="dark"] .dark-home [class*="text-[#252d28]"], :root[data-theme="dark"] .dark-home [class*="text-[#2c332e]"], :root[data-theme="dark"] .dark-home [class*="text-[#2e352f]"] { color: #f2efff !important; }
+  :root[data-theme="light"] .dark-home [class*="bg-[#08090f]"] { background-color: #fff; }
+  :root[data-theme="light"] .primary-button { background: linear-gradient(115deg, #7658d4, #5d48b8); }
+}
+
+.admin-metric-skeleton { background-color: #e8e3f2; }
+.admin-metric-shimmer { background: linear-gradient(90deg, transparent, #a895ff, transparent); }
+:root[data-theme="dark"] .admin-metric-skeleton { background-color: #39334a; }
+:root[data-theme="dark"] .admin-metric-shimmer { background: linear-gradient(90deg, transparent, #c3b5ff, transparent); }
 /* ---------------------------------------------------------------------------
    Global element resets.
    These MUST live inside `@layer base`. Unlayered CSS always outranks layered
    CSS regardless of specificity, so while these rules sat outside a layer they
-   silently beat every Tailwind utility that targeted the same element — e.g.
+   silently beat every Tailwind utility that targeted the same element â€” e.g.
    `button { font: inherit; color: inherit }` would no-op a `text-brand` or
    `font-bold` utility on a <button>. Moving them into `@layer base` keeps the
    declarations and the cascade order they had before (they still apply to
@@ -263,4 +340,124 @@
     color: inherit;
     background: none;
   }
+}
+
+/* Dark theme final pass: also cover light colors applied through parent
+   Tailwind selector utilities, which do not put bg-white on the child. */
+:root[data-theme="dark"] [class*="text-[#191919]"],
+:root[data-theme="dark"] [class*="text-[#111b31]"],
+:root[data-theme="dark"] [class*="text-[#16213b]"],
+:root[data-theme="dark"] [class*="text-[#243149]"],
+:root[data-theme="dark"] [class*="text-[#172033]"],
+:root[data-theme="dark"] [class*="text-[#1e293b]"],
+:root[data-theme="dark"] [class*="text-[#0f172a]"],
+:root[data-theme="dark"] [class*="text-black"],
+:root[data-theme="dark"] [class*="text-[#1e3a8a]"] { color: var(--theme-ink) !important; }
+:root[data-theme="dark"] [class*="text-[#2864e8]"],
+:root[data-theme="dark"] [class*="text-[#315bca]"],
+:root[data-theme="dark"] [class*="text-[#60728f]"] { color: #c3b5ff !important; }
+:root[data-theme="dark"] [class*="[&_.eyebrow]:text-[#315bca]"] .eyebrow,
+:root[data-theme="dark"] [class*="[&>button.active]:text-[#2864e8]"] > button.active,
+:root[data-theme="dark"] [class*="[&_button]:text-[#2563eb]"] button,
+:root[data-theme="dark"] [class*="[&>span]:text-[#2563eb]"] > span,
+:root[data-theme="dark"] [class*="[&>svg]:text-[#2563eb]"] > svg,
+:root[data-theme="dark"] [class*="[&>div]:text-[#2563eb]"] > div { color: #c3b5ff !important; }
+:root[data-theme="dark"] [class*="[&>p]:text-[#334155]"] > p,
+:root[data-theme="dark"] [class*="[&_strong]:text-[#334155]"] strong { color: var(--theme-ink) !important; }
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] option {
+  color-scheme: dark;
+  background-color: var(--theme-surface) !important;
+  color: var(--theme-ink) !important;
+  border-color: var(--theme-line);
+}
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder { color: var(--theme-muted) !important; }
+:root[data-theme="dark"] [class*="[&_button]:bg-[#f8fbff]"] button,
+:root[data-theme="dark"] [class*="[&_button]:bg-[#f8fafc]"] button,
+:root[data-theme="dark"] [class*="[&_button]:bg-[#eff6ff]"] button { background: #211f28 !important; color: #c3b5ff !important; border-color: #403e49 !important; }
+:root[data-theme="dark"] [class*="[&>button]:bg-white"] > button:not(.bg-brand),
+:root[data-theme="dark"] [class*="[&>button]:bg-[#f8fbff]"] > button:not(.bg-brand),
+:root[data-theme="dark"] [class*="[&>button]:bg-[#eff6ff]"] > button:not(.bg-brand) { background: var(--theme-surface) !important; color: var(--theme-muted) !important; border-color: var(--theme-line) !important; }
+:root[data-theme="dark"] [class*="[&>input]:bg-white"] > input,
+:root[data-theme="dark"] [class*="[&>select]:bg-white"] > select,
+:root[data-theme="dark"] [class*="[&_input]:bg-white"] input:not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="dark"] [class*="[&_select]:bg-white"] select,
+:root[data-theme="dark"] [class*="[&_textarea]:bg-white"] textarea,
+:root[data-theme="dark"] [class*="[&_.secondary-button]:bg-white"] .secondary-button { background: var(--theme-surface) !important; color: var(--theme-ink) !important; border-color: var(--theme-line) !important; }
+:root[data-theme="dark"] [class*="[&>div]:bg-white"] > div { background: var(--theme-surface) !important; }
+:root[data-theme="dark"] [class*="[&>button]:bg-white"] > button:not(.bg-brand),
+:root[data-theme="dark"] [class*="[&>button]:bg-[#f8fbff]"] > button:not(.bg-brand) { background: var(--theme-surface) !important; color: var(--theme-muted) !important; border-color: var(--theme-line) !important; }
+:root[data-theme="dark"] [class*="[&_.primary-button]:bg-white"] .primary-button { background: linear-gradient(115deg, #9b83f5, #7056cf) !important; color: #fff !important; }
+:root[data-theme="dark"] [class*="[&_li_span]:bg-white"] li span { background: var(--theme-pale) !important; color: #c3b5ff !important; }
+
+/* Profile palette roles keep account states readable in both themes. */
+.profile-page .profile-avatar-success { background: #ccfbf1; color: #0f766e; }
+.profile-status-success { color: #047857; }
+.profile-status-error { color: #b91c1c; }
+.profile-page .profile-promo-surface { background: #f5f8ff; }
+.profile-page .profile-promo-icon { background: #eaf2ff; color: #4f46e5; }
+.profile-page .profile-plan-badge { background: #eef4ff; }
+.profile-page .profile-plan-card { background: #fcfdff; }
+.profile-page .profile-plan-card-pro { background: linear-gradient(135deg, #f5f8ff, #fff); }
+.profile-page .profile-danger-surface { background: #fffafa; }
+.profile-page .profile-danger-border,
+.profile-page .profile-danger-surface input { border-color: #fecaca; }
+.profile-page .profile-danger-icon { background: #fef2f2; color: #b91c1c; }
+.profile-page .danger-heading { color: #991b1b; }
+.profile-page .profile-warning-icon { background: #fef3c7; color: #b45309; }
+
+:root[data-theme="dark"] .profile-page .profile-avatar-success { background: #18302c; color: #8de0cb; }
+:root[data-theme="dark"] .profile-status-success { color: #8de0cb !important; }
+:root[data-theme="dark"] .profile-status-error { color: #ff9ca7 !important; }
+:root[data-theme="dark"] .profile-page [class*="text-success-icon"] { color: #8de0cb !important; }
+:root[data-theme="dark"] .profile-page .profile-promo-surface,
+:root[data-theme="dark"] .profile-page .profile-plan-card { background: #211f28 !important; color: var(--theme-ink); }
+:root[data-theme="dark"] .profile-page .profile-promo-icon,
+:root[data-theme="dark"] .profile-page .profile-plan-badge { background: #2b2838; color: #c3b5ff; }
+:root[data-theme="dark"] .profile-page .profile-plan-card-pro { background: linear-gradient(135deg, #292536, #1b1a20) !important; }
+:root[data-theme="dark"] .profile-page .profile-danger-surface { background: #261b20 !important; }
+:root[data-theme="dark"] .profile-page .profile-danger-border,
+:root[data-theme="dark"] .profile-page .profile-danger-surface input { border-color: #633943 !important; }
+:root[data-theme="dark"] .profile-page .profile-danger-icon { background: #3a242b; color: #ff9ca7; }
+:root[data-theme="dark"] .profile-page .danger-heading { color: #ff9ca7 !important; }
+:root[data-theme="dark"] .profile-page .profile-warning-icon { background: #382d20; color: #ffd18a; }
+
+/* Quiz feedback uses tinted state surfaces with readable text in both themes. */
+.quiz-progress-track { background-color: #e7edf6; }
+.quiz-answer-selected { border-color: #8d75e8; background-color: #f3efff !important; }
+.quiz-answer-correct { border-color: #16a34a; background-color: #f0fdf4 !important; }
+.quiz-answer-correct > span { background-color: #dcfce7 !important; color: #166534 !important; }
+.quiz-answer-wrong { border-color: #dc2626; background-color: #fef2f2 !important; }
+.quiz-answer-wrong > span { background-color: #fee2e2 !important; color: #991b1b !important; }
+.quiz-explanation { border-color: #bbf7d0; background-color: #f0fdf4; }
+.quiz-missed { color: #b91c1c; }
+
+:root[data-theme="dark"] .quiz-progress-track { background-color: #34313e !important; }
+:root[data-theme="dark"] .quiz-answer-selected { border-color: #a895ff !important; background-color: #2a2638 !important; }
+:root[data-theme="dark"] .quiz-answer-correct { border-color: #398b68 !important; background-color: #1d3029 !important; color: #e4fff1 !important; }
+:root[data-theme="dark"] .quiz-answer-correct > span { background-color: #29483a !important; color: #9de2bf !important; }
+:root[data-theme="dark"] .quiz-answer-wrong { border-color: #a95865 !important; background-color: #38252b !important; color: #ffe9ec !important; }
+:root[data-theme="dark"] .quiz-answer-wrong > span { background-color: #503039 !important; color: #ffabb4 !important; }
+:root[data-theme="dark"] .quiz-explanation { border-color: #355e4a; background-color: #1d2c25; color: #e4fff1 !important; }
+:root[data-theme="dark"] .quiz-missed { color: #ff9ca7 !important; }
+
+/* Keep quiz state surfaces ahead of the shared dark .bg-white utility override. */
+@layer utilities {
+  :root[data-theme="dark"] .quiz-answer {
+    border-color: #5c4b7d !important;
+    background-color: #2d2640 !important;
+    color: #f2efff !important;
+  }
+  :root[data-theme="dark"] .quiz-answer > span { background-color: #403657 !important; color: #d3c5ff !important; }
+  :root[data-theme="dark"] .quiz-create-new { border-color: #625282 !important; background-color: #302743 !important; color: #e0d4ff !important; }
+  :root[data-theme="dark"] .quiz-progress-track { background-color: #34313e !important; }
+  :root[data-theme="dark"] .quiz-answer-selected { border-color: #bba7ff !important; background-color: #413356 !important; }
+  :root[data-theme="dark"] .quiz-answer-correct { border-color: #398b68 !important; background-color: #1d3029 !important; color: #e4fff1 !important; }
+  :root[data-theme="dark"] .quiz-answer-correct > span { background-color: #29483a !important; color: #9de2bf !important; }
+  :root[data-theme="dark"] .quiz-answer-wrong { border-color: #a95865 !important; background-color: #38252b !important; color: #ffe9ec !important; }
+  :root[data-theme="dark"] .quiz-answer-wrong > span { background-color: #503039 !important; color: #ffabb4 !important; }
+  :root[data-theme="dark"] .quiz-explanation { border-color: #355e4a !important; background-color: #1d2c25 !important; color: #e4fff1 !important; }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Activity, ArrowLeft, Ban, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, FileText, Flag, LayoutDashboard, Menu, Plus, Power, Search, ShieldCheck, Sparkles, Ticket, Trash2, UserRound, Users, X } from "lucide-react";
 import { go } from "../components/Layout";
+import { motion } from "motion/react";
 import type { Route } from "../types";
 import { createAdminMission, createAdminPromoCode, deleteAdminMission, deleteAdminPromoCode, errorMessage, getAdminActivity, getAdminMissions, getAdminPromoCodes, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getModerationSummary, getUniversities, promoteAdminUser, reviewSubmission, suspendAdminUser, unsuspendAdminUser, updateAdminMission, updateAdminPromoCode } from "../lib/api";
 import type { ActivityEntry, AdminMission, AdminPromoCode, AdminUser, Department, Faculty, Pagination, RepositorySubmission, University } from "../lib/api";
@@ -276,54 +277,54 @@ export function AdminPage({ section }: { section: string }) {
   }, [section, submissionsPage, submissionStatus, submissionSearch]);
 
   return (
-    <div className="admin-app-shell min-h-screen bg-wash">
+    <div className="min-h-screen bg-[#f6f8fc] text-ink">
       <AdminSidebar section={section} open={navOpen} onClose={() => setNavOpen(false)} />
       {navOpen && <div className="fixed inset-0 z-30 bg-backdrop max-1020:block hidden" onClick={() => setNavOpen(false)} />}
-      <div className="admin-content pl-240 max-1020:pl-0">
-        <header className="admin-topbar sticky top-0 z-20 flex h-64 items-center gap-12 border-b border-line bg-wash px-20 max-680:px-14">
+      <div className="pl-240 max-1020:pl-0">
+        <header className="sticky top-0 z-20 flex h-[74px] items-center gap-12 border-b border-[#e6ebf2] bg-[#f6f8fc] px-20 max-680:px-14">
           <button className="hidden max-1020:grid h-36 w-36 shrink-0 place-items-center rounded-10 border border-line bg-white text-ink" aria-label="Open admin menu" onClick={() => setNavOpen(true)}>
             <Menu size={18} />
           </button>
           <div className="min-w-0">
-            <p className="eyebrow">Admin board</p>
-            <h1 className="m-0 truncate text-15 font-bold text-ink">{ADMIN_TITLES[section] ?? "Admin"}</h1>
+            <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Admin board</p>
+            <h1 className="m-0 truncate font-inter text-15 font-bold text-ink">{ADMIN_TITLES[section] ?? "Admin"}</h1>
           </div>
           <button className="ml-auto inline-flex shrink-0 items-center gap-6 rounded-999 border border-line bg-white px-14 py-8 text-12 font-semibold text-brand transition-colors hover:bg-pale" onClick={() => go("dashboard")}>
             <ArrowLeft size={14} /> Back to main app
           </button>
         </header>
-        <main className="mx-auto w-full max-w-860 px-16 py-24 max-680:px-12">
-          {notice && <div className="admin-notice mb-16"><Check size={14} /> {notice}</div>}
-          {error && <div className="admin-feedback-error mb-16"><Ban size={14} /> {error}</div>}
+        <main className="mx-auto w-full max-w-1240 px-36 pt-30 pb-64 max-680:px-14 max-680:py-22 max-680:pb-48">
+          {notice && <div className="mb-16 flex items-center gap-8 rounded-10 bg-success-soft px-14 py-11 text-11 text-success-deep"><Check size={14} /> {notice}</div>}
+          {error && <div className="mb-16 flex items-center gap-8 rounded-10 border border-red-200 bg-red-50 px-14 py-11 text-11 text-danger"><Ban size={14} /> {error}</div>}
 
           {section === "overview" && (
             <div className="flex flex-col gap-18">
-              <div className="admin-overview-heading">
+              <div className="mb-4 flex items-end justify-between gap-24 max-1020:items-start max-1020:flex-col">
                 <div>
-                  <p className="admin-date-label">Monday, November 9</p>
-                  <h2>Good day, Admin <span aria-hidden="true">👋</span></h2>
-                  <p>Here&apos;s what&apos;s happening across your learning community.</p>
+                  <p className="mb-7 text-13 text-slate-icon">Monday, November 9</p>
+                  <h2 className="m-0 text-[clamp(26px,3vw,32px)] font-bold tracking-[-.05em] text-ink">Good day, Admin <span className="text-[.8em]" aria-hidden="true">👋</span></h2>
+                  <p className="mt-7 text-13 text-slate-icon">Here&apos;s what&apos;s happening across your learning community.</p>
                 </div>
-                <div className="admin-overview-actions">
-                  <div className="admin-period-switcher" aria-label="Dashboard date range">
-                    <button className="active">7D</button>
-                    <button>30D</button>
-                    <button>90D</button>
+                <div className="flex shrink-0 items-center gap-10">
+                  <div className="flex rounded-10 border border-[#dfe6f0] bg-white p-4 [&>button]:min-h-[31px] [&>button]:min-w-[45px] [&>button]:rounded-7 [&>button]:text-12 [&>button]:font-semibold [&>button]:text-[#60728f] [&>button.active]:bg-[#e7efff] [&>button.active]:text-[#2864e8]" aria-label="Dashboard date range">
+                    <button className="rounded-7 bg-[#e7efff] px-10 text-12 font-semibold text-[#2864e8]">7D</button>
+                    <button className="rounded-7 px-10 text-12 font-semibold text-[#60728f]">30D</button>
+                    <button className="rounded-7 px-10 text-12 font-semibold text-[#60728f]">90D</button>
                   </div>
-                  <button className="admin-add-button" onClick={() => go("admin-submissions")}>
+                  <button className="inline-flex min-h-40 items-center gap-7 rounded-9 bg-[#2864e8] px-15 text-12 font-bold text-white shadow-[0_7px_16px_rgba(40,100,232,.18)] hover:bg-[#1f55ca]" onClick={() => go("admin-submissions")}>
                     <Plus size={16} /> Review submissions
                   </button>
                 </div>
               </div>
-              <div className="admin-overview-metrics grid grid-cols-2 gap-12 max-680:grid-cols-1">
-                <Metric icon={<Users size={16} />} value={summary ? String(summary.users) : "—"} label="Students on the platform" tone="blue" />
-                <Metric icon={<Clock3 size={16} />} value={summary ? String(summary.pending) : "—"} label="Submissions awaiting review" tone="amber" />
-                <Metric icon={<Check size={16} />} value={summary ? String(summary.approved) : "—"} label="Approved papers" tone="green" />
-                <Metric icon={<Ban size={16} />} value={summary ? String(summary.rejected) : "—"} label="Rejected papers" tone="red" />
-                <Metric icon={<Sparkles size={16} />} value={summary ? String(summary.generatedSets) : "—"} label="Study sets generated" tone="blue" />
+              <div className="grid grid-cols-4 gap-16 max-1020:grid-cols-2 max-680:grid-cols-1">
+                <Metric icon={<Users size={16} />} value={summary?.users ?? null} label="Students on the platform" tone="blue" />
+                <Metric icon={<Clock3 size={16} />} value={summary?.pending ?? null} label="Submissions awaiting review" tone="amber" />
+                <Metric icon={<Check size={16} />} value={summary?.approved ?? null} label="Approved PDFs" tone="green" />
+                <Metric icon={<Ban size={16} />} value={summary?.rejected ?? null} label="Rejected PDFs" tone="red" />
+                <Metric icon={<Sparkles size={16} />} value={summary?.generatedSets ?? null} label="Study sets generated" tone="blue" />
               </div>
               <div>
-                <p className="eyebrow">Jump to</p>
+                <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Jump to</p>
                 <div className="mt-8 grid grid-cols-2 gap-12 max-680:grid-cols-1">
                   {QUICK_LINKS.map((item) => (
                     <button key={item.route} className="flex items-start gap-12 rounded-13 border border-line bg-white p-16 text-left shadow-card transition-shadow hover:shadow-brand-xl" onClick={() => go(item.route)}>
@@ -336,14 +337,14 @@ export function AdminPage({ section }: { section: string }) {
                   ))}
                 </div>
               </div>
-              <section className="admin-panel">
-                <div className="admin-panel-head">
-                  <div><p className="eyebrow">Signals</p><h2>Latest activity</h2></div>
-                  <button className="ghost-button" onClick={() => go("admin-activity")}>View all</button>
+              <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
+                <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
+                  <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Signals</p><h2>Latest activity</h2></div>
+                  <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" onClick={() => go("admin-activity")}>View all</button>
                 </div>
-                <div className="admin-activity-list">
+                <div className="grid border-t border-line">
                   {activity.length === 0 ? (
-                    <div className="admin-empty"><Activity size={20} /><span>No activity recorded yet.</span></div>
+                    <div className="flex items-center justify-center gap-8 p-32 text-12 text-muted"><Activity size={20} /><span>No activity recorded yet.</span></div>
                   ) : (
                     activity.map((entry) => <ActivityRow key={entry.id} entry={entry} />)
                   )}
@@ -354,7 +355,7 @@ export function AdminPage({ section }: { section: string }) {
 
           {section === "admins" && (
             <div className="rounded-13 border border-line bg-white p-20 shadow-card max-680:p-16">
-              <p className="eyebrow">Grant access</p>
+              <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Grant access</p>
               <h2 className="mb-0 mt-4 text-[17px] font-bold text-ink">Make another person an admin</h2>
               <p className="mb-0 mt-6 text-13 leading-160 text-muted">They must have signed up already — all you need is the email they registered with. Their account gets full board access immediately.</p>
               <div className="mt-14 flex gap-10 max-680:flex-col">
@@ -387,12 +388,12 @@ export function AdminPage({ section }: { section: string }) {
           )}
 
           {section === "users" && (
-            <section className="admin-panel">
-              <div className="admin-panel-head">
-                <div><p className="eyebrow">Students</p><h2>Student directory</h2></div>
-                <span className="admin-status"><Users size={14} /> {usersPagination.total} students</span>
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
+              <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
+                <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Students</p><h2>Student directory</h2></div>
+                <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Users size={14} /> {usersPagination.total} students</span>
               </div>
-              <p className="admin-panel-help">Search by name, username or email, then suspend or restore an account. Suspended students cannot sign in until it lifts.</p>
+              <p className="mb-14 mt-[-10px] text-12 text-muted">Search by name, username or email, then suspend or restore an account. Suspended students cannot sign in until it lifts.</p>
               <div className="mb-16 flex flex-wrap items-center gap-9">
                 <label className={`${adminSearchBox} min-w-220 flex-[2_1_260px] max-760:flex-[1_1_100%]`}>
                   <Search size={16} />
@@ -437,9 +438,9 @@ export function AdminPage({ section }: { section: string }) {
                 </div>
                 <button className="ml-auto inline-flex min-h-40 flex-none items-center gap-7 rounded-10 bg-brand px-16 text-13 font-semibold text-white shadow-brand-sm transition-colors hover:bg-brand-deep max-760:ml-0" onClick={() => setUsersSearch(usersSearchInput.trim())}>Search</button>
               </div>
-              <div className="admin-user-list">
+              <div className="grid border-t border-line">
                 {users.length === 0 ? (
-                  <div className="admin-empty"><UserRound size={20} /><span>No students match these filters.</span></div>
+                  <div className="flex items-center justify-center gap-8 p-32 text-12 text-muted"><UserRound size={20} /><span>No students match these filters.</span></div>
                 ) : (
                   users.map((user) => {
                     const suspended = Boolean(user.suspendedUntil && new Date(user.suspendedUntil) > new Date());
@@ -448,22 +449,22 @@ export function AdminPage({ section }: { section: string }) {
                 )}
               </div>
               {usersPagination.pages > 1 && (
-                <div className="admin-pagination">
-                  <button className="secondary-button" disabled={usersPage <= 1} onClick={() => setUsersPage(usersPage - 1)}><ChevronLeft size={15} /></button>
-                  <span className="admin-pagination-label">Page {usersPagination.page} of {usersPagination.pages} <span className="admin-users-total">({usersPagination.total} total)</span></span>
-                  <button className="secondary-button" disabled={usersPage >= usersPagination.pages} onClick={() => setUsersPage(usersPage + 1)}><ChevronRight size={15} /></button>
+                <div className="mt-15 inline-flex items-center gap-11 border-t border-line py-10 text-11 text-muted">
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={usersPage <= 1} onClick={() => setUsersPage(usersPage - 1)}><ChevronLeft size={15} /></button>
+                  <span className="inline-flex items-center gap-4">Page {usersPagination.page} of {usersPagination.pages} <span className="text-10 text-slate-icon">({usersPagination.total} total)</span></span>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={usersPage >= usersPagination.pages} onClick={() => setUsersPage(usersPage + 1)}><ChevronRight size={15} /></button>
                 </div>
               )}
             </section>
           )}
 
           {section === "activity" && (
-            <section className="admin-panel">
-              <div className="admin-panel-head">
-                <div><p className="eyebrow">Signals</p><h2>Recent activity</h2></div>
-                <span className="admin-status"><Activity size={14} /> {activityPagination.total} events</span>
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
+              <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
+                <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Signals</p><h2>Recent activity</h2></div>
+                <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Activity size={14} /> {activityPagination.total} events</span>
               </div>
-              <p className="admin-panel-help">The newest 15 events per page — filter by kind or search for the person behind the event.</p>
+              <p className="mb-14 mt-[-10px] text-12 text-muted">The newest 15 events per page — filter by kind or search for the person behind the event.</p>
               <div className={`${adminFormGrid} grid-cols-[minmax(180px,220px)_minmax(220px,1fr)_auto] max-1020:grid-cols-1`}>
                 <div className={adminSelectShell}>
                   <select className={adminSelect} value={activityType} onChange={(event) => { setActivityType(event.target.value); setActivityPage(1); }}>
@@ -487,36 +488,36 @@ export function AdminPage({ section }: { section: string }) {
                     placeholder="Search who did it — name or email"
                   />
                 </label>
-                <button className="secondary-button w-full" onClick={() => { setActivitySearch(activitySearchInput.trim()); setActivityPage(1); }}>Search</button>
+                <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 w-full" onClick={() => { setActivitySearch(activitySearchInput.trim()); setActivityPage(1); }}>Search</button>
               </div>
-              <div className="admin-activity-list">
+              <div className="grid border-t border-line">
                 {activity.length === 0 ? (
-                  <div className="admin-empty"><Activity size={20} /><span>No activity matches these filters.</span></div>
+                  <div className="flex items-center justify-center gap-8 p-32 text-12 text-muted"><Activity size={20} /><span>No activity matches these filters.</span></div>
                 ) : (
                   activity.map((entry) => <ActivityRow key={entry.id} entry={entry} />)
                 )}
               </div>
               {activityPagination.pages > 1 && (
-                <div className="admin-pagination">
-                  <button className="secondary-button" disabled={activityPage <= 1} onClick={() => setActivityPage(activityPage - 1)}><ChevronLeft size={15} /></button>
-                  <span className="admin-pagination-label">Page {activityPagination.page} of {activityPagination.pages} <span className="admin-submission-total">({activityPagination.total} total)</span></span>
-                  <button className="secondary-button" disabled={activityPage >= activityPagination.pages} onClick={() => setActivityPage(activityPage + 1)}><ChevronRight size={15} /></button>
+                <div className="mt-15 inline-flex items-center gap-11 border-t border-line py-10 text-11 text-muted">
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={activityPage <= 1} onClick={() => setActivityPage(activityPage - 1)}><ChevronLeft size={15} /></button>
+                  <span className="inline-flex items-center gap-4">Page {activityPagination.page} of {activityPagination.pages} <span className="text-10 text-muted">({activityPagination.total} total)</span></span>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={activityPage >= activityPagination.pages} onClick={() => setActivityPage(activityPage + 1)}><ChevronRight size={15} /></button>
                 </div>
               )}
             </section>
           )}
 
           {section === "missions" && (
-            <section className="admin-panel">
-              <div className="admin-panel-head">
-                <div><p className="eyebrow">Missions</p><h2>XP challenges</h2></div>
-                <span className="admin-status"><Flag size={14} /> {missions.length} missions</span>
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
+              <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
+                <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Missions</p><h2>XP challenges</h2></div>
+                <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Flag size={14} /> {missions.length} missions</span>
               </div>
-              <p className="admin-panel-help">Students claim these once from their study desk or profile for XP. Pause a mission to stop new claims.</p>
+              <p className="mb-14 mt-[-10px] text-12 text-muted">Students claim these once from their study desk or profile for XP. Pause a mission to stop new claims.</p>
               <div className={`${adminFormGrid} grid-cols-[minmax(200px,2fr)_minmax(200px,2fr)_minmax(90px,120px)_auto] items-end`}>
                 <label className={adminLabel}>
                   Mission title
-                  <input className={adminField} value={missionForm.title} onChange={(event) => setMissionForm({ ...missionForm, title: event.target.value })} placeholder="Upload 3 past papers" />
+                  <input className={adminField} value={missionForm.title} onChange={(event) => setMissionForm({ ...missionForm, title: event.target.value })} placeholder="Upload 3 exam PDFs" />
                 </label>
                 <label className={adminLabel}>
                   Description <span className="font-normal text-slate-icon">(optional)</span>
@@ -526,11 +527,11 @@ export function AdminPage({ section }: { section: string }) {
                   XP reward
                   <input className={adminField} type="number" min={1} value={missionForm.xpReward} onChange={(event) => setMissionForm({ ...missionForm, xpReward: Number(event.target.value) })} />
                 </label>
-                <button className="primary-button h-42 w-full max-760:w-full" disabled={!missionForm.title.trim() || creatingMission} onClick={() => void createMission()}><Plus size={15} /> Add mission</button>
+                <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none h-42 w-full max-760:w-full" disabled={!missionForm.title.trim() || creatingMission} onClick={() => void createMission()}><Plus size={15} /> Add mission</button>
               </div>
-              <div className="admin-mission-list">
+              <div className="grid gap-10">
                 {missions.length === 0 ? (
-                  <div className="admin-empty"><Flag size={20} /><span>No missions yet — create the first one above.</span></div>
+                  <div className="flex items-center justify-center gap-8 p-32 text-12 text-muted"><Flag size={20} /><span>No missions yet — create the first one above.</span></div>
                 ) : (
                   missions.map((mission) => (
                     <MissionRow key={mission.id} mission={mission} onToggle={() => void toggleMission(mission)} onDelete={() => void removeMission(mission)} />
@@ -541,12 +542,12 @@ export function AdminPage({ section }: { section: string }) {
           )}
 
           {section === "promo" && (
-            <section className="admin-panel">
-              <div className="admin-panel-head">
-                <div><p className="eyebrow">Promo codes</p><h2>Give out free Pro</h2></div>
-                <span className="admin-status"><Ticket size={14} /> {promoCodes.length} codes</span>
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
+              <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
+                <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Promo codes</p><h2>Give out free Pro</h2></div>
+                <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Ticket size={14} /> {promoCodes.length} codes</span>
               </div>
-              <p className="admin-panel-help">Share a code and students redeem it on their study desk or profile — free Pro days and/or bonus XP, once per student. Leave uses empty for unlimited.</p>
+              <p className="mb-14 mt-[-10px] text-12 text-muted">Share a code and students redeem it on their study desk or profile — free Pro days and/or bonus XP, once per student. Leave uses empty for unlimited.</p>
               <div className={`${adminFormGrid} grid-cols-[minmax(200px,240px)_minmax(220px,1fr)_auto] items-end`}>
                 <label className={adminLabel}>
                   Code
@@ -556,7 +557,7 @@ export function AdminPage({ section }: { section: string }) {
                   Description <span className="font-normal text-slate-icon">(optional)</span>
                   <input className={adminField} value={promoForm.description} onChange={(event) => setPromoForm({ ...promoForm, description: event.target.value })} placeholder="What it says to students" />
                 </label>
-                <button className="primary-button h-42 w-full" disabled={!promoForm.code.trim() || creatingPromo} onClick={() => void createPromo()}><Plus size={15} /> Create code</button>
+                <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none h-42 w-full" disabled={!promoForm.code.trim() || creatingPromo} onClick={() => void createPromo()}><Plus size={15} /> Create code</button>
                 <div className="col-span-full grid grid-cols-4 gap-10 max-760:grid-cols-2">
                   <label className={adminLabel}>
                     Pro days
@@ -576,9 +577,9 @@ export function AdminPage({ section }: { section: string }) {
                   </label>
                 </div>
               </div>
-              <div className="admin-promo-list">
+              <div className="grid gap-10">
                 {promoCodes.length === 0 ? (
-                  <div className="admin-empty"><Ticket size={20} /><span>No promo codes yet — create one above and share it.</span></div>
+                  <div className="flex items-center justify-center gap-8 p-32 text-12 text-muted"><Ticket size={20} /><span>No promo codes yet — create one above and share it.</span></div>
                 ) : (
                   promoCodes.map((promo) => (
                     <PromoRow key={promo.id} promo={promo} copied={copiedCode === promo.code} onCopy={() => copyCode(promo.code)} onToggle={() => void togglePromo(promo)} onDelete={() => void removePromo(promo)} />
@@ -589,10 +590,10 @@ export function AdminPage({ section }: { section: string }) {
           )}
 
           {section === "submissions" && (
-            <section className="admin-panel">
-              <div className="admin-panel-head">
-                <div><p className="eyebrow">Submissions</p><h2>Repository review</h2></div>
-                <span className="admin-status"><FileText size={14} /> {submissionsPagination.total} submissions</span>
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
+              <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
+                <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Submissions</p><h2>Repository review</h2></div>
+                <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><FileText size={14} /> {submissionsPagination.total} submissions</span>
               </div>
               <div className={`${adminFormGrid} grid-cols-[minmax(150px,180px)_minmax(220px,1fr)_auto] max-1020:grid-cols-1`}>
                 <div className={adminSelectShell}>
@@ -613,11 +614,11 @@ export function AdminPage({ section }: { section: string }) {
                     placeholder="Search course or owner"
                   />
                 </label>
-                <button className="secondary-button w-full" onClick={() => { setSubmissionSearch(submissionSearchInput.trim()); setSubmissionsPage(1); }}>Search</button>
+                <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 w-full" onClick={() => { setSubmissionSearch(submissionSearchInput.trim()); setSubmissionsPage(1); }}>Search</button>
               </div>
-              <div className="admin-submission-list">
+              <div className="grid gap-10">
                 {submissions.length === 0 ? (
-                  <div className="admin-empty"><FileText size={20} /><span>Nothing here — try another status or search.</span></div>
+                  <div className="flex items-center justify-center gap-8 p-32 text-12 text-muted"><FileText size={20} /><span>Nothing here — try another status or search.</span></div>
                 ) : (
                   submissions.map((submission) => (
                     <SubmissionRow key={submission.id} submission={submission} busy={reviewing === submission.id} onReview={(id, decision, note) => void confirmReview(id, decision, note)} />
@@ -625,10 +626,10 @@ export function AdminPage({ section }: { section: string }) {
                 )}
               </div>
               {submissionsPagination.pages > 1 && (
-                <div className="admin-pagination">
-                  <button className="secondary-button" disabled={submissionsPage <= 1} onClick={() => setSubmissionsPage(submissionsPage - 1)}><ChevronLeft size={15} /></button>
-                  <span className="admin-pagination-label">Page {submissionsPagination.page} of {submissionsPagination.pages} <span className="admin-submission-total">({submissionsPagination.total} total)</span></span>
-                  <button className="secondary-button" disabled={submissionsPage >= submissionsPagination.pages} onClick={() => setSubmissionsPage(submissionsPage + 1)}><ChevronRight size={15} /></button>
+                <div className="mt-15 inline-flex items-center gap-11 border-t border-line py-10 text-11 text-muted">
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={submissionsPage <= 1} onClick={() => setSubmissionsPage(submissionsPage - 1)}><ChevronLeft size={15} /></button>
+                  <span className="inline-flex items-center gap-4">Page {submissionsPagination.page} of {submissionsPagination.pages} <span className="text-10 text-muted">({submissionsPagination.total} total)</span></span>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={submissionsPage >= submissionsPagination.pages} onClick={() => setSubmissionsPage(submissionsPage + 1)}><ChevronRight size={15} /></button>
                 </div>
               )}
             </section>
@@ -645,7 +646,7 @@ export function AdminPage({ section }: { section: string }) {
     </div>
   );
 }
-function Metric({ icon, value, label, tone }: { icon: ReactNode; value: string; label: string; tone: "blue" | "amber" | "green" | "red" }) {
+function Metric({ icon, value, label, tone }: { icon: ReactNode; value: number | null; label: string; tone: "blue" | "amber" | "green" | "red" }) {
   const tones: Record<string, string> = {
     blue: "bg-pale text-brand",
     amber: "bg-warning-surface text-warning-icon",
@@ -656,7 +657,28 @@ function Metric({ icon, value, label, tone }: { icon: ReactNode; value: string; 
     <div className="flex items-center gap-12 rounded-13 border border-line bg-white p-16 shadow-card">
       <span className={`grid h-36 w-36 shrink-0 place-items-center rounded-10 ${tones[tone]}`}>{icon}</span>
       <div className="min-w-0">
-        <strong className="block text-[20px] font-bold leading-none text-ink">{value}</strong>
+        {value === null ? (
+          <motion.span
+            className="admin-metric-skeleton relative block h-7 w-38 overflow-hidden rounded-5"
+            role="status"
+            aria-label={`Loading ${label.toLowerCase()}`}
+          >
+            <motion.span
+              className="admin-metric-shimmer absolute inset-y-0 left-0 w-1/2"
+              animate={{ x: ["-100%", "200%"] }}
+              transition={{ duration: 1.15, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </motion.span>
+        ) : (
+          <motion.strong
+            className="block text-[20px] font-bold leading-none text-ink"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.24, ease: "easeOut" }}
+          >
+            {value}
+          </motion.strong>
+        )}
         <small className="mt-4 block text-11 text-muted">{label}</small>
       </div>
     </div>
@@ -665,7 +687,7 @@ function Metric({ icon, value, label, tone }: { icon: ReactNode; value: string; 
 
 function AdminSidebar({ section, open, onClose }: { section: string; open: boolean; onClose: () => void }) {
   return (
-    <aside className={`admin-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
+    <aside className={`fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-[#e6ebf2] bg-white font-inter antialiased transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
       <div className="flex h-60 items-center gap-11 border-b border-line px-16">
         <span className="grid h-34 w-34 shrink-0 place-items-center rounded-11 bg-brand text-white shadow-brand-sm"><ShieldCheck size={17} /></span>
         <p className="m-0 min-w-0 truncate text-[15px] font-semibold text-ink">Admin board</p>
@@ -692,19 +714,19 @@ function AdminSidebar({ section, open, onClose }: { section: string; open: boole
 function UserRow({ user, onToggle }: { user: AdminUser; onToggle: () => void }) {
   const suspended = Boolean(user.suspendedUntil && new Date(user.suspendedUntil) > new Date());
   return (
-    <div className="admin-user-row">
-      <span className="admin-user-avatar"><UserRound size={16} /></span>
-      <div className="admin-user-main">
+    <div className="grid grid-cols-[auto_minmax(150px,1fr)_auto_auto_auto] items-center gap-12 border-b border-line py-14 max-760:grid-cols-[auto_1fr_auto]">
+      <span className="grid size-35 place-items-center rounded-full bg-pale text-brand"><UserRound size={16} /></span>
+      <div className="grid min-w-0 gap-4 [&>strong]:overflow-hidden [&>strong]:text-ellipsis [&>strong]:whitespace-nowrap [&>strong]:text-12 [&>small]:text-10 [&>small]:text-muted">
         <strong>{user.displayName || user.username || user.email}</strong>
         <small>{user.email} · joined {new Date(user.createdAt).toLocaleDateString()}</small>
       </div>
-      <div className="admin-user-stats">
+      <div className="flex gap-10 whitespace-nowrap text-10 text-muted max-760:hidden">
         <span>{user._count.generatedSets} sets</span>
-        <span>{user._count.papers} papers</span>
+        <span>{user._count.papers} study PDFs</span>
         <span>{user.xp} XP</span>
       </div>
-      <span className={`admin-role${user.isAdmin ? " admin" : ""}`}>{user.isAdmin ? "Admin" : user.tier === "PREMIUM" ? "Premium" : "Free"}</span>
-      <button className={`admin-action${suspended ? " restore" : ""}`} onClick={onToggle}>{suspended ? "Restore" : "Suspend"}</button>
+      <span className={`justify-self-end rounded-full px-8 py-5 text-10 font-bold ${user.isAdmin ? "bg-[#dbeafe] text-brand" : "bg-slate-100 text-slate-600"}`}>{user.isAdmin ? "Admin" : user.tier === "PREMIUM" ? "Premium" : "Free"}</span>
+      <button className={`col-[2/-1] justify-self-start whitespace-nowrap border-0 bg-transparent p-0 text-10 font-bold ${suspended ? "text-success-deep" : "text-danger"}`} onClick={onToggle}>{suspended ? "Restore" : "Suspend"}</button>
     </div>
   );
 }
@@ -713,21 +735,21 @@ function SubmissionRow({ submission, busy, onReview }: { submission: RepositoryS
   const [note, setNote] = useState("");
   const pending = submission.status === "PENDING";
   return (
-    <div className="admin-submission-row">
-      <span className="admin-submission-icon"><FileText size={16} /></span>
-      <div className="admin-submission-main">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-13 rounded-12 border border-line bg-white p-15 max-760:grid-cols-[auto_minmax(0,1fr)]">
+      <span className="grid size-34 place-items-center rounded-9 bg-pale text-brand"><FileText size={16} /></span>
+      <div className="min-w-0 [&>strong]:text-13 [&>strong]:font-bold [&>p]:my-5 [&>p]:text-11 [&>p]:leading-[1.45] [&>p]:text-muted [&>small]:text-10 [&>small]:text-slate-icon [&>textarea]:mt-10 [&>textarea]:block [&>textarea]:min-h-42 [&>textarea]:w-full [&>textarea]:resize-y [&>textarea]:rounded-8 [&>textarea]:border [&>textarea]:border-line [&>textarea]:p-8 [&>textarea]:text-11">
         <strong>{submission.course.code} — {submission.course.title}</strong>
         <p>{submission.description}</p>
         <small>{submission.owner.displayName || submission.owner.email} · Level {submission.level} · {submission.session} {submission.year} · {submission.semester === "FIRST" ? "First" : "Second"} semester</small>
         {pending && <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add a review note (optional)" />}
       </div>
       {pending ? (
-        <div className="admin-submission-actions">
-          <button className="secondary-button" disabled={busy} onClick={() => onReview(submission.id, "APPROVED", note.trim() || undefined)}><Check size={14} /> Approve</button>
-          <button className="danger-button" disabled={busy} onClick={() => onReview(submission.id, "REJECTED", note.trim() || undefined)}><Ban size={14} /> Reject</button>
+        <div className="flex flex-col gap-7 max-760:col-[2] max-760:flex-row">
+          <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={busy} onClick={() => onReview(submission.id, "APPROVED", note.trim() || undefined)}><Check size={14} /> Approve</button>
+          <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-8 border border-red-200 bg-white px-11 text-11 font-bold text-danger" disabled={busy} onClick={() => onReview(submission.id, "REJECTED", note.trim() || undefined)}><Ban size={14} /> Reject</button>
         </div>
       ) : (
-        <span className="admin-submission-total">{submission.status.toLowerCase()}</span>
+        <span className="text-10 text-muted">{submission.status.toLowerCase()}</span>
       )}
     </div>
   );
@@ -738,7 +760,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
   const action = entry.action.replace(/_/g, " ").toLowerCase();
   const target = entry.metadata?.title ? ` "${entry.metadata.title}"` : "";
   return (
-    <div className="admin-activity-row">
+    <div className="flex items-center gap-10 border-b border-line py-12 text-11 [&>span]:grid [&>span]:size-30 [&>span]:shrink-0 [&>span]:place-items-center [&>span]:rounded-full [&>span]:bg-pale [&>span]:text-brand [&>p]:m-0 [&>p]:min-w-0 [&>p]:flex-1 [&>p]:truncate [&>time]:whitespace-nowrap [&>time]:text-10 [&>time]:text-slate-icon">
       <span><Activity size={14} /></span>
       <p><strong>{actor}</strong> {action}{target}</p>
       <time>{timeAgo(entry.createdAt)}</time>
@@ -750,13 +772,13 @@ function SuspendDialog({ user, onClose, onConfirm }: { user: AdminUser; onClose:
   const [days, setDays] = useState("7");
   const [reason, setReason] = useState("Suspended by administrator");
   return (
-    <div className="admin-dialog-backdrop" onClick={onClose}>
-      <div className="admin-dialog" onClick={(event) => event.stopPropagation()}>
-        <button className="admin-dialog-close" onClick={onClose}><X size={17} /></button>
-        <p className="eyebrow">Suspension</p>
+    <div className="fixed inset-0 z-10 grid place-items-center bg-[#0f172a66] p-20" onClick={onClose}>
+      <div className="relative w-full max-w-[430px] rounded-17 bg-white p-27 shadow-[0_25px_60px_rgba(15,23,42,.2)] [&>h2]:mb-9 [&>h2]:mt-6 [&>h2]:text-[23px] [&>h2]:font-bold [&>p:not(.eyebrow)]:mb-20 [&>p:not(.eyebrow)]:text-12 [&>p:not(.eyebrow)]:leading-[1.55] [&>p:not(.eyebrow)]:text-muted" onClick={(event) => event.stopPropagation()}>
+        <button className="absolute right-17 top-17 text-muted" onClick={onClose}><X size={17} /></button>
+        <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Suspension</p>
         <h2>Suspend {user.displayName || user.email}</h2>
         <p>They will not be able to sign in until the suspension lifts.</p>
-        <label className="field">
+        <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block">
           Duration
           <select value={days} onChange={(event) => setDays(event.target.value)}>
             <option value="1">1 day</option>
@@ -764,13 +786,13 @@ function SuspendDialog({ user, onClose, onConfirm }: { user: AdminUser; onClose:
             <option value="30">30 days</option>
           </select>
         </label>
-        <label className="field">
+        <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block">
           Reason
           <textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why is this account being suspended?" />
         </label>
-        <div className="admin-dialog-actions">
-          <button className="secondary-button" onClick={onClose}>Cancel</button>
-          <button className="danger-button" onClick={() => onConfirm(new Date(Date.now() + Number(days) * 86400000).toISOString(), reason.trim() || "Suspended by administrator")}>Suspend account</button>
+        <div className="mt-20 flex justify-end gap-9">
+          <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onClose}>Cancel</button>
+          <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-8 border border-red-200 bg-white px-11 text-11 font-bold text-danger" onClick={() => onConfirm(new Date(Date.now() + Number(days) * 86400000).toISOString(), reason.trim() || "Suspended by administrator")}>Suspend account</button>
         </div>
       </div>
     </div>
@@ -789,16 +811,16 @@ function timeAgo(iso: string) {
 
 function MissionRow({ mission, onToggle, onDelete }: { mission: AdminMission; onToggle: () => void; onDelete: () => void }) {
   return (
-    <div className={`admin-mission-row ${mission.isActive ? "" : "inactive"}`}>
+    <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-white px-14 py-12 max-760:flex-col max-760:items-start ${mission.isActive ? "" : "opacity-55"}`}>
       <div className="mission-icon"><Flag size={15} /></div>
       <div className="mission-main">
         <strong>{mission.title}</strong>
         <span>{mission.description || "No description."}</span>
         <small>+{mission.xpReward} XP · {mission.claimCount} claimed{mission.isActive ? "" : " · paused"}</small>
       </div>
-      <div className="admin-row-actions">
-        <button className="secondary-button" onClick={onToggle}><Power size={14} /> {mission.isActive ? "Pause" : "Resume"}</button>
-        <button className="ghost-button danger" aria-label={`Delete ${mission.title}`} onClick={onDelete}><Trash2 size={14} /></button>
+      <div className="flex shrink-0 gap-8 max-760:justify-start">
+        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onToggle}><Power size={14} /> {mission.isActive ? "Pause" : "Resume"}</button>
+        <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50 danger" aria-label={`Delete ${mission.title}`} onClick={onDelete}><Trash2 size={14} /></button>
       </div>
     </div>
   );
@@ -811,8 +833,8 @@ function PromoRow({ promo, copied, onCopy, onToggle, onDelete }: { promo: AdminP
   if (promo.premiumDays > 0) grants.push(`${promo.premiumDays} day${promo.premiumDays === 1 ? "" : "s"} of Pro`);
   if (promo.xpBonus > 0) grants.push(`${promo.xpBonus} bonus XP`);
   return (
-    <div className={`admin-promo-row ${!promo.isActive || usedUp || expired ? "inactive" : ""}`}>
-      <div className="admin-promo-main">
+    <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-white px-14 py-12 max-760:flex-col max-760:items-start ${!promo.isActive || usedUp || expired ? "opacity-55" : ""}`}>
+      <div className="grid min-w-0 gap-2 [&>code]:font-mono [&>code]:text-13 [&>code]:font-bold [&>code]:tracking-[.08em] [&>span]:text-12 [&>small]:text-11 [&>small]:text-muted">
         <code>{promo.code}</code>
         <span>{grants.join(" + ") || "No reward set"}</span>
         <small>
@@ -823,9 +845,9 @@ function PromoRow({ promo, copied, onCopy, onToggle, onDelete }: { promo: AdminP
         </small>
       </div>
       <div className="admin-row-actions">
-        <button className="secondary-button" onClick={onCopy}>{copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}</button>
-        <button className="secondary-button" onClick={onToggle}><Power size={14} /> {promo.isActive ? "Pause" : "Resume"}</button>
-        <button className="ghost-button danger" aria-label={`Delete ${promo.code}`} onClick={onDelete}><Trash2 size={14} /></button>
+        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onCopy}>{copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}</button>
+        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onToggle}><Power size={14} /> {promo.isActive ? "Pause" : "Resume"}</button>
+        <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50 danger" aria-label={`Delete ${promo.code}`} onClick={onDelete}><Trash2 size={14} /></button>
       </div>
     </div>
   );

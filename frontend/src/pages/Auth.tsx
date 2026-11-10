@@ -1,6 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { ArrowRight, Check, LockKeyhole, Mail } from "lucide-react";
-import recappLogo from "../assets/recapp-logo.png";
+import { BrandLogo } from "../components/BrandLogo";
 import { go } from "../components/Layout";
 import { errorMessage, login, signup, type AuthProfile } from "../lib/api";
 
@@ -8,7 +8,7 @@ import { errorMessage, login, signup, type AuthProfile } from "../lib/api";
    directory rows (monogram avatar, name, meta, stat chip). Sample profiles;
    swap for a real members feed when the backend exposes a public endpoint. */
 const SIGNUP_STUDENTS = [
-  { initials: "NA", name: "Ngozi A.", meta: "300 level · Medicine", stat: "14 papers" },
+  { initials: "NA", name: "Ngozi A.", meta: "300 level · Medicine", stat: "14 study PDFs" },
   { initials: "TO", name: "Tunde O.", meta: "Final year · Law", stat: "520 XP" },
   { initials: "AK", name: "Amara K.", meta: "200 level · Computer science", stat: "92% avg" },
 ];
@@ -29,19 +29,19 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
      `font: 13px Inter` shorthand reset font-weight to normal, which utility
      classes do not do implicitly (the weight would otherwise be inherited). */
   const fieldInput = "w-full border-0 outline-0 text-ink font-inter font-normal text-13";
-  const primaryCta = "primary-button full";
+  const primaryCta = "primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none w-full";
 
   return (
     <main className="max-w-none min-h-screen grid grid-cols-2 max-1020:grid-cols-1 bg-surface">
       <section className="py-36 px-[clamp(30px,7vw,100px)] max-1020:min-h-0 max-1020:py-30 max-1020:px-26 flex flex-col justify-between bg-pale">
-        <button className="wordmark self-start" onClick={() => go("home")}>
-          <img className="brand-logo" src={recappLogo} alt="RecappEdu" />
+        <button className="wordmark flex items-center gap-10 font-grotesk text-18 font-bold self-start" onClick={() => go("home")}>
+          <BrandLogo />
         </button>
         <div>
-          <p className="eyebrow">A calmer way to revise</p>
-          <h1 className="max-w-480 mb-20 text-[clamp(32px,4vw,48px)] leading-100">Make every paper count.</h1>
+          <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">A calmer way to revise</p>
+          <h1 className="max-w-480 mb-20 text-[clamp(32px,4vw,48px)] leading-100">Make every PDF count.</h1>
           <p className="max-w-430 text-muted text-15 leading-170">
-            Keep your own PDFs private, or learn from the papers your course
+            Keep your own notes and PDFs private, or learn from the PDFs your course
             community has already shared.
           </p>
           {/* Directory-style student card — the same card language as the admin
@@ -57,7 +57,7 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
             </div>
             <p className="m-0 min-w-0 text-12 leading-150 text-muted">
               <strong className="font-semibold text-ink">Students are already on board.</strong>{" "}
-              Share papers, earn XP, and keep every revision in one place.
+              Share study PDFs, earn XP, and keep every revision in one place.
             </p>
           </div>
           <div className="grid gap-14 mt-22 text-brand-deep text-12 font-semibold">
@@ -73,7 +73,7 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
           </div>
           {isSignup && (
             <div className="mt-20 grid gap-10">
-              <p className="eyebrow">Students already revising here</p>
+              <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Students already revising here</p>
               <div className="grid gap-8">
                 {SIGNUP_STUDENTS.map((student) => (
                   <div key={student.name} className="flex items-center gap-12 rounded-13 border border-line bg-surface px-14 py-11 shadow-card">
@@ -94,10 +94,10 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
           as the admin panels, so signup reads as part of the same product. */}
       <section className="grid place-items-center bg-pale p-30 max-1020:py-28 max-1020:px-26">
         <div className="w-[min(100%,450px)] rounded-16 border border-line bg-white p-[clamp(24px,3.4vw,38px)] shadow-card">
-          <button className="back-link mb-30" onClick={() => go("home")}>
+          <button className="mb-30 inline-flex items-center gap-7 text-12 font-semibold text-muted transition-colors hover:text-brand" onClick={() => go("home")}>
             Back to home
           </button>
-          <p className="eyebrow">
+          <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">
             {isSignup ? "Create your workspace" : "Welcome back"}
           </p>
           {notice && (
@@ -112,7 +112,7 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
           </h2>
           <p className="mb-28 text-muted text-13 leading-155">
             {isSignup
-              ? "One account for your own papers and every course repository."
+              ? "One account for your notes, PDFs, and every course library."
               : "Sign in to continue to your study desk."}
           </p>
           {submitted ? (
