@@ -10,6 +10,77 @@
    App.css is wrapped in `@layer components` for this reason. */
 @layer theme, base, components, utilities;
 
+@layer components {
+  @media (max-width: 760px) {
+    .learn-page > header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .learn-page > header > div:last-child {
+      align-self: flex-start;
+      width: 45px;
+      height: 45px;
+      border-radius: 14px;
+    }
+
+    .learn-page > section {
+      border-radius: 19px;
+      padding: 25px 18px;
+    }
+
+    .learn-page > section form > div {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .learn-page > section form input,
+    .learn-page > section form .primary-button {
+      width: 100%;
+    }
+
+    .learn-page > section > div:last-child {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+
+    .learn-page > section:last-child {
+      min-height: 0;
+      padding: 0;
+    }
+
+    .learn-page > section:last-child > div:first-child {
+      padding: 12px;
+    }
+
+    .learn-page > section:last-child > div[aria-live] {
+      min-height: 260px;
+      max-height: 46vh;
+      gap: 15px;
+      padding: 18px 12px;
+    }
+
+    .learn-page .learn-suggestions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      padding-right: 12px;
+      padding-left: 12px;
+    }
+
+    .learn-page .learn-suggestions > button {
+      justify-content: space-between;
+    }
+
+    .learn-page > section:last-child > form {
+      margin-right: 10px;
+      margin-left: 10px;
+    }
+  }
+}
+
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
 @import "tailwindcss";
 
