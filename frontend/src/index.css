@@ -391,6 +391,10 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 :root[data-theme="dark"] [class*="[&>button]:bg-white"] > button:not(.bg-brand),
 :root[data-theme="dark"] [class*="[&>button]:bg-[#f8fbff]"] > button:not(.bg-brand) { background: var(--theme-surface) !important; color: var(--theme-muted) !important; border-color: var(--theme-line) !important; }
 :root[data-theme="dark"] [class*="[&_.primary-button]:bg-white"] .primary-button { background: linear-gradient(115deg, #9b83f5, #7056cf) !important; color: #fff !important; }
+
+/* Preserve the high contrast white call-to-action in the home page banner. */
+.home-cta .primary-button { background: #fff !important; color: #1e3a8a !important; box-shadow: none !important; }
+.home-cta .primary-button:hover { background: #eff6ff !important; color: #1e3a8a !important; }
 :root[data-theme="dark"] [class*="[&_li_span]:bg-white"] li span { background: var(--theme-pale) !important; color: #c3b5ff !important; }
 
 /* Profile palette roles keep account states readable in both themes. */

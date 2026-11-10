@@ -55,6 +55,7 @@ model Profile {
   tier             AccountTier @default(FREE)
   xp               Int         @default(0)
   premiumUntil     DateTime?
+  subscriptionPlan String      @default("FREE")
   referralCode     String?     @unique
   referredById     String?
   suspendedUntil   DateTime?
@@ -89,6 +90,8 @@ model Payment {
   profileId String
   reference String @unique
   amount Int
+  plan String @default("PREMIUM")
+  launchPrice Boolean @default(false)
   currency String @default("NGN")
   status PaymentStatus @default(PENDING)
   paidAt DateTime?

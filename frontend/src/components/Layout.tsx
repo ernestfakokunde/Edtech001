@@ -8,7 +8,7 @@ export function go(route: Route | string) {
   window.location.hash = route;
 }
 
-export type ProfileIdentity = Pick<AuthProfile, "displayName" | "username" | "email" | "tier" | "premiumUntil"> | null | undefined;
+export type ProfileIdentity = Pick<AuthProfile, "displayName" | "username" | "email" | "tier" | "subscriptionPlan" | "premiumUntil"> | null | undefined;
 
 function scrollToHomeSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -41,6 +41,10 @@ export function ThemeToggle() {
 }
 
 function planLabel(profile: ProfileIdentity) {
+  const planNames = { FREE: "Free", BASIC: "Basic", STUDENT_PLUS: "Student Plus", PREMIUM: "Premium" } as const;
+  if (profile?.subscriptionPlan && profile.subscriptionPlan !== "FREE" && profile.premiumUntil && new Date(profile.premiumUntil) > new Date()) {
+    return `${planNames[profile.subscriptionPlan]} until ${new Date(profile.premiumUntil).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  }
   if (profile?.tier === "PREMIUM") {
     const until = profile.premiumUntil ? new Date(profile.premiumUntil) : null;
     if (!until || until > new Date()) {

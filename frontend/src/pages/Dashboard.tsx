@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { displayNameOf, go } from "../components/Layout";
-import { addMyCourse, errorMessage, getGenerationQuota, getMyCourses, getMyXp, getProPricing, startProCheckout, type AuthProfile, type GenerationQuota, type MySchool } from "../lib/api";
+import { addMyCourse, errorMessage, getGenerationQuota, getMyCourses, getMyXp, startPlanCheckout, type AuthProfile, type GenerationQuota, type MySchool } from "../lib/api";
 import { getQuizStats } from "../lib/results";
 import practiceArt from "../assets/brand1.png";
 
@@ -26,7 +26,6 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   const [courseMessage, setCourseMessage] = useState("");
   const [courseError, setCourseError] = useState("");
   const [savingCourse, setSavingCourse] = useState(false);
-  const [proPrice, setProPrice] = useState<number | null>(null);
   const [proBusy, setProBusy] = useState(false);
   const [proError, setProError] = useState("");
   const [activePro, setActivePro] = useState(() => isProActive(profile?.tier, profile?.premiumUntil));
@@ -38,14 +37,13 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
     getMyCourses()
       .then((result) => { setSchool(result.school); setCourses(result.courses); })
       .catch(() => { /* the courses card falls back to its empty state */ });
-    getProPricing().then((price) => setProPrice(price.available ? price.amountNaira : null)).catch(() => undefined);
     getMyXp().then((account) => setActivePro(isProActive(account.tier, account.premiumUntil))).catch(() => undefined);
     getGenerationQuota().then(setQuota).catch(() => undefined);
   }, []);
 
   async function upgrade() {
     setProError(""); setProBusy(true);
-    try { const checkout = await startProCheckout(); window.location.assign(checkout.authorizationUrl); }
+    try { const checkout = await startPlanCheckout("BASIC"); window.location.assign(checkout.authorizationUrl); }
     catch (reason) { setProError(errorMessage(reason, "Pro checkout is not available yet.")); setProBusy(false); }
   }
 
@@ -102,14 +100,14 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
 
       {!activePro && <section className="mb-22 flex items-center gap-17 rounded-18 border border-[#cddcff] bg-[linear-gradient(110deg,#eef4ff,#fafbff_70%)] px-22 py-20 shadow-[0_10px_28px_#1d4ed80c] max-[640px]:flex-wrap max-[640px]:items-start [&>.primary-button]:shrink-0 max-[640px]:[&>.primary-button]:w-full">
         <div className="grid size-44 shrink-0 place-items-center rounded-14 bg-[#2858dc] text-white"><Crown size={20} /></div>
-        <div className="flex-1 max-[640px]:min-w-[calc(100%-65px)] [&_.eyebrow]:mb-4 [&_.eyebrow]:text-10 [&_.eyebrow]:font-extrabold [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.08em] [&_.eyebrow]:text-[#315bca] [&_h2]:m-0 [&_h2]:font-grotesk [&_h2]:text-18 [&_h2]:font-bold [&_h2]:text-ink [&_p]:mb-0 [&_p]:mt-4 [&_p]:text-12 [&_p]:text-muted"><span className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get unlimited quiz generations for 90 days{proPrice !== null ? ` for ${formatProPrice(proPrice)}` : ""}.</p></div>
+        <div className="flex-1 max-[640px]:min-w-[calc(100%-65px)] [&_.eyebrow]:mb-4 [&_.eyebrow]:text-10 [&_.eyebrow]:font-extrabold [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.08em] [&_.eyebrow]:text-[#315bca] [&_h2]:m-0 [&_h2]:font-grotesk [&_h2]:text-18 [&_h2]:font-bold [&_h2]:text-ink [&_p]:mb-0 [&_p]:mt-4 [&_p]:text-12 [&_p]:text-muted"><span className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get 50 AI credits monthly with Basic: ₦499 for month one, then ₦999/month.</p></div>
         <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" disabled={proBusy} onClick={() => void upgrade()}>{proBusy ? "Opening checkout…" : <>Go Pro <ArrowRight size={16} /></>}</button>
         {proError && <small className="basis-full text-red-700">{proError}</small>}
       </section>}
       {quota && quota.limit !== null && <section className={`-mb-[8px] mt-[-8px] mb-24 flex flex-wrap items-center gap-8 rounded-11 border border-[#dbeafe] bg-[#f8fbff] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:bg-[#2858dc] [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
         <Sparkles size={14} />
-        <span><strong>Free plan:</strong> {quota.remaining} of {quota.limit} quiz generations left today{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}.</span>
-        <button type="button" onClick={() => go(quota.remaining === 0 ? "profile" : "generate")}>{quota.remaining === 0 ? "Upgrade to Pro" : "Practice now"}</button>
+        <span><strong>{quota.tier.replace("_", " ")} plan:</strong> {quota.remaining} of {quota.limit} AI credits left this month{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString()}` : ""}.</span>
+        <button type="button" onClick={() => go(quota.remaining === 0 ? "profile" : "generate")}>{quota.remaining === 0 ? "View plans" : "Practice now"}</button>
       </section>}
 
       <section className="mb-31 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-10 max-760:gap-14">
@@ -160,11 +158,6 @@ function isProActive(tier?: "FREE" | "PREMIUM", premiumUntil?: string | null) {
   return tier === "PREMIUM" && (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
 }
 
-function formatProPrice(naira: number) {
-  const nairaLabel = `₦${naira.toLocaleString()}`;
-  const usdLabel = `$${((naira / 1000) * 0.7).toFixed(2)}`;
-  return `${nairaLabel} (about ${usdLabel})`;
-}
 
 function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) { return <div className="min-h-[124px] rounded-16 border border-line bg-white px-18 py-14 max-760:px-12 max-760:py-13 [&>span]:mb-12 [&>span]:block [&>strong]:block [&>strong]:font-grotesk [&>strong]:text-[20px] [&>strong]:font-bold [&>small]:mt-2 [&>small]:block [&>small]:text-11 [&>small]:text-slate-icon"><span className={`mb-12 grid size-30 place-items-center rounded-9 ${tone === "amber" ? "bg-[#fef3c7] text-[#d97706]" : tone === "green" ? "bg-[#ecfdf5] text-[#059669]" : "bg-pale text-brand"}`}>{icon}</span><strong>{value}</strong><small>{label}</small></div>; }
 function DashboardSection({ title, action, onAction, children }: { title: string; action: string; onAction: () => void; children: React.ReactNode }) { return <section className="mb-29"><div className="mb-13 flex items-center justify-between [&>h2]:m-0 [&>h2]:text-16 [&>h2]:tracking-[-.02em] [&>button]:text-12 [&>button]:font-bold [&>button]:text-brand"><h2>{title}</h2><button onClick={onAction}>{action}</button></div>{children}</section>; }

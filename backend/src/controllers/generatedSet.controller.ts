@@ -53,11 +53,9 @@ async function getQuickPracticeCourse() {
   })
 }
 
-const FREE_DAILY_QUIZ_LIMIT = 5
-
-function startOfUtcDay() {
+function startOfUtcMonth() {
   const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
 }
 
 /**
@@ -73,19 +71,24 @@ function effectiveTier(profile: { tier: 'FREE' | 'PREMIUM'; premiumUntil: Date |
 
 export async function generationQuotaController(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
-  const quota = await getGenerationQuota(profile.id, effectiveTier(profile))
+  const quota = await getGenerationQuota(profile.id)
   response.json(quota)
 }
 
-export async function getGenerationQuota(userId: string, tier: 'FREE' | 'PREMIUM') {
-  const limit = tier === 'PREMIUM' ? null : FREE_DAILY_QUIZ_LIMIT
-  const used = tier === 'PREMIUM' ? 0 : await prisma.generatedSet.count({ where: { userId, type: 'QUIZ', createdAt: { gte: startOfUtcDay() } } })
+export async function getGenerationQuota(userId: string) {
+  const account = await prisma.profile.findUnique({ where: { id: userId }, select: { subscriptionPlan: true, tier: true, premiumUntil: true } })
+  const isPromoPremium = account ? effectiveTier(account) === 'PREMIUM' && account.subscriptionPlan === 'FREE' : false
+  const plan = isPromoPremium ? 'PREMIUM' : account?.subscriptionPlan ?? 'FREE'
+  const limits: Record<string, number> = { FREE: 10, BASIC: 50, STUDENT_PLUS: 150, PREMIUM: 300 }
+  const limit = limits[plan] ?? 10
+  const monthStart = startOfUtcMonth()
+  const used = await prisma.generatedSet.count({ where: { userId, createdAt: { gte: monthStart } } })
   return {
-    tier,
+    tier: plan,
     limit,
     used,
-    remaining: limit === null ? null : Math.max(0, limit - used),
-    resetsAt: new Date(startOfUtcDay().getTime() + 86400000).toISOString(),
+    remaining: Math.max(0, limit - used),
+    resetsAt: new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1)).toISOString(),
   }
 }
 
@@ -231,10 +234,10 @@ export async function generateStudySet(request: Request, response: Response) {
 
   // Daily free quota for quizzes: FREE accounts get a set number per day,
   // PREMIUM accounts (payments arrive later) are unlimited.
-  if (type === 'QUIZ' && effectiveTier(profile) !== 'PREMIUM') {
-    const quota = await getGenerationQuota(profile.id, effectiveTier(profile))
+  {
+    const quota = await getGenerationQuota(profile.id)
     if (quota.remaining === 0) {
-      response.status(429).json({ message: `You have used all ${quota.limit} free quiz generations for today. Come back tomorrow or upgrade to PREMIUM for unlimited quizzes.`, quota })
+      response.status(429).json({ message: `You have used all ${quota.limit} AI study credits for this month. Your credits reset next month.`, quota })
       return
     }
   }

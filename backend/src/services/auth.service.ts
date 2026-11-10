@@ -148,7 +148,7 @@ export async function signIn(input: SignInInput) {
       where: { email },
       select: {
         id: true, email: true, passwordHash: true, displayName: true, username: true,
-        isAdmin: true, tier: true, xp: true, referralCode: true, premiumUntil: true,
+        isAdmin: true, tier: true, subscriptionPlan: true, xp: true, referralCode: true, premiumUntil: true,
         suspendedUntil: true, createdAt: true,
       },
     })

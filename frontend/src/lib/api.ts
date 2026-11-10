@@ -48,7 +48,7 @@ export function prefetchCsrfToken(): void {
 }
 
 export type AuthResponse = {
-  profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean; tier?: "FREE" | "PREMIUM"; xp?: number; referralCode?: string | null; premiumUntil?: string | null }
+  profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean; tier?: "FREE" | "PREMIUM"; subscriptionPlan?: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; xp?: number; referralCode?: string | null; premiumUntil?: string | null }
 }
 export type AuthProfile = AuthResponse["profile"]
 
@@ -92,7 +92,7 @@ export type ProfileMission = { id: string; title: string; description: string | 
 export type AdminMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; createdAt: string; claimCount: number }
 
 // Daily quiz-generation quota. `limit: null` means unlimited (PREMIUM).
-export type GenerationQuota = { tier: "FREE" | "PREMIUM"; limit: number | null; used: number; remaining: number | null; resetsAt: string }
+export type GenerationQuota = { tier: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; limit: number | null; used: number; remaining: number | null; resetsAt: string }
 
 export type ReferralInfo = { referralCode: string | null; tier: "FREE" | "PREMIUM"; xp: number; invites: number }
 
@@ -288,9 +288,8 @@ export function removeMyCourse(courseId: string) {
   return request<void>(`/api/profile/courses/${encodeURIComponent(courseId)}`, { method: 'DELETE' })
 }
 
-export type ProPricing = { available: boolean; amountNaira: number | null; durationDays: number; currency: string }
-export function getProPricing() { return request<ProPricing>('/api/payments/pricing', { method: 'GET' }) }
-export function startProCheckout() { return request<{ authorizationUrl: string }>('/api/payments/checkout', { method: 'POST', body: JSON.stringify({}) }) }
+export type PaidPlan = 'BASIC' | 'STUDENT_PLUS' | 'PREMIUM'
+export function startPlanCheckout(plan: PaidPlan) { return request<{ authorizationUrl: string }>('/api/payments/checkout', { method: 'POST', body: JSON.stringify({ plan }) }) }
 export function getPaymentStatus(reference: string) { return request<{ status: 'PENDING' | 'SUCCESS' | 'FAILED'; createdAt: string; tier?: 'FREE' | 'PREMIUM'; premiumUntil?: string | null }>(`/api/payments/status?reference=${encodeURIComponent(reference)}`, { method: 'GET' }) }
 
 export function getUniversities() { return request<{ universities: University[] }>('/api/hierarchy/universities', { method: 'GET' }) }
