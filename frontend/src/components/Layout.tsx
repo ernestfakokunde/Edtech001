@@ -192,17 +192,17 @@ export function PageFrame({
    student surfaces (claim XP / redeem a code), not admin ones.
    ─────────────────────────────────────────────────────────────────────────── */
 
-type UserNavItem = { key: string; hash: string; label: string; icon: ReactNode; adminOnly?: boolean };
+type UserNavItem = { key: string; hash: string; label: string; icon: ReactNode; group: "Study" | "Account"; adminOnly?: boolean };
 
 const USER_NAV: UserNavItem[] = [
-  { key: "dashboard", hash: "dashboard", label: "Study desk", icon: <LayoutDashboard size={16} /> },
-  { key: "hierarchy", hash: "hierarchy", label: "Repository", icon: <BookOpen size={16} /> },
-  { key: "learn", hash: "learn", label: "Learn with AI", icon: <MessageCircle size={16} /> },
-  { key: "generate", hash: "generate", label: "Practice sets", icon: <Sparkles size={16} /> },
-  { key: "history", hash: "history", label: "My quizzes", icon: <History size={16} /> },
-  { key: "rewards", hash: "rewards", label: "Rewards", icon: <Gift size={16} /> },
-  { key: "profile", hash: "profile", label: "My profile", icon: <UserRound size={16} /> },
-  { key: "admin", hash: "admin", label: "Admin board", icon: <ShieldCheck size={16} />, adminOnly: true },
+  { key: "dashboard", hash: "dashboard", label: "Study desk", icon: <LayoutDashboard size={16} />, group: "Study" },
+  { key: "hierarchy", hash: "hierarchy", label: "Course repository", icon: <BookOpen size={16} />, group: "Study" },
+  { key: "learn", hash: "learn", label: "Learn with AI", icon: <MessageCircle size={16} />, group: "Study" },
+  { key: "generate", hash: "generate", label: "Practice sets", icon: <Sparkles size={16} />, group: "Study" },
+  { key: "history", hash: "history", label: "My quizzes", icon: <History size={16} />, group: "Study" },
+  { key: "rewards", hash: "rewards", label: "Rewards", icon: <Gift size={16} />, group: "Account" },
+  { key: "profile", hash: "profile", label: "Profile settings", icon: <UserRound size={16} />, group: "Account" },
+  { key: "admin", hash: "admin", label: "Admin board", icon: <ShieldCheck size={16} />, group: "Account", adminOnly: true },
 ];
 
 const userNavBase = "flex w-full shrink-0 items-center gap-11 rounded-9 px-12 py-10 text-left text-13 font-medium transition-colors";
@@ -241,28 +241,49 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
         </button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto p-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {items.map((item) => (
-          <button
-            key={item.key}
-            className={`${userNavBase} ${navActive(item, route, sub) ? userNavActive : userNavIdle}`}
-            onClick={() => { go(item.hash); onClose(); }}
-          >
-            <span className="shrink-0">{item.icon}</span>
-            <span className="truncate">{item.label}</span>
-          </button>
+      <button className="mx-14 mt-14 flex items-center gap-10 rounded-10 border border-transparent px-8 py-9 text-left transition hover:border-line hover:bg-pale" onClick={() => { go("profile"); onClose(); }}>
+        <span className="grid size-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand">{initialsOf(profile)}</span>
+        <span className="min-w-0 flex-1">
+          <strong className="block truncate text-11 font-semibold text-ink">{displayNameOf(profile)}</strong>
+          <small className="block truncate text-10 text-muted">{planLabel(profile)}</small>
+        </span>
+        <UserRound size={14} className="shrink-0 text-muted" />
+      </button>
+
+      <nav className="flex flex-1 flex-col gap-22 overflow-y-auto p-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {(["Study", "Account"] as const).map((group) => (
+          <div key={group} className="grid gap-5">
+            <p className="px-12 text-[9px] font-extrabold uppercase tracking-[.13em] text-slate-icon">{group}</p>
+            {items.filter((item) => item.group === group).map((item) => {
+              const active = navActive(item, route, sub);
+              return (
+                <button
+                  key={item.key}
+                  aria-current={active ? "page" : undefined}
+                  className={`${userNavBase} ${active ? userNavActive : userNavIdle}`}
+                  onClick={() => { go(item.hash); onClose(); }}
+                >
+                  <span className={`grid size-30 shrink-0 place-items-center rounded-8 ${active ? "bg-white/15" : "bg-pale"}`}>{item.icon}</span>
+                  <span className="truncate">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
         ))}
       </nav>
 
-      <div className="flex items-center gap-10 border-t border-line px-16 py-14">
-        <span className="grid h-34 w-34 shrink-0 place-items-center rounded-half bg-pale text-12 font-bold text-brand">{initialsOf(profile)}</span>
-        <span className="min-w-0 flex-1">
-          <strong className="block truncate text-13 font-semibold text-ink">{displayNameOf(profile)}</strong>
-          <small className="block truncate text-11 text-muted">{profile?.email ?? "Signed in"}</small>
-          <small className={`mt-5 inline-flex shrink-0 items-center gap-6 whitespace-nowrap rounded-full border border-ghost-border bg-pale px-12 py-5 text-11 font-bold tracking-[.02em] text-brand ${planLabel(profile) === "Free" ? "" : "border-amber-300 bg-gradient-to-br from-amber-100 to-amber-200 text-amber-800 shadow-[0_2px_6px_rgba(180,83,9,.15)]"}`} title="Your current plan">{planLabel(profile)}</small>
-        </span>
-        <button className="grid h-32 w-32 shrink-0 place-items-center rounded-10 text-muted transition-colors hover:bg-pale hover:text-ink" aria-label="Log out" onClick={onLogout}>
-          <LogOut size={15} />
+      <div className="grid gap-3 border-t border-line p-14">
+        <div className="flex items-center justify-between px-8 py-5">
+          <span className="text-10 font-semibold text-muted">Appearance</span>
+          <ThemeToggle />
+        </div>
+        <button className={`${userNavBase} ${userNavIdle}`} onClick={() => { go("profile"); onClose(); }}>
+          <span className="grid size-30 shrink-0 place-items-center rounded-8 bg-pale"><UserRound size={15} /></span>
+          <span>Settings</span>
+        </button>
+        <button className={`${userNavBase} text-danger hover:bg-red-50`} onClick={onLogout}>
+          <span className="grid size-30 shrink-0 place-items-center rounded-8 bg-red-50"><LogOut size={15} /></span>
+          <span>Sign out</span>
         </button>
       </div>
     </aside>
