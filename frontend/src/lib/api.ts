@@ -91,8 +91,9 @@ export type QuizAttemptStats = { attempts: number; average: number; best: number
 export type ProfileMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; claimedAt: string | null }
 export type AdminMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; createdAt: string; claimCount: number }
 
-// Daily quiz-generation quota. `limit: null` means unlimited (PREMIUM).
-export type GenerationQuota = { tier: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; limit: number | null; used: number; remaining: number | null; resetsAt: string }
+// Shared monthly AI-credit quota used by Learn, quizzes, and flashcards.
+export type GenerationQuota = { tier: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; limit: number; used: number; remaining: number; resetsAt: string }
+export type AiCreditQuota = GenerationQuota
 
 export type ReferralInfo = { referralCode: string | null; tier: "FREE" | "PREMIUM"; xp: number; invites: number }
 
@@ -411,7 +412,7 @@ export async function uploadLearnDocument(file: File): Promise<{ title: string; 
   return { title: body.title, documentText: body.documentText, truncated: Boolean(body.truncated) }
 }
 export function askLearnTutor(input: { documentText?: string; topic?: string; question: string; history: LearnChatMessage[] }) {
-  return request<{ answer: string }>("/api/learn/chat", { method: "POST", body: JSON.stringify(input) })
+  return request<{ answer: string; quota: AiCreditQuota }>("/api/learn/chat", { method: "POST", body: JSON.stringify(input) })
 }
 
 /**

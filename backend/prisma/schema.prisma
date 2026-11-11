@@ -75,30 +75,32 @@ model Profile {
   redeemedCodes     CodeRedemption[] @relation("CodeRedemptions")
   createdPromoCodes PromoCode[]      @relation("PromoCodeCreator")
 
-  papers        Paper[]
-  generatedSets GeneratedSet[]
-  quizAttempts  QuizAttempt[]
-  auditEvents   AuditEvent[]
-  sessions      Session[]
-  savedCourses  ProfileCourse[]
+  papers            Paper[]
+  generatedSets     GeneratedSet[]
+  aiCreditUsage     AiCreditUsage[]
+  quizAttempts      QuizAttempt[]
+  auditEvents       AuditEvent[]
+  sessions          Session[]
+  savedCourses      ProfileCourse[]
   dailyLoginRewards DailyLoginReward[]
-  payments Payment[]
+  payments          Payment[]
 }
 
 model Payment {
-  id String @id @default(cuid())
-  profileId String
-  reference String @unique
-  amount Int
-  plan String @default("PREMIUM")
-  launchPrice Boolean @default(false)
-  currency String @default("NGN")
-  status PaymentStatus @default(PENDING)
-  paidAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String        @id @default(cuid())
+  profileId   String
+  reference   String        @unique
+  amount      Int
+  plan        String        @default("PREMIUM")
+  launchPrice Boolean       @default(false)
+  currency    String        @default("NGN")
+  status      PaymentStatus @default(PENDING)
+  paidAt      DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
   @@index([profileId, createdAt])
   @@index([status])
 }
@@ -263,6 +265,25 @@ model GeneratedSet {
 
   @@index([userId, courseId])
   @@index([userId, createdAt])
+}
+
+/// One reserved or completed AI action in a user's current monthly allowance.
+/// A row is retained when refunded so failed provider calls cannot silently
+/// consume credits and request retries can be audited.
+model AiCreditUsage {
+  id        String   @id @default(cuid())
+  profileId String
+  monthKey  String
+  feature   String
+  units     Int      @default(1)
+  status    String   @default("RESERVED")
+  requestId String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, monthKey, status])
 }
 
 model GeneratedSetItem {

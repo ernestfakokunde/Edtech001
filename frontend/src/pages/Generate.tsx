@@ -60,8 +60,7 @@ export function GenerateFlow({
   const [timePerQuestion, setTimePerQuestion] = useState<30 | 60>(30);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  // Daily quiz quota for FREE accounts (PREMIUM = unlimited).
-  const [quota, setQuota] = useState<GenerationQuota>({ tier: "FREE", limit: null, used: 0, remaining: null, resetsAt: "" });
+  const [quota, setQuota] = useState<GenerationQuota>({ tier: "FREE", limit: 20, used: 0, remaining: 20, resetsAt: "" });
 
   useEffect(() => {
     let alive = true;
@@ -131,7 +130,7 @@ export function GenerateFlow({
         ...(mode === "quiz" ? { timePerQuestion } : {}),
       });
       onComplete(set);
-      if (mode === "quiz") setQuota((current) => ({ ...current, used: current.used + 1, remaining: current.remaining === null ? null : Math.max(0, current.remaining - 1) }));
+      setQuota((current) => ({ ...current, used: current.used + 1, remaining: Math.max(0, current.remaining - 1) }));
     } catch (reason) {
       setError(errorMessage(reason, "Could not generate the study set."));
       setBusy(false);
@@ -243,10 +242,10 @@ export function GenerateFlow({
         </div>
       )}
 
-      {mode === "quiz" && quota.limit !== null && (
+      {quota.limit > 0 && (
         <div className={`mb-14 flex flex-wrap items-center gap-8 rounded-11 border border-[#dbeafe] bg-[#f8fbff] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:bg-[#2858dc] [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
           <Clock3 size={14} />
-          <span>Free plan: {quota.remaining ?? 0} of {quota.limit} quiz generations left today{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}. Pro includes unlimited quizzes.</span>
+          <span>{quota.remaining} of {quota.limit} monthly AI credits remaining{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}.</span>
           <button type="button" onClick={() => go("profile")}>Go Pro</button>
         </div>
       )}
@@ -255,7 +254,7 @@ export function GenerateFlow({
 
       <button
         className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none w-full"
-        disabled={!selectedFile || fileProblem !== null || (mode === "quiz" && quota.limit !== null && (quota.remaining ?? 0) === 0)}
+        disabled={!selectedFile || fileProblem !== null || quota.remaining === 0}
         onClick={() => void submit()}
       >
         <Sparkles size={16} /> Create {mode === "quiz" ? "quiz" : "flashcards"}

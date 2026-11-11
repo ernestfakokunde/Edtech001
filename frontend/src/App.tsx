@@ -300,7 +300,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_32%),var(--color-wash)] text-ink">
-      <AnimatePresence>{routeLoading && <motion.div key="route-loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-x-0 top-0 z-[100] h-3 overflow-hidden bg-[#393759]" role="status" aria-label="Loading page"><motion.span className="block h-full w-[40%] bg-gradient-to-r from-violet-400 via-indigo-200 to-cyan-200 shadow-[0_0_14px_#9b83f5]" initial={{ x: "-100%" }} animate={{ x: "250%" }} transition={{ duration: .8, repeat: Infinity, ease: "easeInOut" }} /></motion.div>}</AnimatePresence>
+      <AnimatePresence>{routeLoading && <motion.div key="route-loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-x-0 top-0 z-[100] h-3 overflow-hidden bg-[#393759]" role="status" aria-label="Loading page"><motion.span className="block h-full w-[40%] bg-gradient-to-r from-violet-400 via-fuchsia-200 to-pink-200 shadow-[0_0_14px_#9b83f5]" initial={{ x: "-100%" }} animate={{ x: "250%" }} transition={{ duration: .8, repeat: Infinity, ease: "easeInOut" }} /></motion.div>}</AnimatePresence>
       {showHeader && <Header route={route} isAdmin={isAdmin} profile={profile} />}
       {!adminRoutes.includes(route) && <AnimatePresence mode="wait" initial={false}><motion.div key={route} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: .2, ease: "easeOut" }} className="min-h-screen">
         {studentRoutes.includes(route)

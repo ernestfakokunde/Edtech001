@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { prisma } from '../lib/prisma.js'
@@ -7,6 +8,7 @@ import { fileExtension } from '../utils/file.js'
 import { extractText } from '../utils/extractText.js'
 import { generateStudyItems, AiNotConfiguredError, GenerationFailedError, isAiConfigured, type GeneratedItem } from '../services/ai.service.js'
 import { recordGenerationFailure } from '../services/generationDiagnostics.js'
+import { AiCreditsExhaustedError, completeAiCredit, getAiCreditQuota, refundAiCredit, reserveAiCredit } from '../services/aiCredits.service.js'
 
 /**
  * Best-effort cleanup after any post-upload failure: removes the stored file
@@ -53,22 +55,6 @@ async function getQuickPracticeCourse() {
   })
 }
 
-function startOfUtcMonth() {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-}
-
-/**
- * Daily quota for quiz generations. Free accounts get a fixed number of quiz
- * runs a day; PREMIUM (payment integration comes later) is unlimited. This is
- * deliberately UTC-day based so the count resets predictably.
- */
-/** Premium = the paying tier, or an active promo-code window (premiumUntil). */
-function effectiveTier(profile: { tier: 'FREE' | 'PREMIUM'; premiumUntil: Date | null }): 'FREE' | 'PREMIUM' {
-  if (profile.tier === 'PREMIUM') return 'PREMIUM'
-  return profile.premiumUntil && profile.premiumUntil > new Date() ? 'PREMIUM' : 'FREE'
-}
-
 export async function generationQuotaController(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
   const quota = await getGenerationQuota(profile.id)
@@ -76,20 +62,7 @@ export async function generationQuotaController(request: Request, response: Resp
 }
 
 export async function getGenerationQuota(userId: string) {
-  const account = await prisma.profile.findUnique({ where: { id: userId }, select: { subscriptionPlan: true, tier: true, premiumUntil: true } })
-  const isPromoPremium = account ? effectiveTier(account) === 'PREMIUM' && account.subscriptionPlan === 'FREE' : false
-  const plan = isPromoPremium ? 'PREMIUM' : account?.subscriptionPlan ?? 'FREE'
-  const limits: Record<string, number> = { FREE: 10, BASIC: 50, STUDENT_PLUS: 150, PREMIUM: 300 }
-  const limit = limits[plan] ?? 10
-  const monthStart = startOfUtcMonth()
-  const used = await prisma.generatedSet.count({ where: { userId, createdAt: { gte: monthStart } } })
-  return {
-    tier: plan,
-    limit,
-    used,
-    remaining: Math.max(0, limit - used),
-    resetsAt: new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1)).toISOString(),
-  }
+  return getAiCreditQuota(userId)
 }
 
 /**
@@ -232,16 +205,6 @@ export async function generateStudySet(request: Request, response: Response) {
     return
   }
 
-  // Daily free quota for quizzes: FREE accounts get a set number per day,
-  // PREMIUM accounts (payments arrive later) are unlimited.
-  {
-    const quota = await getGenerationQuota(profile.id)
-    if (quota.remaining === 0) {
-      response.status(429).json({ message: `You have used all ${quota.limit} AI study credits for this month. Your credits reset next month.`, quota })
-      return
-    }
-  }
-
   const course = courseId
     ? await prisma.course.findUnique({ where: { id: courseId } })
     : await getQuickPracticeCourse()
@@ -304,6 +267,21 @@ export async function generateStudySet(request: Request, response: Response) {
     return
   }
 
+  const creditRequestId = randomUUID()
+  let creditReservation: { id: string } | undefined
+  try {
+    creditReservation = await reserveAiCredit(profile.id, type === 'QUIZ' ? 'QUIZ' : 'FLASHCARD', creditRequestId)
+  } catch (reason) {
+    if (reason instanceof AiCreditsExhaustedError) {
+      await rollbackPersonalPaper(paper.id, path)
+      const quota = await getGenerationQuota(profile.id)
+      response.status(429).json({ message: `You have used all ${quota.limit} AI credits for this month. Your credits reset next month.`, quota })
+      return
+    }
+    await rollbackPersonalPaper(paper.id, path)
+    throw reason
+  }
+
   // 12–13. Send the extracted text to the AI, then parse and strictly validate
   // its JSON response before writing anything to the database. The server
   // chooses the configured generation service automatically.
@@ -329,6 +307,7 @@ export async function generateStudySet(request: Request, response: Response) {
       detail: reason instanceof Error ? reason.message : String(reason),
     })
     await rollbackPersonalPaper(paper.id, path)
+    if (creditReservation) await refundAiCredit(creditReservation.id)
     if (reason instanceof AiNotConfiguredError) {
       response.status(503).json({ code: 'AI_NOT_CONFIGURED', message: 'Practice generation is temporarily unavailable. Please try again later.' })
     } else if (reason instanceof GenerationFailedError && reason.code === 'AI_BAD_KEY') {
@@ -373,10 +352,12 @@ export async function generateStudySet(request: Request, response: Response) {
         items: { orderBy: { position: 'asc' }, include: { question: true } },
       },
     })
+    if (creditReservation) await completeAiCredit(creditReservation.id)
     response.status(201).json({ set })
   } catch (reason) {
     console.error('[generate] saving the generated set failed:', reason)
     await rollbackPersonalPaper(paper.id, path)
+    if (creditReservation) await refundAiCredit(creditReservation.id)
     response.status(500).json({ message: 'The study set could not be saved. Please try again.' })
   }
 }

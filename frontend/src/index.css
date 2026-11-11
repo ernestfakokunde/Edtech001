@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
+
 /* Layer order, declared FIRST so it cannot be reordered by Tailwind's own
    expansion or by the minifier (CSS layer order is fixed by the first
    appearance of each name).  components sits between base and utilities:
@@ -10,78 +12,6 @@
    App.css is wrapped in `@layer components` for this reason. */
 @layer theme, base, components, utilities;
 
-@layer components {
-  @media (max-width: 760px) {
-    .learn-page > header {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .learn-page > header > div:last-child {
-      align-self: flex-start;
-      width: 45px;
-      height: 45px;
-      border-radius: 14px;
-    }
-
-    .learn-page > section {
-      border-radius: 19px;
-      padding: 25px 18px;
-    }
-
-    .learn-page > section form > div {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .learn-page > section form input,
-    .learn-page > section form .primary-button {
-      width: 100%;
-    }
-
-    .learn-page > section > div:last-child {
-      grid-template-columns: 1fr;
-      gap: 15px;
-    }
-
-    .learn-page > section:last-child {
-      min-height: 0;
-      padding: 0;
-    }
-
-    .learn-page > section:last-child > div:first-child {
-      padding: 12px;
-    }
-
-    .learn-page > section:last-child > div[aria-live] {
-      min-height: 260px;
-      max-height: 46vh;
-      gap: 15px;
-      padding: 18px 12px;
-    }
-
-    .learn-page .learn-suggestions {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 6px;
-      padding-right: 12px;
-      padding-left: 12px;
-    }
-
-    .learn-page .learn-suggestions > button {
-      justify-content: space-between;
-    }
-
-    .learn-page > section:last-child > form {
-      margin-right: 10px;
-      margin-left: 10px;
-    }
-  }
-}
-
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
 @import "tailwindcss";
 
 /* ===========================================================================
@@ -178,9 +108,9 @@
 
   /* â”€ Colours â€” neutral / misc â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --color-slate-icon: #94a3b8;      /* 22  muted icons, scrollbar, empty states */
-  --color-outline: #93c5fd;         /* 21  dashed/hover borders, focus rings */
-  --color-focus-ring: #dbeafe;      /* 20  box-shadow focus rings */
-  --color-line-soft: #dbe5f3;       /*  1  .profile-add-row */
+  --color-outline: #c4b5fd;         /* 21  dashed/hover borders, focus rings */
+  --color-focus-ring: #ede9fe;      /* 20  box-shadow focus rings */
+  --color-line-soft: #e8e1f4;       /*  1  .profile-add-row */
   --color-ghost-surface: var(--theme-pale);
   --color-ghost-border: var(--theme-line);
   --color-panel: var(--theme-surface);
@@ -221,8 +151,8 @@
   --color-link-course: var(--theme-link); /* course links */
 
   /* â”€â”€ Colours â€” gradients / translucent overlays (verbatim) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  --color-hero-from: #173c9e;       /* .hero-panel 145deg */
-  --color-hero-via: #477ce0;        /* .hero-panel mid stop */
+  --color-hero-from: #5b3b9e;       /* .hero-panel 145deg */
+  --color-hero-via: #8b6bd1;        /* .hero-panel mid stop */
   --color-backdrop: #0f172a66;      /* .admin-dialog-backdrop */
   --color-overlay-line: #ffffff2b;  /* 2  .panel-stat / .panel-footer borders */
   --color-overlay-fill: #ffffff33;  /* 1  .set-track */
@@ -231,18 +161,18 @@
   /* â”€â”€ Shadows (verbatim; names reflect measured elevation/role) â”€â”€â”€â”€â”€â”€â”€â”€
      Names are shape-descriptive because Tailwind's own `shadow-sm/md/lg/xl`
      carry different values; those defaults are unused. */
-  --shadow-focus: 0 0 0 3px #dbeafe;              /* 7 */
-  --shadow-card: 0 14px 30px #1d4ed80b;           /* 2  resting card */
+  --shadow-focus: 0 0 0 3px #ede9fe;              /* 7 */
+  --shadow-card: 0 14px 30px #6d4cc20b;           /* 2  resting card */
   --shadow-raised: 0 22px 40px #0f172a12;         /* 2  loader / results hero */
-  --shadow-selected: 0 8px 18px #1d4ed826;        /* 2  selected chip */
-  --shadow-ghost-card: 0 12px 25px #1d4ed80a;     /* 1  repository paper card */
-  --shadow-brand-sm: 0 8px 18px #1d4ed833;        /* 1  wordmark */
-  --shadow-brand-md: 0 10px 22px #1d4ed82b;       /* 1  primary button */
-  --shadow-brand-lg: 0 14px 26px #1d4ed83d;       /* 1  primary button hover */
-  --shadow-brand-xl: 0 16px 28px #1d4ed812;       /* 1  path-grid button hover */
-  --shadow-brand-hero: 0 28px 50px #1d4ed83b;     /* 1  hero panel */
+  --shadow-selected: 0 8px 18px #6d4cc226;        /* 2  selected chip */
+  --shadow-ghost-card: 0 12px 25px #6d4cc20a;     /* 1  repository paper card */
+  --shadow-brand-sm: 0 8px 18px #6d4cc233;        /* 1  wordmark */
+  --shadow-brand-md: 0 10px 22px #6d4cc22b;       /* 1  primary button */
+  --shadow-brand-lg: 0 14px 26px #6d4cc23d;       /* 1  primary button hover */
+  --shadow-brand-xl: 0 16px 28px #6d4cc212;       /* 1  path-grid button hover */
+  --shadow-brand-hero: 0 28px 50px #6d4cc23b;     /* 1  hero panel */
   --shadow-dialog: 0 25px 60px #0f172a33;         /* 1  modal */
-  --shadow-mode-hover: 0 12px 24px #1d4ed812;     /* 1 */
+  --shadow-mode-hover: 0 12px 24px #6d4cc212;     /* 1 */
   --shadow-results: 0 18px 34px #0f172a0d;        /* 1 */
   --shadow-flashcard: 0 20px 36px #0f172a10;      /* 1 */
   --shadow-flashcard-hover: 0 24px 42px #0f172a16;/* 1 */
@@ -314,14 +244,48 @@
   color-scheme: light;
   --theme-ink: #172033;
   --theme-muted: #64748b;
-  --theme-link: #2563eb;
-  --theme-line: #e7edf6;
-  --theme-wash: #f8faff;
-  --theme-pale: #eff6ff;
+  --theme-link: #6d4cc2;
+  --theme-line: #e8e1f4;
+  --theme-wash: #fbfaff;
+  --theme-pale: #f3efff;
   --theme-surface: #fff;
 }
 html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(--theme-ink); }
 @layer utilities {
+  /* Legacy blue utilities are kept in older page markup, but the product
+     palette is intentionally purple/lilac in both themes. */
+  :root [class*="text-blue-"],
+  :root [class*="text-sky-"],
+  :root [class*="text-indigo-"],
+  :root [class*="text-[#2563eb]"],
+  :root [class*="text-[#1d4ed8]"],
+  :root [class*="text-[#4f46e5]"],
+  :root [class*="text-[#315bca]"],
+  :root [class*="text-[#3b82f6]"],
+  :root [class*="text-[#60a5fa]"] { color: var(--color-brand-deep) !important; }
+  :root [class*="bg-blue-"],
+  :root [class*="bg-sky-"],
+  :root [class*="bg-indigo-"],
+  :root [class*="bg-[#2563eb]"],
+  :root [class*="bg-[#1d4ed8]"],
+  :root [class*="bg-[#2858dc]"],
+  :root [class*="bg-[#1f55ca]"],
+  :root [class*="bg-[#2864e8]"] { background: linear-gradient(115deg, #7c5ac7, #5b3b9e) !important; }
+  :root [class*="border-blue-"],
+  :root [class*="border-sky-"],
+  :root [class*="border-indigo-"],
+  :root [class*="border-[#dbeafe]"],
+  :root [class*="border-[#dbe7f8]"],
+  :root [class*="border-[#cddcff]"],
+  :root [class*="border-[#93c5fd]"] { border-color: #cfc3e8 !important; }
+  :root [class*="#eaf2ff"],
+  :root [class*="#e7efff"],
+  :root [class*="#eff6ff"],
+  :root [class*="#f8faff"],
+  :root [class*="#f5f8ff"],
+  :root [class*="#eef4ff"],
+  :root [class*="#f6f8fc"],
+  :root [class*="#fbfdff"] { background-color: #f3efff !important; }
   :root[data-theme="dark"] .bg-white { background-color: var(--theme-surface) !important; }
   :root[data-theme="dark"] .bg-wash { background-color: var(--theme-wash) !important; }
   :root[data-theme="dark"] .border-line { border-color: var(--theme-line) !important; }
@@ -345,7 +309,7 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   :root[data-theme="dark"] .dark-home [class*="border-[#dbe7f8]"], :root[data-theme="dark"] .dark-home [class*="border-[#dbeafe]"], :root[data-theme="dark"] .dark-home [class*="border-[#93c5fd]"], :root[data-theme="dark"] .dark-home [class*="border-[#d6e3f5]"], :root[data-theme="dark"] .dark-home [class*="border-[#eef2f7]"] { border-color: #443b5f !important; }
   :root[data-theme="dark"] .dark-home [class*="text-blue-"], :root[data-theme="dark"] .dark-home [class*="text-[#334155]"], :root[data-theme="dark"] .dark-home [class*="text-[#64748b]"], :root[data-theme="dark"] .dark-home [class*="text-[#4f46e5]"] { color: #c3b5ff !important; }
   :root[data-theme="dark"] .dark-home [class*="bg-[#0f172a]"] { background-color: #12121b !important; }
-  :root[data-theme="light"] .dark-home { background-color: #f8faff; background-image: radial-gradient(ellipse at 75% 32%, #d8b4fe66, transparent 42%), linear-gradient(135deg, #fff, #f3f6ff 55%); color: #172033; }
+  :root[data-theme="light"] .dark-home { background-color: #fbfaff; background-image: radial-gradient(ellipse at 75% 32%, #d8b4fe66, transparent 42%), linear-gradient(135deg, #fff, #f5f0fb 55%); color: #172033; }
   :root[data-theme="light"] .home-header { background-color: #ffffffed; border-color: #e7edf6; }
   :root[data-theme="light"] .dark-home h1 { color: #172033; }
   :root[data-theme="light"] .dark-home .hero-headline { color: #172033 !important; }
@@ -472,11 +436,11 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 .profile-page .profile-avatar-success { background: #ccfbf1; color: #0f766e; }
 .profile-status-success { color: #047857; }
 .profile-status-error { color: #b91c1c; }
-.profile-page .profile-promo-surface { background: #f5f8ff; }
-.profile-page .profile-promo-icon { background: #eaf2ff; color: #4f46e5; }
-.profile-page .profile-plan-badge { background: #eef4ff; }
+.profile-page .profile-promo-surface { background: #f7f3fb; }
+.profile-page .profile-promo-icon { background: #eee7fa; color: #6d4cc2; }
+.profile-page .profile-plan-badge { background: #f1ebfa; }
 .profile-page .profile-plan-card { background: #fcfdff; }
-.profile-page .profile-plan-card-pro { background: linear-gradient(135deg, #f5f8ff, #fff); }
+.profile-page .profile-plan-card-pro { background: linear-gradient(135deg, #f7f3fb, #fff); }
 .profile-page .profile-danger-surface { background: #fffafa; }
 .profile-page .profile-danger-border,
 .profile-page .profile-danger-surface input { border-color: #fecaca; }
@@ -500,8 +464,78 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 :root[data-theme="dark"] .profile-page .danger-heading { color: #ff9ca7 !important; }
 :root[data-theme="dark"] .profile-page .profile-warning-icon { background: #382d20; color: #ffd18a; }
 
+/* Profile workspace: restrained surfaces and a single clear content hierarchy. */
+.profile-page { display: grid; gap: 18px; }
+.profile-identity { display: flex; align-items: center; gap: 14px; padding: 22px 24px; border: 1px solid var(--theme-line); border-radius: 16px; background: var(--theme-surface); }
+.profile-monogram { display: grid; width: 52px; height: 52px; flex: 0 0 auto; place-items: center; border-radius: 15px; background: var(--theme-pale); color: var(--theme-brand); font-family: var(--font-grotesk); font-size: 15px; font-weight: 800; }
+.profile-identity h2 { margin: 0; color: var(--theme-ink); font-family: var(--font-grotesk); font-size: 20px; letter-spacing: -.03em; }
+.profile-identity p { margin: 4px 0 0; color: var(--theme-muted); font-size: 12px; }
+.profile-identity small { display: block; margin-top: 5px; color: var(--theme-muted); font-size: 10px; }
+.profile-tier-chip { display: inline-flex; align-items: center; border-radius: 999px; background: var(--theme-pale); color: var(--theme-muted); padding: 5px 9px; font-size: 10px; font-weight: 800; }
+.profile-tier-chip.pro { background: #f1ebfa; color: #6d4cc2; }
+.profile-tabs { display: flex; gap: 26px; overflow-x: auto; border-bottom: 1px solid var(--theme-line); }
+.profile-tabs button { flex: 0 0 auto; border-bottom: 2px solid transparent; padding: 12px 2px 11px; color: var(--theme-muted); font-size: 12px; font-weight: 700; }
+.profile-tabs button:hover, .profile-tabs button.active { border-bottom-color: var(--theme-brand); color: var(--theme-ink); }
+.profile-notice { margin: 0; border-radius: 9px; padding: 10px 12px; font-size: 11px; font-weight: 700; }
+.profile-notice.success { background: #ecfdf5; color: #047857; }
+.profile-notice.error { background: #fef2f2; color: #b91c1c; }
+.profile-content-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 18px; align-items: start; }
+.profile-card { min-width: 0; border: 1px solid var(--theme-line); border-radius: 16px; background: var(--theme-surface); padding: 22px; }
+.profile-card-heading { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 20px; }
+.profile-card-icon { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 10px; background: var(--theme-pale); color: var(--theme-brand); }
+.profile-card h2 { margin: 0; color: var(--theme-ink); font-family: var(--font-grotesk); font-size: 18px; letter-spacing: -.02em; }
+.profile-card-heading p:not(.profile-eyebrow) { margin: 5px 0 0; color: var(--theme-muted); font-size: 11px; line-height: 1.5; }
+.profile-eyebrow { margin: 0 0 4px; color: var(--theme-brand); font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.profile-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.profile-form-grid label, .profile-plan-controls label { display: grid; gap: 6px; color: var(--theme-muted); font-size: 11px; font-weight: 700; }
+.profile-form-grid label.wide { grid-column: 1 / -1; }
+.profile-form-grid small { margin-top: 1px; color: var(--theme-muted); font-size: 10px; font-weight: 400; }
+.profile-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.profile-link-row { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--theme-line); padding: 14px 0 0; color: var(--theme-ink); font-size: 12px; font-weight: 700; text-align: left; }
+.profile-link-row + .profile-link-row { margin-top: 12px; }
+.profile-link-row svg { color: var(--theme-muted); }
+.profile-add-course { display: grid; grid-template-columns: .75fr 1.25fr auto; gap: 8px; }
+.profile-course-list { display: grid; gap: 7px; margin: 18px 0 0; padding: 0; list-style: none; }
+.profile-course-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--theme-line); border-radius: 10px; padding: 10px 11px; }
+.profile-course-list strong, .profile-course-list small { display: block; }
+.profile-course-list strong { color: var(--theme-ink); font-size: 12px; }
+.profile-course-list small { margin-top: 2px; color: var(--theme-muted); font-size: 10px; }
+.profile-course-list button { color: var(--theme-muted); }
+.profile-course-list button:hover { color: #b91c1c; }
+.profile-empty { margin: 18px 0 0; color: var(--theme-muted); font-size: 11px; }
+.profile-plan-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 11px; background: var(--theme-pale); padding: 13px; }
+.profile-plan-summary strong { color: var(--theme-ink); font-size: 13px; }
+.profile-plan-summary span { color: var(--theme-muted); font-size: 11px; text-align: right; }
+.profile-plan-list { display: grid; gap: 9px; margin-top: 18px; }
+.profile-plan-list div { display: flex; justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--theme-line); padding-bottom: 9px; }
+.profile-plan-list strong { color: var(--theme-ink); font-size: 12px; }
+.profile-plan-list span { color: var(--theme-muted); font-size: 11px; text-align: right; }
+.profile-plan-controls { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-top: 20px; }
+.profile-plan-controls select { margin-top: 2px; min-height: 40px; border: 1px solid var(--theme-line); border-radius: 9px; background: var(--theme-surface); padding: 0 10px; color: var(--theme-ink); font-size: 12px; }
+.profile-delete-row { display: flex; gap: 8px; }
+.profile-danger-button { min-height: 40px; flex: 0 0 auto; border: 1px solid #fecaca; border-radius: 9px; background: #fffafa; padding: 0 12px; color: #b91c1c; font-size: 11px; font-weight: 800; }
+.profile-danger-button:disabled { opacity: .5; }
+:root[data-theme="dark"] .profile-identity, :root[data-theme="dark"] .profile-card { background: var(--theme-surface); }
+:root[data-theme="dark"] .profile-tier-chip.pro { background: #2b2838; color: #c3b5ff; }
+:root[data-theme="dark"] .profile-notice.success { background: #18302c; color: #8de0cb; }
+:root[data-theme="dark"] .profile-notice.error { background: #3a242b; color: #ff9ca7; }
+:root[data-theme="dark"] .profile-danger-button { border-color: #633943; background: #261b20; color: #ff9ca7; }
+@media (max-width: 760px) {
+  .profile-content-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .profile-identity { flex-wrap: wrap; padding: 18px; }
+  .profile-identity .profile-monogram { width: 44px; height: 44px; border-radius: 12px; }
+  .profile-identity > button { width: 100%; }
+  .profile-form-grid, .profile-add-course { grid-template-columns: 1fr; }
+  .profile-form-grid label.wide { grid-column: auto; }
+  .profile-plan-summary, .profile-plan-list div, .profile-plan-controls, .profile-delete-row { align-items: stretch; flex-direction: column; }
+  .profile-plan-summary span, .profile-plan-list span { text-align: left; }
+  .profile-plan-controls .inline-flex, .profile-delete-row button { width: 100%; }
+}
+
 /* Quiz feedback uses tinted state surfaces with readable text in both themes. */
-.quiz-progress-track { background-color: #e7edf6; }
+.quiz-progress-track { background-color: #ebe7f2; }
 .quiz-answer-selected { border-color: #8d75e8; background-color: #f3efff !important; }
 .quiz-answer-correct { border-color: #16a34a; background-color: #f0fdf4 !important; }
 .quiz-answer-correct > span { background-color: #dcfce7 !important; color: #166534 !important; }
