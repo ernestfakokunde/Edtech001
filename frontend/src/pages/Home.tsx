@@ -5,7 +5,7 @@ import { BrandLogo } from "../components/BrandLogo";
 import { useEffect, useState } from "react";
 
 const HEADLINES = [
-  { lead: "Learn smarter with ", highlight: "the worldâ€™s most advanced AI." },
+  { lead: "Learn smarter with ", highlight: "the world's most advanced AI." },
   { lead: "Pass your exams with ", highlight: "AI that actually understands your course." },
 ];
 
@@ -29,7 +29,7 @@ export function Home() {
             {HEADLINES[headlineIndex].lead}<em key={headlineIndex} className="hero-headline-highlight box-decoration-clone rounded-[.18em] bg-[#211d3a] px-[.12em] py-[.015em] not-italic text-[#b9a8ff]" aria-live="polite">{HEADLINES[headlineIndex].highlight}</em>
           </h1>
           <p className="hero-description m-0 max-w-[500px] text-16 leading-[1.75] text-[#aaa5b7] max-1020:text-15">
-            Turn lecture notes and exam PDFs into focused quizzes, flashcards and clear explanations â€” all in one study space.
+            Turn lecture notes and exam PDFs into focused quizzes, flashcards, and clear explanations - all in one study space.
           </p>
           <div className="mt-27 flex flex-wrap justify-start gap-12 [&_.primary-button]:min-h-50 [&_.primary-button]:px-19 [&_.secondary-button]:min-h-50 [&_.secondary-button]:px-19">
             <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("learn")}>
@@ -58,14 +58,14 @@ export function Home() {
             </div>
             <button className="mt-16 flex w-full items-center gap-12 rounded-13 border border-white/10 bg-[#201f2c] p-13 text-left transition hover:border-[#7656a8]" onClick={() => go("learn")}>
               <span className="grid size-39 shrink-0 place-items-center rounded-11 bg-[#352a4e] text-[#c5a7ff]"><Layers3 size={18} /></span>
-              <span className="grid min-w-0 gap-4"><small className="text-[8px] font-bold tracking-[.1em] text-[#aaa3bd]">CONTINUE LEARNING</small><strong className="truncate text-12">Foundations of Biology</strong><span className="text-10 text-[#aaa6bd]">Cell structure Â· Topic 03</span></span>
+              <span className="grid min-w-0 gap-4"><small className="text-[8px] font-bold tracking-[.1em] text-[#aaa3bd]">CONTINUE LEARNING</small><strong className="truncate text-12">Foundations of Biology</strong><span className="text-10 text-[#aaa6bd]">Cell structure - Topic 03</span></span>
               <span className="ml-auto grid size-30 shrink-0 place-items-center rounded-8 bg-[#38304d] text-[#d6c6ff]"><ArrowRight size={15} /></span>
             </button>
             <div className="mx-2 my-16 grid gap-8 text-10 text-[#b1adc2]"><div className="flex justify-between"><span>Topic progress</span><strong className="text-[#d2b8ff]">3 of 5</strong></div><span className="block h-5 overflow-hidden rounded-full bg-[#373348]"><i className="block h-full w-3/5 rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-300" /></span></div>
             <div className="rounded-13 border border-white/5 bg-[#242230] p-15">
               <div className="flex items-center justify-between text-[9px] font-semibold tracking-[.08em] text-[#aaa6bd]"><span>UP NEXT</span><span className="inline-flex items-center gap-5 font-normal tracking-normal"><Clock3 size={12} /> 10 min</span></div>
               <strong className="mt-10 block font-grotesk text-15">Cell structure &amp; function</strong>
-              <p className="mb-12 mt-5 text-10 text-[#aaa6bd]">Quick quiz <span className="px-4 text-[#c7a2ff]">Â·</span> 8 questions</p>
+              <p className="mb-12 mt-5 text-10 text-[#aaa6bd]">Quick quiz <span className="px-4 text-[#c7a2ff]">·</span> 8 questions</p>
               <button className="inline-flex items-center gap-7 text-10 font-bold text-[#c6a6ff]" onClick={() => go("generate")}>Start a practice round <ArrowRight size={13} /></button>
             </div>
             <div className="flex items-center gap-8 px-2 pt-14 text-[9px] text-[#b8b2c9]"><CircleCheck size={14} className="text-[#b391ff]" /> Small sessions add up. Pick up where you left off.</div>
@@ -73,7 +73,7 @@ export function Home() {
           </div>
         </div>
       </section>
-      {/* Brand showcase â€” the course-archive / study-desk imagery, right where a
+      {/* Brand showcase - the course-archive / study-desk imagery, right where a
           first-time visitor decides whether the product is for them. */}
       <BrandCarousel />
       <section className="mx-auto grid max-w-[1170px] grid-cols-3 gap-32 border-t border-[#dbeafe] px-24 pb-70 pt-12 max-760:grid-cols-1 max-760:gap-18 max-760:px-22 max-760:pb-48" aria-label="Study tools">

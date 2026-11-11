@@ -59,8 +59,8 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   return (
     <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
       {firstPractice && (
-        <section className="mb-8 grid grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] items-center gap-28 overflow-hidden rounded-20 bg-[linear-gradient(145deg,#173c9e,#1d4ed8_62%,#477ce0)] px-[clamp(22px,3vw,38px)] py-30 shadow-[0_22px_40px_#1d4ed833] max-760:grid-cols-1 max-760:rounded-20 max-760:px-20 max-760:py-24">
-          <div className="max-w-[560px] text-white [&_.eyebrow]:mb-10 [&_.eyebrow]:text-blue-200 [&_h2]:mb-10 [&_h2]:text-[clamp(24px,3vw,32px)] [&>p:not(.eyebrow)]:m-0 [&>p:not(.eyebrow)]:text-13 [&>p:not(.eyebrow)]:leading-170 [&>p:not(.eyebrow)]:text-blue-100">
+        <section className="dashboard-first-practice mb-8 grid grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] items-center gap-28 overflow-hidden rounded-20 border border-[#e5dcf4] bg-[linear-gradient(135deg,#f8f5fc,#eee8fa)] px-[clamp(22px,3vw,38px)] py-30 shadow-[0_18px_38px_#6d4cc214] max-760:grid-cols-1 max-760:rounded-20 max-760:px-20 max-760:py-24">
+          <div className="max-w-[560px] text-ink [&_.eyebrow]:mb-10 [&_.eyebrow]:text-brand [&_h2]:mb-10 [&_h2]:text-[clamp(24px,3vw,32px)] [&>p:not(.eyebrow)]:m-0 [&>p:not(.eyebrow)]:text-13 [&>p:not(.eyebrow)]:leading-170 [&>p:not(.eyebrow)]:text-muted">
             <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand"><Sparkles size={14} /> Start here</p>
             <h2>Create your first practice</h2>
             <p>
@@ -68,16 +68,16 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
               practice you can mark yourself — flashcards to flip, or a timed
               quiz that scores you.
             </p>
-            <ol className="mt-18 grid list-none gap-8 p-0 [&>li]:flex [&>li]:items-center [&>li]:gap-9 [&>li]:text-12 [&>li]:text-blue-100 [&_li_span]:grid [&_li_span]:size-20 [&_li_span]:shrink-0 [&_li_span]:place-items-center [&_li_span]:rounded-full [&_li_span]:bg-white/15 [&_li_span]:font-grotesk [&_li_span]:text-10 [&_li_span]:font-bold">
+            <ol className="mt-18 grid list-none gap-8 p-0 [&>li]:flex [&>li]:items-center [&>li]:gap-9 [&>li]:text-12 [&>li]:text-muted [&_li_span]:grid [&_li_span]:size-20 [&_li_span]:shrink-0 [&_li_span]:place-items-center [&_li_span]:rounded-full [&_li_span]:bg-white [&_li_span]:font-grotesk [&_li_span]:text-10 [&_li_span]:font-bold [&_li_span]:text-brand">
               <li><span>1</span> Bring a PDF — yours, or one from your course archive</li>
               <li><span>2</span> Choose flashcards or a timed quiz</li>
               <li><span>3</span> Answer, get scored, and watch your streak build</li>
             </ol>
-            <div className="mt-22 flex flex-wrap gap-10 [&_.primary-button]:bg-white [&_.primary-button]:text-brand [&_.primary-button]:shadow-lg [&_.secondary-button]:border-white/35 [&_.secondary-button]:bg-white/10 [&_.secondary-button]:text-white hover:[&_.secondary-button]:bg-white/20">
+            <div className="mt-22 flex flex-wrap gap-10 [&_.primary-button]:bg-brand [&_.primary-button]:text-white [&_.primary-button]:shadow-[0_8px_18px_#6d4cc226] [&_.secondary-button]:border-[#d5c9eb] [&_.secondary-button]:bg-white/70 [&_.secondary-button]:text-brand hover:[&_.secondary-button]:bg-white">
               <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("generate")}>
                 Use my own PDF <ArrowRight size={16} />
               </button>
-              <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => go("hierarchy")}>Find my course</button>
+              <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d5c9eb] bg-white/70 px-14 text-12 font-bold leading-[1.25] text-brand transition-colors duration-200 hover:border-outline hover:bg-white disabled:cursor-not-allowed disabled:opacity-50" onClick={() => go("hierarchy")}>Find my course</button>
             </div>
           </div>
           <img className="h-full max-h-[224px] w-full rounded-16 border border-white/15 object-cover shadow-[0_18px_30px_#0f172a3d] -rotate-[1.5deg] max-760:hidden" src={practiceArt} alt="" />

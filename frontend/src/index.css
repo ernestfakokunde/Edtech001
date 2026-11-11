@@ -316,6 +316,8 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   :root[data-theme="light"] .dark-home .hero-headline-highlight { background-color: #e9e3ff !important; color: #5a438f !important; }
   :root[data-theme="light"] .dark-home .hero-eyebrow { color: #6652a8 !important; }
   :root[data-theme="light"] .dark-home .hero-description { color: #555469 !important; }
+  .hero-headline { text-wrap: balance; }
+  .hero-headline-highlight { -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   :root[data-theme="light"] .dark-home .pricing-headline { color: #172033 !important; }
   :root[data-theme="light"] .dark-home .pricing-highlight { background-color: #e9e3ff !important; color: #5a438f !important; }
   :root[data-theme="light"] .home-header [class*="text-[#b5b0c3]"], :root[data-theme="light"] .home-header [class*="text-[#c2bdce]"] { color: #535166 !important; }
@@ -447,6 +449,10 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 .profile-page .profile-danger-icon { background: #fef2f2; color: #b91c1c; }
 .profile-page .danger-heading { color: #991b1b; }
 .profile-page .profile-warning-icon { background: #fef3c7; color: #b45309; }
+.dashboard-first-practice .primary-button { background: var(--theme-brand) !important; color: #fff !important; }
+.dashboard-first-practice .secondary-button { border-color: #d5c9eb !important; background: #ffffffb8 !important; color: var(--theme-brand) !important; }
+:root[data-theme="dark"] .dashboard-first-practice { border-color: #3a334c; background: linear-gradient(135deg, #242031, #1d1a26); }
+:root[data-theme="dark"] .dashboard-first-practice .secondary-button { border-color: #4b4162 !important; background: #2b2638 !important; }
 
 :root[data-theme="dark"] .profile-page .profile-avatar-success { background: #18302c; color: #8de0cb; }
 :root[data-theme="dark"] .profile-status-success { color: #8de0cb !important; }
