@@ -338,7 +338,6 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
             <small className="hidden text-10 text-muted max-680:block">Study smarter</small>
           </div>
           <div className="ml-auto flex items-center gap-10">
-            <ThemeToggle />
             <div className="relative" ref={profileMenuRef}>
               <button className="flex items-center gap-8 rounded-10 px-4 py-4 hover:bg-pale" aria-label="Open profile menu" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((value) => !value)}>
                 <span className="grid h-32 w-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand">{initialsOf(profile)}</span>

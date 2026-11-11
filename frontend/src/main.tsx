@@ -4,7 +4,7 @@ import "./index.css";
 import App from "./App.tsx";
 
 const savedTheme = window.localStorage.getItem("recappedu-theme");
-document.documentElement.dataset.theme = savedTheme === "light" ? "light" : "dark";
+document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
 
 /**
  * Last line of defence: a render/lifecycle crash anywhere in the tree shows a

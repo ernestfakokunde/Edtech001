@@ -19,8 +19,8 @@ export function Home() {
   const scrollToPricing = () => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <main className="dark-home min-h-screen bg-[#08090f] text-[#f2efff] [background-image:radial-gradient(ellipse_at_76%_50%,#542b7540,transparent_38%),linear-gradient(120deg,#090a11,#08090f_58%)] [background-size:auto,auto] [background-position:center,center]">
-      <section className="mx-auto grid w-full max-w-[1260px] grid-cols-[1.04fr_.96fr] items-center gap-[clamp(36px,7vw,94px)] px-[clamp(26px,6vw,80px)] py-[95px] max-1020:grid-cols-1 max-1020:gap-38 max-1020:px-22 max-1020:py-60 max-1020:text-left max-680:px-19 max-680:py-47">
+    <main className="landing-page dark-home min-h-screen bg-[#08090f] text-[#f2efff] [background-image:radial-gradient(ellipse_at_76%_50%,#542b7540,transparent_38%),linear-gradient(120deg,#090a11,#08090f_58%)] [background-size:auto,auto] [background-position:center,center]">
+      <section className="landing-hero mx-auto grid w-full max-w-[1260px] grid-cols-[1.04fr_.96fr] items-center gap-[clamp(36px,7vw,94px)] px-[clamp(26px,6vw,80px)] py-[95px] max-1020:grid-cols-1 max-1020:gap-38 max-1020:px-22 max-1020:py-60 max-1020:text-left max-680:px-19 max-680:py-47">
         <div className="max-w-[600px]">
           <p className="hero-eyebrow eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand mb-22 justify-start text-[#b4a6ff]">
             <Sparkles size={15} /> A better way to prepare
@@ -32,11 +32,11 @@ export function Home() {
             Turn lecture notes and exam PDFs into focused quizzes, flashcards, and clear explanations - all in one study space.
           </p>
           <div className="mt-27 flex flex-wrap justify-start gap-12 [&_.primary-button]:min-h-50 [&_.primary-button]:px-19 [&_.secondary-button]:min-h-50 [&_.secondary-button]:px-19">
-            <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("learn")}>
+            <button className="landing-primary primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-999 bg-[#2563eb] px-18 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("learn")}>
               Build my study desk <ArrowRight size={17} />
             </button>
             <button
-              className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="landing-secondary secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-999 border border-[#d6e3f5] bg-white px-18 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => go("hierarchy")}
             >
               Explore courses
@@ -155,32 +155,41 @@ export function Home() {
         <div className="mt-24 overflow-x-auto rounded-16 border border-[#dbe7f8] bg-white"><table className="w-full min-w-[720px] border-collapse text-left text-12"><caption className="px-16 py-14 text-left font-grotesk text-16 font-bold text-ink">What each plan includes</caption><thead><tr className="border-y border-line text-muted">{["Feature","Free","Basic","Student Plus","Premium"].map(x=><th key={x} className="px-12 py-10">{x}</th>)}</tr></thead><tbody className="text-ink">{[["Study materials","✓","✓","✓","✓"],["Monthly AI credits","20","100","300","600"],["AI quizzes","Limited","More","More","Highest"],["AI flashcards","Limited","✓","✓","✓"],["AI explanations","Limited","✓","✓","✓"],["AI revision notes","—","—","✓","✓"],["PDF uploads","Limited","More","More","Highest"],["Learning analytics","Basic","Basic","Advanced","Advanced"],["Exam preparation","—","Basic","Advanced","Full"]].map(row=><tr key={row[0]} className="border-b border-line last:border-0">{row.map((value,i)=>i===0?<th key={i} className="px-12 py-11 text-left font-semibold">{value}</th>:<td key={i} className="px-12 py-11 text-muted">{value}</td>)}</tr>)}</tbody></table></div>
         <p className="mt-16 text-center text-11 text-muted">Launch pricing is charged for month one only. AI usage is subject to monthly plan credits.</p>
       </section>
-      <section className="home-cta mx-auto mb-70 flex max-w-[1120px] items-center justify-between gap-24 rounded-18 bg-[#1e3a8a] px-38 py-34 text-white max-760:mx-18 max-760:mb-44 max-760:flex-col max-760:items-stretch max-760:px-22 max-760:py-26 [&_.eyebrow]:mb-9 [&_.eyebrow]:text-blue-200 [&_h2]:mb-7 [&_h2]:text-[27px] [&_p:last-child]:m-0 [&_p:last-child]:text-12 [&_p:last-child]:text-blue-100 [&_.primary-button]:min-h-45 [&_.primary-button]:shrink-0 [&_.primary-button]:px-16 [&_.primary-button]:bg-white [&_.primary-button]:text-[#1e3a8a] [&_.primary-button]:shadow-none [&_h2]:text-white max-760:[&_h2]:text-[24px]"><div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Your next study session starts here</p><h2>Make every PDF count.</h2><p>Create your free account and build a revision routine that works for you.</p></div><button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("signup")}>Create your free account <ArrowRight size={16} /></button></section>
-      <footer className="home-footer relative mt-28 border-t border-white/10 bg-[linear-gradient(180deg,#12111b,#08090f)] px-[clamp(20px,5vw,64px)] pb-22 pt-42 text-[#f2efff]">
+      <section className="home-cta mx-auto mb-70 flex max-w-[1120px] items-center justify-between gap-24 rounded-18 bg-[#342252] px-38 py-34 text-white max-760:mx-18 max-760:mb-44 max-760:flex-col max-760:items-stretch max-760:px-22 max-760:py-26">
+        <div>
+          <p className="cta-eyebrow eyebrow mb-9 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em]">Your next study session starts here</p>
+          <h2 className="mb-7 text-[27px] text-white max-760:text-[24px]">Make every PDF count.</h2>
+          <p className="cta-copy m-0 text-12">Create your free account and build a revision routine that works for you.</p>
+        </div>
+        <button className="landing-cta-button cta-button inline-flex min-h-45 shrink-0 items-center justify-center gap-7 rounded-999 bg-white px-18 text-12 font-bold text-[#342252] shadow-none transition-colors hover:bg-[#f3efff]" onClick={() => go("signup")}>
+          Create your free account <ArrowRight size={16} />
+        </button>
+      </section>
+      <footer className="landing-footer home-footer relative mt-28 border-t border-white/10 bg-[linear-gradient(180deg,#12111b,#08090f)] px-[clamp(20px,5vw,64px)] pb-22 pt-42 text-[#f2efff]">
         <div className="mx-auto grid max-w-[1180px] grid-cols-[1.5fr_1fr_1fr] gap-40 pb-34 max-680:grid-cols-1 max-680:gap-26">
           <div className="grid content-start justify-items-start gap-12">
             <BrandLogo className="h-32" />
-            <p className="m-0 max-w-290 text-12 leading-160 text-[#aaa5b7]">A calmer way to turn your course materials into focused, useful practice.</p>
-            <button className="mt-3 inline-flex items-center gap-7 rounded-8 border border-[#49415e] px-12 py-8 text-11 font-semibold text-[#d1c2f5] transition hover:border-[#8770b5] hover:bg-white/5" onClick={() => go("signup")}>Build your study desk <ArrowRight size={13} /></button>
+            <p className="landing-footer-muted m-0 max-w-290 text-12 leading-160">A calmer way to turn your course materials into focused, useful practice.</p>
+            <button className="landing-footer-action mt-3 inline-flex items-center gap-7 rounded-8 border px-12 py-8 text-11 font-semibold transition" onClick={() => go("signup")}>Build your study desk <ArrowRight size={13} /></button>
           </div>
           <nav className="grid content-start justify-items-start gap-11" aria-label="Explore RecappEdu">
-            <strong className="mb-2 text-11 font-bold uppercase tracking-[.12em] text-white">Explore</strong>
-            <button className="text-12 text-[#aaa5b7] transition hover:text-white" onClick={() => go("learn")}>Learn with AI</button>
-            <button className="text-12 text-[#aaa5b7] transition hover:text-white" onClick={() => go("hierarchy")}>Course repository</button>
-            <button className="text-12 text-[#aaa5b7] transition hover:text-white" onClick={() => go("generate")}>Create a study set</button>
-            <button className="text-12 text-[#aaa5b7] transition hover:text-white" onClick={scrollToPricing}>Plans &amp; pricing</button>
+            <strong className="landing-footer-heading mb-2 text-11 font-bold uppercase tracking-[.12em]">Explore</strong>
+            <button className="landing-footer-link text-12 transition" onClick={() => go("learn")}>Learn with AI</button>
+            <button className="landing-footer-link text-12 transition" onClick={() => go("hierarchy")}>Course repository</button>
+            <button className="landing-footer-link text-12 transition" onClick={() => go("generate")}>Create a study set</button>
+            <button className="landing-footer-link text-12 transition" onClick={scrollToPricing}>Plans &amp; pricing</button>
           </nav>
           <nav className="grid content-start justify-items-start gap-11" aria-label="Account and information">
-            <strong className="mb-2 text-11 font-bold uppercase tracking-[.12em] text-white">Account &amp; info</strong>
-            <button className="text-12 text-[#aaa5b7] transition hover:text-white" onClick={() => go("login")}>Sign in</button>
-            <button className="text-12 text-[#aaa5b7] transition hover:text-white" onClick={() => go("signup")}>Create an account</button>
-            <button className="text-12 text-[#aaa5b7] transition hover:text-white" onClick={() => go("privacy")}>Privacy policy</button>
-            <button className="text-12 text-[#aaa5b7] transition hover:text-white" onClick={() => go("terms")}>Terms of use</button>
+            <strong className="landing-footer-heading mb-2 text-11 font-bold uppercase tracking-[.12em]">Account &amp; info</strong>
+            <button className="landing-footer-link text-12 transition" onClick={() => go("login")}>Sign in</button>
+            <button className="landing-footer-link text-12 transition" onClick={() => go("signup")}>Create an account</button>
+            <button className="landing-footer-link text-12 transition" onClick={() => go("privacy")}>Privacy policy</button>
+            <button className="landing-footer-link text-12 transition" onClick={() => go("terms")}>Terms of use</button>
           </nav>
         </div>
-        <div className="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-12 border-t border-white/10 pt-17 text-10 text-[#858096] max-680:flex-col max-680:items-start">
+        <div className="landing-footer-bottom mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-12 border-t border-white/10 pt-17 text-10 max-680:flex-col max-680:items-start">
           <span>&copy; {new Date().getFullYear()} RecappEdu. All rights reserved.</span>
-          <button className="inline-flex items-center gap-6 transition hover:text-white" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Back to top <ArrowRight size={12} className="-rotate-90" /></button>
+          <button className="landing-footer-link inline-flex items-center gap-6 transition" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Back to top <ArrowRight size={12} className="-rotate-90" /></button>
         </div>
       </footer>
     </main>

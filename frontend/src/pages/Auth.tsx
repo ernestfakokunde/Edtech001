@@ -33,7 +33,7 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
 
   return (
     <main className="max-w-none min-h-screen grid grid-cols-2 max-1020:grid-cols-1 bg-surface">
-      <section className="py-36 px-[clamp(30px,7vw,100px)] max-1020:min-h-0 max-1020:py-30 max-1020:px-26 flex flex-col justify-between bg-pale">
+      <section className="auth-marketing py-36 px-[clamp(30px,7vw,100px)] max-1020:min-h-0 max-1020:py-30 max-1020:px-26 flex flex-col justify-between bg-pale">
         <button className="wordmark flex items-center gap-10 font-grotesk text-18 font-bold self-start" onClick={() => go("home")}>
           <BrandLogo />
         </button>
@@ -92,8 +92,11 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
       </section>
       {/* The form sits in a white card on the pale canvas — same card language
           as the admin panels, so signup reads as part of the same product. */}
-      <section className="grid place-items-center bg-pale p-30 max-1020:py-28 max-1020:px-26">
+      <section className="auth-form-panel grid place-items-center bg-pale p-30 max-1020:py-28 max-1020:px-26">
         <div className="w-[min(100%,450px)] rounded-16 border border-line bg-white p-[clamp(24px,3.4vw,38px)] shadow-card">
+          <div className="auth-mobile-brand">
+            <BrandLogo className="h-32" />
+          </div>
           <button className="mb-30 inline-flex items-center gap-7 text-12 font-semibold text-muted transition-colors hover:text-brand" onClick={() => go("home")}>
             Back to home
           </button>

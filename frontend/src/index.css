@@ -341,10 +341,251 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   :root[data-theme="light"] .primary-button { background: linear-gradient(115deg, #7658d4, #5d48b8); }
 }
 
+  /* Public landing page styling follows the reference: a warm paper-like
+     canvas, centered editorial hero, pill controls, and a single coral-to-pink
+     action accent. */
+  :root[data-theme="light"] .home-header {
+    border-color: #f0e2e5 !important;
+    background: #fffaf7e8 !important;
+    backdrop-filter: blur(18px);
+  }
+  :root[data-theme="light"] .home-header > div { height: 82px; }
+  :root[data-theme="light"] .home-header nav {
+    gap: 4px !important;
+    padding: 4px;
+    border: 1px solid #f0e2e5;
+    border-radius: 999px;
+    background: #fffdfc;
+    box-shadow: 0 8px 24px #71374d0b;
+  }
+  :root[data-theme="light"] .home-header nav button {
+    border-radius: 999px;
+    padding: 10px 16px;
+    color: #716974 !important;
+  }
+  :root[data-theme="light"] .home-header nav button:hover {
+    background: #fff0f5;
+    color: #de568f !important;
+  }
+  :root[data-theme="light"] .home-header .primary-button {
+    border-radius: 999px;
+    background: linear-gradient(110deg, #ee6aa8, #ff9b67) !important;
+    box-shadow: 0 8px 20px #ee6aa82e !important;
+  }
+  :root[data-theme="light"] .home-header [class*="text-[#c2bdce]"] { color: #5f5964 !important; }
+  :root[data-theme="light"] .landing-page {
+    background:
+      radial-gradient(ellipse at 50% 12%, #ffd9ca 0, transparent 30%),
+      radial-gradient(ellipse at 18% 28%, #f5d9f4 0, transparent 29%),
+      radial-gradient(ellipse at 86% 54%, #f8d5e7 0, transparent 31%),
+      #fffaf7 !important;
+    color: #17151a !important;
+  }
+  :root[data-theme="light"] .landing-hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 36px;
+    max-width: 1180px;
+    padding-top: 76px;
+    padding-bottom: 74px;
+    text-align: center;
+  }
+  :root[data-theme="light"] .landing-hero > div:first-child {
+    max-width: 780px;
+  }
+  :root[data-theme="light"] .landing-hero .hero-eyebrow {
+    justify-content: center;
+    margin-bottom: 20px;
+    color: #d65b91 !important;
+  }
+  :root[data-theme="light"] .landing-hero .hero-headline {
+    height: auto;
+    max-width: 820px;
+    margin-inline: auto;
+    color: #17151a !important;
+    font-size: clamp(42px, 6vw, 72px);
+    font-weight: 500;
+    line-height: .98;
+    letter-spacing: -.065em;
+  }
+  :root[data-theme="light"] .landing-hero .hero-headline-highlight {
+    display: inline;
+    background: transparent !important;
+    color: #17151a !important;
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 400;
+  }
+  :root[data-theme="light"] .landing-hero .hero-description {
+    max-width: 600px;
+    margin: 20px auto 0;
+    color: #625c64 !important;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  :root[data-theme="light"] .landing-hero .mt-27 { justify-content: center; margin-top: 25px; }
+  :root[data-theme="light"] .landing-hero .landing-primary {
+    min-height: 48px;
+    padding-inline: 21px;
+    background: linear-gradient(110deg, #ee6aa8, #ff9b67) !important;
+    box-shadow: 0 10px 24px #ee6aa82e !important;
+  }
+  :root[data-theme="light"] .landing-hero .landing-secondary {
+    min-height: 48px;
+    border-color: #eadde2 !important;
+    background: #fffdfc !important;
+    color: #28232a !important;
+  }
+  :root[data-theme="light"] .landing-hero .mt-23 { justify-content: center; color: #77707b !important; }
+  :root[data-theme="light"] .landing-hero .mt-23 button { color: #d4548e !important; }
+  :root[data-theme="light"] .landing-hero > div:last-child {
+    width: min(100%, 790px);
+    max-width: 790px;
+    justify-self: center;
+  }
+  :root[data-theme="light"] .landing-hero > div:last-child > div:first-child { background: radial-gradient(ellipse, #ef8fc833, transparent 68%); }
+  :root[data-theme="light"] .landing-hero .study-preview-card {
+    border-color: #f0e2e5 !important;
+    border-radius: 24px;
+    background: #fffdfc !important;
+    box-shadow: 0 28px 70px #71374d18, 0 0 40px #ee6aa812 !important;
+    text-align: left;
+  }
+  :root[data-theme="light"] .landing-page > section:not(.landing-hero) {
+    border-color: #f0e2e5 !important;
+  }
+  :root[data-theme="light"] .landing-page .home-cta {
+    background: linear-gradient(110deg, #ee6aa8, #ff9b67) !important;
+    border-radius: 22px;
+    box-shadow: 0 18px 40px #ee6aa82e;
+  }
+  :root[data-theme="light"] .landing-page .home-cta [class*="text-blue-"],
+  :root[data-theme="light"] .landing-page .home-cta [class*="text-[#1e3a8a]"] { color: #fff !important; }
+  :root[data-theme="light"] .landing-page .home-cta .primary-button {
+    border-radius: 999px;
+    color: #d9548e !important;
+  }
+  :root[data-theme="light"] .landing-page [class*="bg-[#2563eb]"] {
+    background: linear-gradient(110deg, #ee6aa8, #ff9b67) !important;
+  }
+  :root[data-theme="light"] .landing-page [class*="border-[#93c5fd]"] {
+    border-color: #ef9abd !important;
+    box-shadow: 0 0 0 2px #f9dbe8 !important;
+  }
+  :root[data-theme="light"] .landing-page [class*="text-[#2563eb]"] {
+    color: #d4548e !important;
+  }
+  :root[data-theme="light"] .landing-page .home-footer {
+    background: #fff4f0 !important;
+    border-color: #f0e2e5 !important;
+    color: #231d24 !important;
+  }
+
+  /* Landing accessibility pass: use the brand purple as the single action
+     color, keep decoration low-contrast, and reserve warm tones for ambient
+     background light rather than interactive controls. */
+  :root[data-theme="light"] .landing-page {
+    background:
+      radial-gradient(ellipse at 50% 0%, #eee9ff 0, transparent 34%),
+      linear-gradient(180deg, #fcfbff 0%, #fff 58%, #fbfaff 100%) !important;
+  }
+  :root[data-theme="light"] .home-header {
+    background: #ffffffef !important;
+    border-color: #e8e1f4 !important;
+  }
+  :root[data-theme="light"] .home-header nav {
+    border-color: #e8e1f4;
+    box-shadow: 0 5px 16px #2f1e5410;
+  }
+  :root[data-theme="light"] .home-header nav button:hover {
+    background: #f3efff;
+    color: #5b3b9e !important;
+  }
+  :root[data-theme="light"] .home-header .primary-button,
+  :root[data-theme="light"] .landing-hero .landing-primary,
+  :root[data-theme="light"] .landing-page [class*="bg-[#2563eb]"] {
+    background: #5b3b9e !important;
+    box-shadow: 0 7px 16px #5b3b9e2b !important;
+  }
+  :root[data-theme="light"] .home-header .primary-button:hover,
+  :root[data-theme="light"] .landing-hero .landing-primary:hover,
+  :root[data-theme="light"] .landing-page [class*="bg-[#2563eb]"]:hover {
+    background: #472d80 !important;
+  }
+  :root[data-theme="light"] .landing-hero .hero-eyebrow,
+  :root[data-theme="light"] .landing-page [class*="text-[#2563eb]"] {
+    color: #5b3b9e !important;
+  }
+  :root[data-theme="light"] .landing-hero .hero-headline-highlight {
+    color: #5b3b9e !important;
+  }
+  :root[data-theme="light"] .landing-hero .landing-secondary {
+    border-color: #cfc4e8 !important;
+    color: #472d80 !important;
+  }
+  :root[data-theme="light"] .landing-hero .landing-secondary:hover {
+    border-color: #8d78c5 !important;
+    background: #f8f6ff !important;
+  }
+  :root[data-theme="light"] .landing-hero > div:last-child > div:first-child {
+    background: radial-gradient(ellipse, #bba8ed2b, transparent 68%);
+  }
+  :root[data-theme="light"] .landing-hero .study-preview-card {
+    border-color: #dcd4ed !important;
+    box-shadow: 0 18px 48px #30224d18 !important;
+  }
+  :root[data-theme="light"] .landing-page .home-cta {
+    background: #342252 !important;
+    box-shadow: 0 14px 34px #30224d24;
+  }
+  :root[data-theme="light"] .landing-page .home-cta .cta-eyebrow { color: #d7ccff !important; }
+  :root[data-theme="light"] .landing-page .home-cta .cta-copy { color: #f0ecff !important; }
+  :root[data-theme="light"] .landing-page .home-cta .cta-button {
+    background: #fff !important;
+    color: #342252 !important;
+    box-shadow: none !important;
+  }
+  :root[data-theme="light"] .landing-page .home-cta .cta-button:hover {
+    background: #f0ebff !important;
+    color: #2a1b43 !important;
+  }
+  :root[data-theme="light"] .landing-page .landing-footer {
+    background: #f7f5fc !important;
+    border-top-color: #e8e1f4 !important;
+    color: #172033 !important;
+  }
+  :root[data-theme="light"] .landing-page .landing-footer-heading {
+    color: #30254b !important;
+  }
+  :root[data-theme="light"] .landing-page .landing-footer-muted,
+  :root[data-theme="light"] .landing-page .landing-footer-bottom {
+    color: #64748b !important;
+  }
+  :root[data-theme="light"] .landing-page .landing-footer-link {
+    color: #5f6472 !important;
+  }
+  :root[data-theme="light"] .landing-page .landing-footer-link:hover {
+    color: #5b3b9e !important;
+  }
+  :root[data-theme="light"] .landing-page .landing-footer-action {
+    border-color: #cfc4e8 !important;
+    background: #fff !important;
+    color: #472d80 !important;
+  }
+  :root[data-theme="light"] .landing-page .landing-footer-action:hover {
+    border-color: #8d78c5 !important;
+    background: #f3efff !important;
+  }
+  :root[data-theme="light"] .landing-page .landing-footer-bottom {
+    border-top-color: #e2dcef !important;
+  }
+
 .admin-metric-skeleton { background-color: #e8e3f2; }
 .admin-metric-shimmer { background: linear-gradient(90deg, transparent, #a895ff, transparent); }
 :root[data-theme="dark"] .admin-metric-skeleton { background-color: #39334a; }
 :root[data-theme="dark"] .admin-metric-shimmer { background: linear-gradient(90deg, transparent, #c3b5ff, transparent); }
+
 /* ---------------------------------------------------------------------------
    Global element resets.
    These MUST live inside `@layer base`. Unlayered CSS always outranks layered
@@ -429,9 +670,257 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 :root[data-theme="dark"] [class*="[&>button]:bg-[#f8fbff]"] > button:not(.bg-brand) { background: var(--theme-surface) !important; color: var(--theme-muted) !important; border-color: var(--theme-line) !important; }
 :root[data-theme="dark"] [class*="[&_.primary-button]:bg-white"] .primary-button { background: linear-gradient(115deg, #9b83f5, #7056cf) !important; color: #fff !important; }
 
-/* Preserve the high contrast white call-to-action in the home page banner. */
-.home-cta .primary-button { background: #fff !important; color: #1e3a8a !important; box-shadow: none !important; }
-.home-cta .primary-button:hover { background: #eff6ff !important; color: #1e3a8a !important; }
+:root[data-theme="dark"] .landing-page .home-cta {
+  background: #101827 !important;
+  border: 1px solid #263852;
+  box-shadow: 0 14px 34px #00000040;
+}
+:root[data-theme="dark"] .landing-page .home-cta h2 { color: #fff !important; }
+:root[data-theme="dark"] .landing-page .home-cta .cta-eyebrow { color: #fff !important; }
+:root[data-theme="dark"] .landing-page .home-cta .cta-copy { color: #fff !important; }
+:root[data-theme="dark"] .landing-page .home-cta .landing-cta-button,
+:root[data-theme="dark"] .landing-page .home-cta .landing-cta-button[class*="bg-white"] {
+  appearance: none;
+  background: #8065d6 !important;
+  background-image: none !important;
+  border: 1px solid #9a84e5 !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 6px 16px #00000040 !important;
+}
+:root[data-theme="dark"] .landing-page .home-cta .landing-cta-button:hover {
+  background: #967ce8 !important;
+  background-image: none !important;
+  border-color: #b2a1f2 !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+/* Keep authentication actions reachable on small screens. The marketing
+   panel remains available below the form, but never pushes the form below the
+   first mobile interaction area. */
+@media (max-width: 1020px) {
+  .auth-form-panel { order: -1; }
+  .auth-marketing { order: 2; }
+  .auth-form-panel > div {
+    width: min(100%, 520px);
+  }
+}
+@media (max-width: 680px) {
+  .auth-form-panel {
+    min-height: 100svh;
+    align-items: start;
+    padding: 18px 14px 32px !important;
+    background:
+      radial-gradient(ellipse at 18% 0%, #e8ddff 0, transparent 38%),
+      radial-gradient(ellipse at 88% 8%, #d9eefa 0, transparent 34%),
+      var(--theme-wash) !important;
+  }
+  .auth-form-panel > div {
+    padding: 22px 18px !important;
+    border-radius: 20px;
+    box-shadow: 0 16px 40px #30224d14;
+  }
+  .auth-mobile-brand {
+    display: flex;
+    justify-content: center;
+    margin: 2px 0 22px;
+  }
+  .auth-mobile-brand img { display: block; }
+  .auth-form-panel > div > button:first-child {
+    margin-bottom: 20px;
+  }
+  .auth-form-panel h2 {
+    font-size: 26px !important;
+  }
+  .auth-form-panel form {
+    gap: 13px;
+  }
+  .auth-form-panel .mt-27 {
+    margin-top: 18px;
+  }
+  .auth-marketing {
+    display: none;
+  }
+}
+
+.auth-mobile-brand { display: none; }
+
+/* Legal pages use a focused reading surface in both theme modes. */
+.legal-page {
+  max-width: none !important;
+  min-height: 100vh;
+  background: #08090f;
+  color: #fff;
+}
+.legal-page > * { max-width: 880px; margin-inline: auto; }
+.legal-page > button {
+  display: inline-flex;
+  color: #e5e7eb !important;
+}
+.legal-page > button:hover { color: #fff !important; }
+.legal-page > header {
+  border-color: #30394b !important;
+  background: linear-gradient(145deg, #111827, #172033) !important;
+}
+.legal-page > header span {
+  background: #263852 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.legal-page .eyebrow,
+.legal-page > header .text-brand { color: #dbeafe !important; }
+.legal-page > header h1 { color: #fff !important; }
+.legal-page > header p { color: #f8fafc !important; }
+.legal-page > header small { color: #cbd5e1 !important; }
+.legal-page article h2 { color: #fff !important; }
+.legal-page article p { color: #e5e7eb !important; }
+.legal-page article > section { border-color: #30394b !important; }
+.legal-page > aside {
+  border-color: #30394b !important;
+  background: #111827 !important;
+}
+.legal-page > aside strong,
+.legal-page > aside span { color: #f8fafc !important; }
+.legal-page > aside a { color: #bfdbfe !important; }
+.legal-page > aside a:hover { color: #fff !important; }
+
+@media (max-width: 680px) {
+  .auth-mobile-brand { display: flex; }
+  :root[data-theme="dark"] .auth-form-panel {
+    background:
+      radial-gradient(ellipse at 18% 0%, #332b52 0, transparent 38%),
+      radial-gradient(ellipse at 88% 8%, #20374d 0, transparent 34%),
+      var(--theme-wash) !important;
+  }
+  :root[data-theme="dark"] .auth-form-panel > div {
+    box-shadow: 0 18px 44px #00000040;
+  }
+}
+:root[data-theme="dark"] .landing-page {
+  background:
+    radial-gradient(ellipse at 50% 0%, #24213b 0, transparent 34%),
+    linear-gradient(180deg, #08090f 0%, #0b0d16 100%) !important;
+}
+:root[data-theme="dark"] .home-header {
+  border-color: #27243a !important;
+  background: #08090fe8 !important;
+  backdrop-filter: blur(18px);
+}
+:root[data-theme="dark"] .home-header nav {
+  gap: 4px !important;
+  padding: 4px;
+  border: 1px solid #302b45;
+  border-radius: 999px;
+  background: #151421;
+  box-shadow: 0 8px 24px #0000002e;
+}
+:root[data-theme="dark"] .home-header nav button {
+  border-radius: 999px;
+  padding: 10px 16px;
+  color: #b7b1c9 !important;
+}
+:root[data-theme="dark"] .home-header nav button:hover {
+  background: #29233d;
+  color: #fff !important;
+}
+:root[data-theme="dark"] .home-header .primary-button {
+  border-radius: 999px;
+  background: #8065d6 !important;
+  box-shadow: 0 8px 20px #8065d640 !important;
+}
+:root[data-theme="dark"] .home-header .primary-button:hover {
+  background: #967ce8 !important;
+}
+:root[data-theme="dark"] .landing-hero .hero-eyebrow {
+  color: #bca9ff !important;
+}
+:root[data-theme="dark"] .landing-hero .hero-headline {
+  color: #f8f7ff !important;
+}
+:root[data-theme="dark"] .landing-hero .hero-headline-highlight {
+  background: transparent !important;
+  color: #c3b5ff !important;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 400;
+}
+:root[data-theme="dark"] .landing-hero .hero-description {
+  color: #c2bdce !important;
+}
+:root[data-theme="dark"] .landing-hero .landing-primary {
+  background: #8065d6 !important;
+  box-shadow: 0 8px 20px #8065d640 !important;
+}
+:root[data-theme="dark"] .landing-hero .landing-primary:hover {
+  background: #967ce8 !important;
+}
+:root[data-theme="dark"] .landing-hero .landing-secondary {
+  border-color: #51486b !important;
+  background: #151421 !important;
+  color: #d7ceff !important;
+}
+:root[data-theme="dark"] .landing-hero .landing-secondary:hover {
+  border-color: #8065d6 !important;
+  background: #211b32 !important;
+}
+:root[data-theme="dark"] .landing-hero .mt-23 {
+  color: #aaa5b7 !important;
+}
+:root[data-theme="dark"] .landing-hero .mt-23 button {
+  color: #c3b5ff !important;
+}
+:root[data-theme="dark"] .landing-hero {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 36px;
+  max-width: 1180px;
+  padding-top: 76px;
+  padding-bottom: 74px;
+  text-align: center;
+}
+:root[data-theme="dark"] .landing-hero > div:first-child {
+  max-width: 780px;
+}
+:root[data-theme="dark"] .landing-hero .hero-eyebrow {
+  justify-content: center;
+  margin-bottom: 20px;
+}
+:root[data-theme="dark"] .landing-hero .hero-headline {
+  height: auto;
+  max-width: 820px;
+  margin-inline: auto;
+  font-size: clamp(42px, 6vw, 72px);
+  line-height: .98;
+  letter-spacing: -.065em;
+}
+:root[data-theme="dark"] .landing-hero .hero-headline-highlight {
+  display: inline;
+}
+:root[data-theme="dark"] .landing-hero .hero-description {
+  max-width: 600px;
+  margin: 20px auto 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+:root[data-theme="dark"] .landing-hero .mt-27 { justify-content: center; margin-top: 25px; }
+:root[data-theme="dark"] .landing-hero .mt-23 { justify-content: center; }
+:root[data-theme="dark"] .landing-hero > div:last-child {
+  width: min(100%, 790px);
+  max-width: 790px;
+  justify-self: center;
+}
+:root[data-theme="dark"] .landing-hero > div:last-child > div:first-child {
+  background: radial-gradient(ellipse, #7652aa2e, transparent 68%);
+}
+:root[data-theme="dark"] .landing-hero .study-preview-card {
+  border-radius: 24px;
+  box-shadow: 0 28px 70px #00000066, 0 0 40px #7652aa20;
+  text-align: left;
+}
+:root[data-theme="dark"] .landing-page .home-cta {
+  margin-top: 12px;
+}
 :root[data-theme="dark"] [class*="[&_li_span]:bg-white"] li span { background: var(--theme-pale) !important; color: #c3b5ff !important; }
 
 /* Profile palette roles keep account states readable in both themes. */

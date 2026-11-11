@@ -4,7 +4,7 @@ import { go } from "../components/Layout";
 
 function LegalFrame({ kind, children }: { kind: "privacy" | "terms"; children: ReactNode }) {
   const privacy = kind === "privacy";
-  return <main className="mx-auto w-full max-w-[880px] px-24 pb-72 pt-28 max-680:px-18 max-680:pb-50 max-680:pt-17">
+  return <main className="legal-page mx-auto w-full max-w-[880px] px-24 pb-72 pt-28 max-680:px-18 max-680:pb-50 max-680:pt-17">
     <button className="inline-flex items-center gap-8 py-8 text-13 font-semibold text-slate-600 hover:text-brand" onClick={() => go("home")}><ArrowLeft size={15} /> Back to RecappEdu</button>
     <header className="mx-auto mb-30 mt-35 rounded-[22px] border border-[#dbeafe] bg-[radial-gradient(ellipse_at_90%_0%,#dbeafe_0,transparent_55%),linear-gradient(145deg,#f8fbff,#eff6ff)] px-[clamp(22px,5vw,48px)] py-34 max-680:mx-0 max-680:mb-17 max-680:mt-24 max-680:rounded-18 max-680:px-21 max-680:py-25">
       <span className="mb-19 grid size-43 place-items-center rounded-14 bg-white text-brand shadow-[0_7px_20px_#1d4ed814]">{privacy ? <ShieldCheck size={21} /> : <Scale size={21} />}</span>
