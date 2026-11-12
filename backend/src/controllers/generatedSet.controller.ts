@@ -4,11 +4,15 @@ import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { prisma } from '../lib/prisma.js'
 import { supabase } from '../lib/supabase.js'
 import { env } from '../config/env.js'
-import { fileExtension } from '../utils/file.js'
+import { assertDocumentSignature, fileExtension } from '../utils/file.js'
 import { extractText } from '../utils/extractText.js'
 import { generateStudyItems, AiNotConfiguredError, GenerationFailedError, isAiConfigured, type GeneratedItem } from '../services/ai.service.js'
 import { recordGenerationFailure } from '../services/generationDiagnostics.js'
 import { AiCreditsExhaustedError, completeAiCredit, getAiCreditQuota, refundAiCredit, reserveAiCredit } from '../services/aiCredits.service.js'
+
+/** A hard ceiling on AI output: protects provider cost and keeps one request
+ * from monopolising the model for a minute. */
+const MAX_GENERATED_ITEMS = 60
 
 /**
  * Best-effort cleanup after any post-upload failure: removes the stored file
@@ -179,6 +183,9 @@ export async function generateStudySet(request: Request, response: Response) {
     response.status(400).json({ message: 'No file uploaded. A file is required.' })
     return
   }
+  // Reject renamed/mislabelled files before a Paper row or storage object is
+  // created. Throwing here reaches the shared upload error mapper.
+  assertDocumentSignature(file)
 
   const { courseId, type, length, timePerQuestion } = request.body as Partial<{
     courseId: string
@@ -197,6 +204,11 @@ export async function generateStudySet(request: Request, response: Response) {
 
   if (!Number.isInteger(parsedLength) || parsedLength <= 0) {
     response.status(400).json({ message: 'length must be a positive whole number.' })
+    return
+  }
+
+  if (parsedLength > MAX_GENERATED_ITEMS) {
+    response.status(400).json({ message: `Choose ${MAX_GENERATED_ITEMS} questions or fewer per set.` })
     return
   }
 

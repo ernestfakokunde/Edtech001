@@ -171,12 +171,12 @@ export function GenerateFlow({
           {courseOptions.map((item) => <option value={item.id} key={item.id}>{item.code} · {item.title}</option>)}
         </select>
         {courseLoading && <small>Loading saved courses… you can upload now.</small>}
-        {!courseLoading && <small>Want to group this set? <button className="text-button" onClick={openAddForm}>Add a course</button></small>}
+        {!courseLoading && <small>Want to group this set? <button type="button" className="text-button" onClick={openAddForm}>Add a course</button></small>}
       </div>
       {addingCourse && (
         <div className="border-t border-line py-15">
-          {!school && <p className="mb-10 text-11 font-bold text-[#b45309]">Add your university and faculty on your profile to save a course. You can still continue without one.</p>}
-          <div className="mb-12 grid grid-cols-[.9fr_1.6fr] gap-8 max-760:grid-cols-1 [&>input]:min-h-44 [&>input]:w-full [&>input]:rounded-10 [&>input]:border [&>input]:border-line [&>input]:bg-white [&>input]:px-12 [&>input]:text-12 [&>input]:text-ink [&>input]:outline-none [&>input:focus]:border-outline [&>input:focus]:shadow-[0_0_0_3px_#dbeafe] [&>input:disabled]:bg-[#f8fafc] [&>input:disabled]:text-slate-icon">
+          {!school && <p className="course-warning mb-10 text-11 font-bold">Add your university and faculty on your profile to save a course. You can still continue without one.</p>}
+          <div className="mb-12 grid grid-cols-[.9fr_1.6fr] gap-8 max-760:grid-cols-1 [&>input]:min-h-44 [&>input]:w-full [&>input]:rounded-10 [&>input]:border [&>input]:border-line [&>input]:bg-white [&>input]:px-12 [&>input]:text-12 [&>input]:text-ink [&>input]:outline-none [&>input:focus]:border-outline [&>input:focus]:shadow-[0_0_0_3px_#ede9fe] [&>input:disabled]:bg-[#f8fafc] [&>input:disabled]:text-slate-icon">
             <input value={newCourse.code} onChange={(event) => setNewCourse({ ...newCourse, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" disabled={!school} />
             <input value={newCourse.title} onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })} placeholder="Course title e.g. Data Structures" disabled={!school} />
           </div>
@@ -188,14 +188,14 @@ export function GenerateFlow({
         </div>
       )}
 
-      <label className="upload-zone relative mb-20 flex min-h-[124px] cursor-pointer flex-col items-center gap-6 px-18 py-22 text-center transition hover:border-brand hover:bg-pale [&>span]:block [&>span]:w-full [&>span]:text-13 [&>span]:text-ink [&>small]:block [&>small]:w-full [&>small]:max-w-[420px] [&>small]:font-medium [&>small]:leading-150 [&>input]:pointer-events-none [&>input]:absolute [&>input]:opacity-0">
+      <label className={`upload-zone relative mb-20 flex min-h-[124px] cursor-pointer flex-col items-center gap-6 px-18 py-22 text-center transition ${fileProblem ? "has-error" : ""} [&>span]:block [&>span]:w-full [&>span]:text-13 [&>span]:text-ink [&>span]:[overflow-wrap:anywhere] [&>small]:block [&>small]:w-full [&>small]:max-w-[420px] [&>small]:font-medium [&>small]:leading-150 [&>input]:pointer-events-none [&>input]:absolute [&>input]:opacity-0`}>
         <Upload size={17} />
         <span>{selectedFile ? selectedFile.name : "Choose a PDF or DOCX file"}</span>
         <small>{fileProblem ?? (selectedFile ? "Ready to process" : `The file is used only to generate your private practice set — PDF or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
         <input
           type="file"
           accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          onChange={(event) => { const file = event.target.files?.[0] || null; setSelectedFile(file); setError(file ? uploadFileProblem(file) ?? "" : ""); }}
+          onChange={(event) => { const file = event.target.files?.[0] || null; setSelectedFile(file); setError(""); }}
         />
       </label>
 
@@ -205,7 +205,9 @@ export function GenerateFlow({
           ["quiz", "Quiz", "Timed multiple-choice practice with a score at the end", Check],
         ] as const).map(([value, title, description, Icon]) => (
           <button
-            className={`grid cursor-pointer gap-8 rounded-14 border bg-white p-17 text-left text-ink transition hover:-translate-y-2 hover:border-outline hover:shadow-[0_12px_24px_#1d4ed812] ${mode === value ? "border-brand bg-pale shadow-[0_0_0_3px_#dbeafe]" : "border-line"} [&>strong]:font-grotesk [&>strong]:text-15 [&>strong]:font-bold [&>small]:text-11 [&>small]:leading-150 [&>small]:text-muted [&_.choice-icon]:grid [&_.choice-icon]:size-38 [&_.choice-icon]:place-items-center [&_.choice-icon]:rounded-10 [&_.choice-icon]:bg-pale [&_.choice-icon]:text-brand`}
+            type="button"
+            aria-pressed={mode === value}
+            className={`choice-card grid cursor-pointer gap-8 rounded-14 border p-17 text-left text-ink transition hover:-translate-y-2 hover:shadow-[0_12px_24px_#6d4cc214] [&>strong]:font-grotesk [&>strong]:text-15 [&>strong]:font-bold [&>small]:text-11 [&>small]:leading-150 [&>small]:text-muted [&_.choice-icon]:grid [&_.choice-icon]:size-38 [&_.choice-icon]:place-items-center [&_.choice-icon]:rounded-10 [&_.choice-icon]:bg-pale [&_.choice-icon]:text-brand`}
             key={value}
             onClick={() => setMode(value)}
           >
@@ -216,13 +218,13 @@ export function GenerateFlow({
         ))}
       </div>
 
-      {mode === "quiz" && <p className="-mt-5 mb-18 rounded-r-9 border-l-[3px] border-brand bg-slate-50 px-13 py-11 text-11 leading-[1.55] text-slate-600">Each question has four answer choices. Your answer key and explanations are saved with the quiz, so you can review them after you finish.</p>}
+      {mode === "quiz" && <p className="quiz-note -mt-5 mb-18 rounded-r-9 border-l-[3px] px-13 py-11 text-11 leading-[1.55]">Each question has four answer choices. Your answer key and explanations are saved with the quiz, so you can review them after you finish.</p>}
 
       <div className="mb-18 [&>label]:mb-7 [&>label]:block [&>label]:text-12 [&>label]:font-bold [&>small]:mt-6 [&>small]:block [&>small]:text-11 [&>small]:text-muted">
         <label>Set length</label>
-        <div className="flex flex-wrap gap-8 [&>button]:inline-flex [&>button]:min-h-42 [&>button]:items-center [&>button]:justify-center [&>button]:gap-5 [&>button]:rounded-10 [&>button]:border [&>button]:border-line [&>button]:bg-white [&>button]:px-18 [&>button]:text-13 [&>button]:font-grotesk [&>button]:font-semibold [&>button]:text-muted ">
+        <div className="flex flex-wrap gap-8">
           {LENGTH_OPTIONS.map((option) => (
-            <button key={option} className={length === option ? "border-brand bg-brand text-white shadow-[0_8px_18px_#1d4ed826]" : "border-line text-muted"} onClick={() => setLength(option)}>
+            <button key={option} type="button" aria-pressed={length === option} className="option-pill" onClick={() => setLength(option)}>
               {option}
             </button>
           ))}
@@ -232,9 +234,9 @@ export function GenerateFlow({
       {mode === "quiz" && (
         <div className="mb-18 [&>label]:mb-7 [&>label]:block [&>label]:text-12 [&>label]:font-bold [&>small]:mt-6 [&>small]:block [&>small]:text-11 [&>small]:text-muted">
           <label>Time per question</label>
-          <div className="flex flex-wrap gap-8 [&>button]:inline-flex [&>button]:min-h-42 [&>button]:items-center [&>button]:justify-center [&>button]:gap-5 [&>button]:rounded-10 [&>button]:border [&>button]:border-line [&>button]:bg-white [&>button]:px-18 [&>button]:text-13 [&>button]:font-grotesk [&>button]:font-semibold [&>button]:text-muted ">
+          <div className="flex flex-wrap gap-8">
             {TIME_OPTIONS.map((option) => (
-              <button key={option} className={timePerQuestion === option ? "border-brand bg-brand text-white shadow-[0_8px_18px_#1d4ed826]" : "border-line text-muted"} onClick={() => setTimePerQuestion(option)}>
+              <button key={option} type="button" aria-pressed={timePerQuestion === option} className="option-pill" onClick={() => setTimePerQuestion(option)}>
                 {option}s <Clock3 size={12} />
               </button>
             ))}
@@ -243,10 +245,10 @@ export function GenerateFlow({
       )}
 
       {quota.limit > 0 && (
-        <div className={`mb-14 flex flex-wrap items-center gap-8 rounded-11 border border-[#dbeafe] bg-[#f8fbff] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:bg-[#2858dc] [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
+        <div className={`mb-14 flex flex-wrap items-center gap-8 rounded-11 border border-[#dbeafe] bg-[#f8fbff] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
           <Clock3 size={14} />
           <span>{quota.remaining} of {quota.limit} monthly AI credits remaining{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}.</span>
-          <button type="button" onClick={() => go("profile")}>Go Pro</button>
+          <button type="button" className="bg-brand" onClick={() => go("profile")}>Go Pro</button>
         </div>
       )}
 

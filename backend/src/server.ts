@@ -11,6 +11,7 @@ import { hierarchyRouter } from './routes/hierarchy.routes.js'
 import { generationRouter } from './routes/generation.routes.js'
 import { requireCsrf } from './middleware/csrf.js'
 import { apiErrorHandler } from './middleware/errorHandler.js'
+import { securityHeaders } from './middleware/securityHeaders.js'
 import { prisma } from './lib/prisma.js'
 import { compileOriginMatchers } from './utils/origin.js'
 import { persistPermanentAdmin, RECAPP_ADMIN_EMAIL } from './services/auth.service.js'
@@ -20,9 +21,12 @@ import { learnRouter } from './routes/learn.routes.js'
 function logAiConfiguration() {
   if (env.ai.providers.gemini.apiKey) console.log('[config] Practice generation is ready.')
   else console.warn('[config] Practice generation may be unavailable. Check the server configuration.')
+  if (env.mail.enabled) console.log('[config] Transactional email is ready.')
+  else console.warn('[config] RESEND_API_KEY is not set: new accounts are auto-verified and reset emails cannot be delivered.')
 }
 
 const app = express()
+app.disable('x-powered-by')
 
 // Signature verification needs the exact raw bytes from Paystack.
 app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit: '256kb' }), paystackWebhook)
@@ -31,6 +35,7 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json', limit:
 // X-Forwarded-* headers to see the real protocol and host: `secure` cookies,
 // request logs and any future rate limiting all depend on it.
 app.set('trust proxy', 1)
+app.use(securityHeaders)
 
 // FRONTEND_ORIGIN may list several origins (custom domain, www, previews) and an
 // entry may carry a `*` host wildcard for hosts that mint a new subdomain per

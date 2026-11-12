@@ -3,7 +3,7 @@ import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { AiNotConfiguredError, chatWithStudyMaterial, GenerationFailedError, type StudyChatMessage } from '../services/ai.service.js'
 import { extractText } from '../utils/extractText.js'
-import { fileExtension } from '../utils/file.js'
+import { assertDocumentSignature, fileExtension } from '../utils/file.js'
 import { AiCreditsExhaustedError, completeAiCredit, getAiCreditQuota, refundAiCredit, reserveAiCredit } from '../services/aiCredits.service.js'
 
 const MAX_DOCUMENT_TEXT = 60_000
@@ -16,6 +16,7 @@ export async function readLearnDocument(request: Request, response: Response) {
   const file = uploadFile(request)
   if (!file) { response.status(400).json({ message: 'Choose a PDF to start a study session.' }); return }
   if (fileExtension(file) !== 'pdf') { response.status(415).json({ message: 'Learn with AI currently supports PDF files.' }); return }
+  assertDocumentSignature(file)
   let text: string
   try { text = await extractText(file, 'pdf') }
   catch { response.status(422).json({ message: 'We could not read this PDF. Try another file.' }); return }

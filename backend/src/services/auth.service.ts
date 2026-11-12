@@ -1,5 +1,6 @@
-import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, scrypt as scryptCallback, scryptSync, timingSafeEqual } from 'node:crypto'
 import { promisify } from 'node:util'
+import { env } from '../config/env.js'
 import { prisma, withConnectionRetry } from '../lib/prisma.js'
 
 const scrypt = promisify(scryptCallback)
@@ -9,7 +10,7 @@ type PasswordRecord = { salt: string; hash: string }
 export type SignUpInput = { email: string; password: string; displayName: string; referralCode?: string }
 export type SignInInput = { email: string; password: string }
 
-function normalizeEmail(email: string) { return email.trim().toLowerCase() }
+export function normalizeEmail(email: string) { return email.trim().toLowerCase() }
 function hashToken(token: string) { return createHash('sha256').update(token).digest('hex') }
 
 const DAILY_LOGIN_XP = 100
@@ -80,6 +81,16 @@ async function verifyPassword(password: string, stored: string) {
   return timingSafeEqual(Buffer.from(record.hash, 'hex'), derivedKey)
 }
 
+/**
+ * A real scrypt record checked when the email does not exist. Without it,
+ * unknown addresses return materially faster than wrong passwords and the
+ * endpoint becomes an account-enumeration oracle.
+ */
+const DUMMY_PASSWORD_HASH = JSON.stringify({
+  salt: '0'.repeat(32),
+  hash: scryptSync('recappedu-not-a-real-password', '0'.repeat(32), 64).toString('hex'),
+} satisfies PasswordRecord)
+
 async function createSession(profileId: string) {
   const token = randomBytes(32).toString('base64url')
   await prisma.session.create({ data: { tokenHash: hashToken(token), profileId, expiresAt: new Date(Date.now() + SESSION_DURATION_MS) } })
@@ -92,6 +103,83 @@ async function findReferrer(referralCodeInput: string | undefined) {
   return prisma.profile.findFirst({ where: { referralCode: { equals: code, mode: 'insensitive' } }, select: { id: true, referralCode: true } })
 }
 
+const REFERRAL_XP_BONUS = 20
+
+/**
+ * Pays the referrer once per verified invitee. The audit row is the ledger:
+ * a second call finds it and does nothing, so verification retries are safe.
+ */
+async function awardReferralXp(inviteeId: string) {
+  const invitee = await prisma.profile.findUnique({ where: { id: inviteeId }, select: { id: true, referredById: true } })
+  if (!invitee?.referredById) return
+  const alreadyPaid = await prisma.auditEvent.findFirst({
+    where: { action: 'REFERRAL_ACCEPTED', entityType: 'Profile', entityId: inviteeId },
+    select: { id: true },
+  })
+  if (alreadyPaid) return
+  await prisma.$transaction([
+    prisma.profile.update({ where: { id: invitee.referredById }, data: { xp: { increment: REFERRAL_XP_BONUS } } }),
+    prisma.auditEvent.create({
+      data: {
+        actorId: invitee.referredById,
+        action: 'REFERRAL_ACCEPTED',
+        entityType: 'Profile',
+        entityId: inviteeId,
+        metadata: { xpBonus: REFERRAL_XP_BONUS },
+      },
+    }),
+  ])
+}
+
+/**
+ * Marks the address verified exactly once. Returns false when it was already
+ * verified (or the id/email pair does not match), which callers treat as
+ * idempotent success after checking the email.
+ */
+export async function markEmailVerified(profileId: string, email: string) {
+  const claimed = await prisma.profile.updateMany({
+    where: { id: profileId, email: normalizeEmail(email), emailVerifiedAt: null },
+    data: { emailVerifiedAt: new Date() },
+  })
+  if (claimed.count !== 1) return false
+  await prisma.auditEvent.create({
+    data: { actorId: profileId, action: 'EMAIL_VERIFIED', entityType: 'Profile', entityId: profileId },
+  })
+  await awardReferralXp(profileId)
+  return true
+}
+
+export async function findProfileForPasswordReset(email: string) {
+  return prisma.profile.findUnique({
+    where: { email: normalizeEmail(email) },
+    select: { id: true, email: true, displayName: true, passwordHash: true, emailVerifiedAt: true },
+  })
+}
+
+/**
+ * Replaces the password, proves email ownership at the same time, and revokes
+ * every existing session so a stolen cookie cannot outlive the reset.
+ */
+export async function replacePassword(profileId: string, password: string) {
+  const passwordHash = await hashPassword(password)
+  await prisma.$transaction([
+    prisma.profile.update({
+      where: { id: profileId },
+      data: { passwordHash, emailVerifiedAt: new Date() },
+    }),
+    prisma.session.deleteMany({ where: { profileId } }),
+    prisma.auditEvent.create({
+      data: { actorId: profileId, action: 'PASSWORD_RESET_COMPLETED', entityType: 'Profile', entityId: profileId },
+    }),
+  ])
+}
+
+export async function recordPasswordResetRequest(profileId: string) {
+  await prisma.auditEvent.create({
+    data: { actorId: profileId, action: 'PASSWORD_RESET_REQUESTED', entityType: 'Profile', entityId: profileId },
+  }).catch(() => undefined)
+}
+
 export async function signUp(input: SignUpInput) {
   return withConnectionRetry(async () => {
     const email = normalizeEmail(input.email)
@@ -101,6 +189,9 @@ export async function signUp(input: SignUpInput) {
         passwordHash: await hashPassword(input.password),
         displayName: input.displayName.trim(),
         referralCode: generateReferralCode(input.displayName.trim().split(/\s+/)[0] ?? 're'),
+        // Without a mail provider nobody can complete verification, so the
+        // account is verified immediately instead of being permanently gated.
+        emailVerifiedAt: env.mail.enabled ? null : new Date(),
       },
     })
 
@@ -110,23 +201,17 @@ export async function signUp(input: SignUpInput) {
       data: { actorId: profile.id, action: 'SIGNUP', entityType: 'Profile', entityId: profile.id, metadata: { email } },
     })
 
-    // If the student joined through an invite, link them to the referrer and
-    // credit the referrer with bonus XP. Both steps are best-effort: an invalid
-    // code is ignored rather than blocking signup.
+    // If the student joined through an invite, link them to the referrer. The
+    // XP bonus is only paid once the invitee proves control of their email, so
+    // throwaway sign-ups cannot farm referral points.
     const referrer = await findReferrer(input.referralCode)
     if (referrer) {
       await prisma.profile.update({
         where: { id: profile.id },
         data: { referredById: referrer.id },
       })
-      await prisma.profile.update({
-        where: { id: referrer.id },
-        data: { xp: { increment: 20 } },
-      })
-      await prisma.auditEvent.create({
-        data: { actorId: referrer.id, action: 'REFERRAL_ACCEPTED', entityType: 'Profile', entityId: profile.id, metadata: { referredEmail: email, xpBonus: 20 } },
-      })
     }
+    if (!env.mail.enabled) await awardReferralXp(profile.id)
 
     if (isPermanentAdminEmail(email)) {
       profile.isAdmin = true
@@ -148,11 +233,11 @@ export async function signIn(input: SignInInput) {
       where: { email },
       select: {
         id: true, email: true, passwordHash: true, displayName: true, username: true,
-        isAdmin: true, tier: true, subscriptionPlan: true, xp: true, referralCode: true, premiumUntil: true,
+        isAdmin: true, emailVerifiedAt: true, tier: true, subscriptionPlan: true, xp: true, referralCode: true, premiumUntil: true,
         suspendedUntil: true, createdAt: true,
       },
     })
-    if (!profile || !(await verifyPassword(input.password, profile.passwordHash))) throw new Error('Invalid login credentials')
+    if (!profile || !(await verifyPassword(input.password, profile?.passwordHash ?? DUMMY_PASSWORD_HASH))) throw new Error('Invalid login credentials')
     if (isPermanentAdminEmail(email) && !profile.isAdmin) {
       profile.isAdmin = true
       void persistPermanentAdmin(profile.id)

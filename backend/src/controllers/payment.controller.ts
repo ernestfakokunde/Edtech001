@@ -1,16 +1,24 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import type { Request, Response } from 'express'
+import { Prisma } from '@prisma/client'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { env } from '../config/env.js'
+import { LAUNCH_PLAN_CAP, PAID_PLAN_IDS, PLAN_CATALOG, isPaidPlan, planDurationDays } from '../config/plans.js'
 import { prisma } from '../lib/prisma.js'
 
 const PAYSTACK_API = 'https://api.paystack.co'
-const PLANS = {
-  BASIC: { regular: 99900, launch: 49900 },
-  STUDENT_PLUS: { regular: 199900, launch: 99900 },
-  PREMIUM: { regular: 299900, launch: 149900 },
-} as const
-type PaidPlan = keyof typeof PLANS
+/** A pending checkout holds a launch slot for this long. */
+const LAUNCH_RESERVATION_MS = 30 * 60 * 1000
+
+function launchClaimWhere(): Prisma.PaymentWhereInput {
+  return {
+    launchPrice: true,
+    OR: [
+      { status: 'SUCCESS' },
+      { status: 'PENDING', createdAt: { gte: new Date(Date.now() - LAUNCH_RESERVATION_MS) } },
+    ],
+  }
+}
 
 function profileId(request: Request) { return (request as AuthenticatedRequest).profile.id }
 
@@ -29,33 +37,65 @@ type InitializedTransaction = { authorization_url: string; reference: string }
 type VerifiedTransaction = { status: string; reference: string; amount: number; currency: string; customer?: { email?: string } }
 
 export async function initializeProCheckout(request: Request, response: Response) {
-  const body = request.body as { plan?: string }
-  const plan = body.plan as PaidPlan
-  if (!Object.hasOwn(PLANS, plan)) { response.status(400).json({ message: 'Choose a valid paid plan.' }); return }
+  const body = request.body as { plan?: unknown }
+  if (!isPaidPlan(body.plan)) { response.status(400).json({ message: 'Choose a valid paid plan.' }); return }
+  const plan = body.plan
   if (!env.paystack.secretKey) { response.status(503).json({ message: 'Checkout is not available right now.' }); return }
   const profile = await prisma.profile.findUnique({ where: { id: profileId(request) }, select: { id: true, email: true, premiumUntil: true, tier: true } })
   if (!profile) { response.status(404).json({ message: 'Profile not found.' }); return }
-  const priorPaid = await prisma.payment.findFirst({ where: { profileId: profile.id, status: 'SUCCESS' }, select: { id: true } })
-  const launchPrice = !priorPaid && await prisma.payment.count({ where: { status: 'SUCCESS', launchPrice: true } }) < 500
-  const amount = launchPrice ? PLANS[plan].launch : PLANS[plan].regular
   const reference = `recapp_${Date.now()}_${randomBytes(8).toString('hex')}`
+
   try {
-    await prisma.payment.create({ data: { profileId: profile.id, reference, amount, currency: 'NGN', plan, launchPrice } })
+    /**
+     * Serializable so two simultaneous checkouts cannot both see "499 launch
+     * slots claimed" and both get the launch price. The 30-minute pending
+     * window reserves a slot while the student is still on Paystack.
+     */
+    const payment = await prisma.$transaction(async (transaction) => {
+      const priorPaid = await transaction.payment.findFirst({ where: { profileId: profile.id, status: 'SUCCESS' }, select: { id: true } })
+      const claimed = await transaction.payment.count({ where: launchClaimWhere() })
+      const launchPrice = !priorPaid && claimed < LAUNCH_PLAN_CAP
+      const amount = launchPrice ? PLAN_CATALOG[plan].launchKobo : PLAN_CATALOG[plan].regularKobo
+      return transaction.payment.create({ data: { profileId: profile.id, reference, amount, currency: 'NGN', plan, launchPrice } })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 })
+
     const transaction = await paystackRequest<InitializedTransaction>('/transaction/initialize', {
       method: 'POST',
-      body: JSON.stringify({ email: profile.email, amount, currency: 'NGN', reference, callback_url: env.paystack.frontendReturnUrl, metadata: { profileId: profile.id, plan, launchPrice } }),
+      body: JSON.stringify({ email: profile.email, amount: payment.amount, currency: 'NGN', reference, callback_url: env.paystack.frontendReturnUrl, metadata: { profileId: profile.id, plan, launchPrice: payment.launchPrice } }),
     })
     if (transaction.reference !== reference || !transaction.authorization_url.startsWith('https://checkout.paystack.com/')) throw new Error('PAYMENT_BAD_CHECKOUT')
-    response.json({ authorizationUrl: transaction.authorization_url })
-  } catch {
+    response.json({
+      authorizationUrl: transaction.authorization_url,
+      amountNaira: payment.amount / 100,
+      launchPrice: payment.launchPrice,
+      durationDays: PLAN_CATALOG[plan].durationDays,
+    })
+  } catch (error) {
     await prisma.payment.updateMany({ where: { reference, status: 'PENDING' }, data: { status: 'FAILED' } }).catch(() => undefined)
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+      // Another checkout changed the launch count at the same instant; a
+      // retry recomputes the current price instead of overselling the offer.
+      response.status(409).json({ message: 'Checkout was busy for a moment. Please try again.', code: 'CHECKOUT_RETRY' })
+      return
+    }
     response.status(502).json({ message: 'Could not start checkout. Please try again.' })
   }
 }
 
 export async function getProPricing(_request: Request, response: Response) {
-  const launchStudents = await prisma.payment.count({ where: { status: 'SUCCESS', launchPrice: true } })
-  response.json({ available: Boolean(env.paystack.secretKey), launchSpotsRemaining: Math.max(0, 500 - launchStudents), plans: Object.fromEntries(Object.entries(PLANS).map(([name, price]) => [name, { regularNaira: price.regular / 100, launchNaira: price.launch / 100 }])) , currency: 'NGN' })
+  const claimed = await prisma.payment.count({ where: launchClaimWhere() })
+  response.json({
+    available: Boolean(env.paystack.secretKey),
+    launchSpotsRemaining: Math.max(0, LAUNCH_PLAN_CAP - claimed),
+    currency: 'NGN',
+    plans: Object.fromEntries(PAID_PLAN_IDS.map((id) => [id, {
+      label: PLAN_CATALOG[id].label,
+      credits: PLAN_CATALOG[id].credits,
+      durationDays: PLAN_CATALOG[id].durationDays,
+      regularNaira: PLAN_CATALOG[id].regularKobo / 100,
+      launchNaira: PLAN_CATALOG[id].launchKobo / 100,
+    }])),
+  })
 }
 
 async function verifyAndGrant(reference: string) {
@@ -75,7 +115,7 @@ async function verifyAndGrant(reference: string) {
     const user = await tx.profile.findUnique({ where: { id: payment.profileId }, select: { premiumUntil: true } })
     if (!user) throw new Error('PAYMENT_PROFILE_MISSING')
     const base = user.premiumUntil && user.premiumUntil > new Date() ? user.premiumUntil : new Date()
-    const expiry = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const expiry = new Date(base.getTime() + planDurationDays(payment.plan) * 24 * 60 * 60 * 1000)
     await tx.profile.update({ where: { id: payment.profileId }, data: { tier: 'PREMIUM', subscriptionPlan: payment.plan, premiumUntil: expiry } })
     await tx.auditEvent.create({ data: { actorId: payment.profileId, action: 'PRO_PAYMENT_CONFIRMED', entityType: 'Payment', entityId: payment.id, metadata: { reference, amount: payment.amount, currency: payment.currency, premiumUntil: expiry.toISOString() } } })
   }, { maxWait: 10000, timeout: 15000 })

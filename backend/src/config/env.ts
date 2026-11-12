@@ -111,9 +111,24 @@ export const env = {
   cookieSameSite: cookieSameSite(process.env.COOKIE_SAME_SITE),
   paystack: {
     secretKey: cleanSecret(process.env.PAYSTACK_SECRET_KEY),
-    semesterPriceKobo: Number(process.env.PRO_SEMESTER_PRICE_KOBO ?? 0),
+    // Prices live in config/plans.ts. The old semester-named variable is kept
+    // as a compatibility fallback so existing deployments keep booting.
+    monthlyPriceKobo: Number(process.env.PRO_MONTHLY_PRICE_KOBO ?? process.env.PRO_SEMESTER_PRICE_KOBO ?? 0),
     frontendReturnUrl: cleanSecret(process.env.PAYMENT_RETURN_URL) ?? `${frontendOrigins[0] ?? 'http://localhost:5173'}/#profile`,
   },
+  mail: {
+    /**
+     * Resend is used over HTTPS (no SDK dependency). Without a key, sign-up
+     * auto-verifies the address so no student can be locked out of a
+     * deployment that has not configured email yet; the server logs a warning.
+     */
+    resendApiKey: cleanSecret(process.env.RESEND_API_KEY),
+    from: cleanSecret(process.env.MAIL_FROM) ?? 'RecappEdu <no-reply@recappedu.app>',
+    publicAppUrl: (cleanSecret(process.env.PUBLIC_APP_URL) ?? frontendOrigins[0] ?? 'http://localhost:5173').replace(/\/+$/, ''),
+    enabled: Boolean(cleanSecret(process.env.RESEND_API_KEY)),
+  },
+  /** Set RATE_LIMIT_DISABLED=1 in offline diagnostics only. */
+  rateLimitDisabled: process.env.RATE_LIMIT_DISABLED === '1',
   supabaseUrl: cleanSecret(process.env.SUPABASE_URL),
   supabaseServiceRoleKey: cleanSecret(process.env.SUPABASE_SERVICE_ROLE_KEY),
   supabaseBucket: cleanSecret(process.env.SUPABASE_BUCKET) ?? 'recappedu-papers',

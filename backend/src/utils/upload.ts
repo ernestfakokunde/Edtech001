@@ -1,5 +1,5 @@
 import multer from 'multer'
-import { fileExtension } from './file.js'
+import { FileSignatureMismatchError, fileExtension } from './file.js'
 
 /**
  * The document-upload contract shared by every route that accepts a file
@@ -52,6 +52,9 @@ export function createDocumentUpload() {
  */
 export function describeUploadError(error: unknown): { status: number; code: string; message: string } | null {
   if (error instanceof UnsupportedFileTypeError) {
+    return { status: error.status, code: error.code, message: error.message }
+  }
+  if (error instanceof FileSignatureMismatchError) {
     return { status: error.status, code: error.code, message: error.message }
   }
   if (!(error instanceof multer.MulterError)) return null

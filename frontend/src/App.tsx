@@ -15,7 +15,7 @@ import {
 import { GenerateFlow } from "./pages/Generate";
 import { getRepositoryPaper, recordQuizAttempt, type RepositoryPaper, type GeneratedSet } from "./lib/api";
 import type { Route } from "./types";
-import { errorMessage, getCurrentProfile, hasProfileCache, logout, prefetchCsrfToken, type AuthProfile } from "./lib/api";
+import { errorMessage, getCurrentProfile, hasProfileCache, invalidateProfileCache, logout, prefetchCsrfToken, type AuthProfile } from "./lib/api";
 import { saveQuizResult } from "./lib/results";
 import { ProfilePage } from "./pages/Profile";
 import { AdminPage } from "./pages/Admin";
@@ -24,6 +24,7 @@ import { Onboarding } from "./pages/Onboarding";
 import { RewardsPage } from "./pages/Rewards";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
 import { LearnWithAI } from "./pages/Learn";
+import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from "./pages/AccountAccess";
 import { AnimatePresence, motion } from "motion/react";
 
 const protectedRoutes: Route[] = [
@@ -68,6 +69,9 @@ const ROUTE_TITLES: Record<Route, string> = {
   dashboard: "Dashboard",
   login: "Sign in",
   signup: "Create your account",
+  forgot: "Forgot password",
+  reset: "Choose a new password",
+  "verify-email": "Verify your email",
   personal: "Practise from my PDF",
   learn: "Learn with AI",
   hierarchy: "Browse courses",
@@ -105,6 +109,12 @@ function adminSection(route: Route): string {
 
 function routeParts() {
   return window.location.hash.slice(1).split("/");
+}
+
+/** Hash segments are only decoded for token links, where a malformed escape
+ * must show the "invalid link" screen rather than break the router. */
+function safeDecode(value: string) {
+  try { return decodeURIComponent(value); } catch { return value; }
 }
 
 function App() {
@@ -195,6 +205,18 @@ function App() {
 
   const materialId = route === "material" ? window.location.hash.slice(1).split("/")[1] : undefined;
 
+  /** After a verification link succeeds, replace the cached identity so the
+   * resend banner disappears without forcing a full reload. */
+  const refreshProfile = async () => {
+    invalidateProfileCache();
+    try {
+      const result = await getCurrentProfile();
+      setProfile(result.profile);
+      setIsAdmin(Boolean(result.profile.isAdmin));
+      setAuthStatus("authenticated");
+    } catch { /* the banner stays until the next page load */ }
+  };
+
   useEffect(() => {
     if (route !== "material") return;
     if (!materialId) { go("hierarchy"); return; }
@@ -211,7 +233,7 @@ function App() {
     go(`material/${encodeURIComponent(paper.id)}`);
   };
   const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "learn", "flashcards", "quiz", "results", "profile"];
-  const showHeader = !["login", "signup", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
+  const showHeader = !["login", "signup", "forgot", "reset", "verify-email", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   if (authStatus === "checking" && protectedRoutes.includes(route)) {
     return <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted"><div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted"><motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" /><strong>Checking your session</strong><span>Getting your study desk ready…</span></div></div>;
   }
@@ -226,6 +248,9 @@ function App() {
       {route === "dashboard" && <Dashboard profile={profile} />}
       {route === "login" && <AuthPage mode="login" onAuthenticated={signedIn} notice={authNotice} />}
       {route === "signup" && <AuthPage mode="signup" onAuthenticated={signedIn} />}
+      {route === "forgot" && <ForgotPasswordPage />}
+      {route === "reset" && <ResetPasswordPage token={safeDecode(sub)} />}
+      {route === "verify-email" && <VerifyEmailPage token={safeDecode(sub)} onVerified={() => void refreshProfile()} />}
       {route === "personal" && <PersonalPractice />}
       {route === "learn" && <LearnWithAI />}
       {route === "hierarchy" && <Hierarchy onMaterial={chooseMaterial} />}

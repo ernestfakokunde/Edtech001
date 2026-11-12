@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { clearQuizAttempts, deleteQuizAttempt, generateStudySet, generationQuotaController, getSavedQuiz, listQuizAttempts, listSavedQuizzes, recordQuizAttempt } from '../controllers/generatedSet.controller.js'
-import { requireAuth } from '../middleware/auth.js'
+import { requireAuth, requireVerifiedEmail } from '../middleware/auth.js'
+import { generationLimit } from '../middleware/rateLimit.js'
 import { createDocumentUpload } from '../utils/upload.js'
 
 // Limits, accepted extensions and the 413/415 mapping live in utils/upload.ts
@@ -16,4 +17,4 @@ generationRouter.get('/attempts', listQuizAttempts)
 generationRouter.delete('/attempts', clearQuizAttempts)
 generationRouter.delete('/attempts/:attemptId', deleteQuizAttempt)
 generationRouter.post('/:setId/attempts', recordQuizAttempt)
-generationRouter.post('/', upload.single('file'), generateStudySet)
+generationRouter.post('/', generationLimit, requireVerifiedEmail, upload.single('file'), generateStudySet)

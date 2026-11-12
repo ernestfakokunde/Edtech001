@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Menu, MessageCircle, Moon, ShieldCheck, Sparkles, Sun, UserRound, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Mail, Menu, MessageCircle, Moon, ShieldCheck, Sparkles, Sun, UserRound, X } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { Route } from "../types";
-import type { AuthProfile } from "../lib/api";
+import { resendVerificationEmail, type AuthProfile } from "../lib/api";
 
 export function go(route: Route | string) {
   window.location.hash = route;
 }
 
-export type ProfileIdentity = Pick<AuthProfile, "displayName" | "username" | "email" | "tier" | "subscriptionPlan" | "premiumUntil"> | null | undefined;
+export type ProfileIdentity = Pick<AuthProfile, "displayName" | "username" | "email" | "tier" | "subscriptionPlan" | "premiumUntil" | "emailVerifiedAt"> | null | undefined;
 
 function scrollToHomeSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -253,7 +253,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
       <nav className="flex flex-1 flex-col gap-22 overflow-y-auto p-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(["Study", "Account"] as const).map((group) => (
           <div key={group} className="grid gap-5">
-            <p className="px-12 text-[9px] font-extrabold uppercase tracking-[.13em] text-slate-icon">{group}</p>
+            <p className="px-12 text-[10px] font-extrabold uppercase tracking-[.13em] text-muted">{group}</p>
             {items.filter((item) => item.group === group).map((item) => {
               const active = navActive(item, route, sub);
               return (
@@ -281,12 +281,54 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
           <span className="grid size-30 shrink-0 place-items-center rounded-8 bg-pale"><UserRound size={15} /></span>
           <span>Settings</span>
         </button>
-        <button className={`${userNavBase} text-danger hover:bg-red-50`} onClick={onLogout}>
+        <button className={`${userNavBase} signout-button`} onClick={onLogout}>
           <span className="grid size-30 shrink-0 place-items-center rounded-8 bg-red-50"><LogOut size={15} /></span>
           <span>Sign out</span>
         </button>
       </div>
     </aside>
+  );
+}
+
+/**
+ * Shown across the student shell until the address is confirmed. AI practice
+ * and uploads are gated server-side, so this is the one place a student needs
+ * to act; resending is rate-limited on the API.
+ */
+function EmailVerificationBanner({ email }: { email?: string | null }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  async function resend() {
+    setState("sending");
+    try {
+      await resendVerificationEmail();
+      setState("sent");
+    } catch {
+      setState("error");
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-10 border-b border-warning-surface bg-warning-surface px-18 py-9 text-11 leading-145 text-warning" role="status">
+      <Mail size={15} className="shrink-0" />
+      <span className="min-w-0 flex-1">
+        {state === "sent"
+          ? "Verification email sent. Check your inbox and spam folder."
+          : state === "error"
+            ? "We could not send that email just now. Please try again shortly."
+            : <>Verify <strong className="font-semibold">{email ?? "your email"}</strong> to unlock AI practice and uploads.</>}
+      </span>
+      {state !== "sent" && (
+        <button
+          type="button"
+          className="shrink-0 rounded-8 border border-warning px-10 py-5 text-10 font-bold transition-colors hover:bg-white/40 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={state === "sending"}
+          onClick={() => void resend()}
+        >
+          {state === "sending" ? "Sending…" : state === "error" ? "Try again" : "Resend email"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -351,6 +393,7 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
             </div>
           </div>
         </header>
+        {profile && profile.emailVerifiedAt === null && <EmailVerificationBanner email={profile.email} />}
         {children}
       </div>
     </div>

@@ -51,6 +51,7 @@ model Profile {
   passwordHash     String
   displayName      String?
   username         String?     @unique
+  emailVerifiedAt  DateTime?
   isAdmin          Boolean     @default(false)
   tier             AccountTier @default(FREE)
   xp               Int         @default(0)

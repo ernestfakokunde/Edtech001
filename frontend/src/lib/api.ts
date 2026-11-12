@@ -48,7 +48,8 @@ export function prefetchCsrfToken(): void {
 }
 
 export type AuthResponse = {
-  profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean; tier?: "FREE" | "PREMIUM"; subscriptionPlan?: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; xp?: number; referralCode?: string | null; premiumUntil?: string | null }
+  profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean; emailVerifiedAt?: string | null; tier?: "FREE" | "PREMIUM"; subscriptionPlan?: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; xp?: number; referralCode?: string | null; premiumUntil?: string | null }
+  verificationSent?: boolean
 }
 export type AuthProfile = AuthResponse["profile"]
 
@@ -257,6 +258,25 @@ export async function login(input: { email: string; password: string }) {
   const result = await request<AuthResponse>('/api/auth/login', { method: 'POST', body: JSON.stringify(input) })
   writeProfileCache(result)
   return result
+}
+
+/** Sends a reset link. The server always answers generically, whether or not the address exists. */
+export async function requestPasswordReset(email: string) {
+  return request<{ message: string }>('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })
+}
+
+/** Consumes a one-time reset link and revokes every existing session. */
+export async function resetPassword(input: { token: string; password: string }) {
+  return request<void>('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** Confirms an email-verification link. Safe to call twice. */
+export async function verifyEmailAddress(token: string) {
+  return request<{ verified: boolean; alreadyVerified: boolean }>('/api/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) })
+}
+
+export async function resendVerificationEmail() {
+  return request<{ sent: boolean }>('/api/auth/resend-verification', { method: 'POST', body: JSON.stringify({}) })
 }
 
 /** True when a non-expired identity is already cached — lets App skip its loading flash. */

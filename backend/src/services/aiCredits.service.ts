@@ -1,14 +1,16 @@
 import { Prisma } from '@prisma/client'
+import { PLAN_CATALOG, type PlanId } from '../config/plans.js'
 import { prisma } from '../lib/prisma.js'
 
-export type CreditPlan = 'FREE' | 'BASIC' | 'STUDENT_PLUS' | 'PREMIUM'
+export type CreditPlan = PlanId
 export type CreditFeature = 'LEARN' | 'QUIZ' | 'FLASHCARD'
 
+/** Allowances come from the same catalog that prices the plans. */
 export const AI_CREDIT_LIMITS: Record<CreditPlan, number> = {
-  FREE: 20,
-  BASIC: 100,
-  STUDENT_PLUS: 300,
-  PREMIUM: 600,
+  FREE: PLAN_CATALOG.FREE.credits,
+  BASIC: PLAN_CATALOG.BASIC.credits,
+  STUDENT_PLUS: PLAN_CATALOG.STUDENT_PLUS.credits,
+  PREMIUM: PLAN_CATALOG.PREMIUM.credits,
 }
 
 export class AiCreditsExhaustedError extends Error {

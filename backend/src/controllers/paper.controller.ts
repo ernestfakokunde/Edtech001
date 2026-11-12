@@ -4,7 +4,7 @@ import { env } from '../config/env.js'
 import { prisma } from '../lib/prisma.js'
 import { supabase } from '../lib/supabase.js'
 import { resolveCourse } from '../utils/course.js'
-import { fileExtension } from '../utils/file.js'
+import { assertDocumentSignature, fileExtension } from '../utils/file.js'
 
 function getProfile(request: Request) {
   return (request as AuthenticatedRequest).profile
@@ -26,6 +26,9 @@ export async function uploadPaper(request: Request, response: Response) {
 
   const extension = file ? fileExtension(file) : null
   if (!file || !extension) { response.status(400).json({ message: 'A PDF or Word document is required.' }); return }
+  // Trust the bytes, not the filename: reject a renamed executable or image
+  // before it ever reaches storage.
+  assertDocumentSignature(file)
   const parsedYear = Number(year)
   const hasTypedCourse = Boolean(universityName?.trim() && facultyName?.trim() && courseTitle?.trim() && courseCode?.trim())
   if ((!courseId && !hasTypedCourse) || !description?.trim() || !level?.trim() || !session || !Number.isInteger(parsedYear) || parsedYear < 1900 || !['FIRST', 'SECOND'].includes(semester ?? '')) { response.status(400).json({ message: 'University, faculty, course name, course code, description, level, session, year, and semester are required.' }); return }

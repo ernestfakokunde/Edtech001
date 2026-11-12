@@ -212,6 +212,13 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
                   />
                 </div>
               </label>
+              {!isSignup && (
+                <div className="-mt-5 flex justify-end">
+                  <button type="button" className="text-11 font-semibold text-brand hover:underline" onClick={() => go("forgot")}>
+                    Forgot password?
+                  </button>
+                </div>
+              )}
               {isSignup && (
                 <label className={label}>
                   Confirm password
@@ -245,7 +252,7 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
               {error && <p className="m-0 text-danger text-11 leading-145" role="alert">{error}</p>}
             </form>
           )}
-          <p className="mt-27 text-slate-icon text-11 text-center">
+          <p className="mt-27 text-muted text-11 text-center">
             {isSignup ? "Already have an account?" : "New to RecappEdu?"}{" "}
             <button className="text-brand font-bold" onClick={() => go(isSignup ? "login" : "signup")}>
               {isSignup ? "Sign in" : "Create an account"}
