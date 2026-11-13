@@ -241,8 +241,7 @@ export async function createPromoCode(request: Request, response: Response) {
   if (code.length < 4) { response.status(400).json({ message: 'Use a code of at least 4 letters, numbers, dashes or underscores.' }); return }
   const premiumDays = Number(body.premiumDays ?? 0)
   const xpBonus = Number(body.xpBonus ?? 0)
-  if (!Number.isInteger(premiumDays) || premiumDays < 0 || !Number.isInteger(xpBonus) || xpBonus < 0) { response.status(400).json({ message: 'Pro days and bonus XP must be whole numbers of 0 or more.' }); return }
-  if (premiumDays === 0 && xpBonus === 0) { response.status(400).json({ message: 'Grant at least some Pro days or bonus XP.' }); return }
+  if (!Number.isInteger(premiumDays) || premiumDays < 1 || !Number.isInteger(xpBonus) || xpBonus < 0) { response.status(400).json({ message: 'Student Plus days must be a whole number of 1 or more, and bonus XP must be 0 or more.' }); return }
   const maxRedemptions = body.maxRedemptions == null || body.maxRedemptions === ('' as unknown) ? null : Number(body.maxRedemptions)
   if (maxRedemptions !== null && (!Number.isInteger(maxRedemptions) || maxRedemptions < 1)) { response.status(400).json({ message: 'Max uses must be a whole number of 1 or more (or empty for unlimited).' }); return }
   const expiresAt = body.expiresAt ? new Date(body.expiresAt) : null
@@ -263,7 +262,7 @@ export async function updatePromoCode(request: Request, response: Response) {
   const body = request.body as Partial<{ description: string | null; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean }>
   const data: Record<string, unknown> = {}
   if (body.description !== undefined) data.description = body.description?.trim() || null
-  if (body.premiumDays !== undefined) { if (!Number.isInteger(body.premiumDays) || body.premiumDays < 0) { response.status(400).json({ message: 'Pro days must be a whole number of 0 or more.' }); return } data.premiumDays = body.premiumDays }
+  if (body.premiumDays !== undefined) { if (!Number.isInteger(body.premiumDays) || body.premiumDays < 1) { response.status(400).json({ message: 'Student Plus days must be a whole number of 1 or more.' }); return } data.premiumDays = body.premiumDays }
   if (body.xpBonus !== undefined) { if (!Number.isInteger(body.xpBonus) || body.xpBonus < 0) { response.status(400).json({ message: 'Bonus XP must be a whole number of 0 or more.' }); return } data.xpBonus = body.xpBonus }
   if (body.maxRedemptions !== undefined) data.maxRedemptions = body.maxRedemptions === null ? null : Number(body.maxRedemptions)
   if (body.expiresAt !== undefined) data.expiresAt = body.expiresAt ? new Date(body.expiresAt) : null

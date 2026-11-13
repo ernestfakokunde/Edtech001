@@ -59,7 +59,7 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   return (
     <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
       {firstPractice && (
-        <section className="dashboard-first-practice mb-8 grid grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] items-center gap-28 overflow-hidden rounded-20 border border-[#e5dcf4] bg-[linear-gradient(135deg,#f8f5fc,#eee8fa)] px-[clamp(22px,3vw,38px)] py-30 shadow-[0_18px_38px_#6d4cc214] max-760:grid-cols-1 max-760:rounded-20 max-760:px-20 max-760:py-24">
+        <section className="dashboard-first-practice mb-8 grid grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] items-center gap-28 overflow-hidden rounded-20 border border-[#e5dcf4] bg-[linear-gradient(135deg,#f8f5fcaa,#eee8fa66)] px-[clamp(22px,3vw,38px)] py-30 shadow-[0_18px_38px_#6d4cc214] max-760:grid-cols-1 max-760:rounded-20 max-760:px-20 max-760:py-24">
           <div className="max-w-[560px] text-ink [&_.eyebrow]:mb-10 [&_.eyebrow]:text-brand [&_h2]:mb-10 [&_h2]:text-[clamp(24px,3vw,32px)] [&>p:not(.eyebrow)]:m-0 [&>p:not(.eyebrow)]:text-13 [&>p:not(.eyebrow)]:leading-170 [&>p:not(.eyebrow)]:text-muted">
             <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand"><Sparkles size={14} /> Start here</p>
             <h2>Create your first practice</h2>
@@ -68,7 +68,7 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
               practice you can mark yourself — flashcards to flip, or a timed
               quiz that scores you.
             </p>
-            <ol className="mt-18 grid list-none gap-8 p-0 [&>li]:flex [&>li]:items-center [&>li]:gap-9 [&>li]:text-12 [&>li]:text-muted [&_li_span]:grid [&_li_span]:size-20 [&_li_span]:shrink-0 [&_li_span]:place-items-center [&_li_span]:rounded-full [&_li_span]:bg-white [&_li_span]:font-grotesk [&_li_span]:text-10 [&_li_span]:font-bold [&_li_span]:text-brand">
+            <ol className="mt-18 grid list-none gap-8 bg-transparent p-0 [&>li]:flex [&>li]:items-center [&>li]:gap-9 [&>li]:bg-transparent [&>li]:text-12 [&>li]:text-muted [&_li_span]:grid [&_li_span]:size-20 [&_li_span]:shrink-0 [&_li_span]:place-items-center [&_li_span]:rounded-full [&_li_span]:border [&_li_span]:border-brand/40 [&_li_span]:bg-transparent [&_li_span]:font-grotesk [&_li_span]:text-10 [&_li_span]:font-bold [&_li_span]:text-brand">
               <li><span>1</span> Bring a PDF — yours, or one from your course archive</li>
               <li><span>2</span> Choose flashcards or a timed quiz</li>
               <li><span>3</span> Answer, get scored, and watch your streak build</li>

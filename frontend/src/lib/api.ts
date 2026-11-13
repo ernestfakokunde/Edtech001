@@ -488,13 +488,13 @@ export function getReferralInfo() {
   return request<{ referral: ReferralInfo }>('/api/profile/referral', { method: 'GET' })
 }
 export function getMyMissions() {
-  return request<{ xp: number; tier: "FREE" | "PREMIUM"; dailyLogin: { xpReward: number; claimedToday: boolean; claimedAt: string | null }; missions: ProfileMission[] }>('/api/profile/missions', { method: 'GET' })
+  return request<{ xp: number; level: number; tier: "FREE" | "PREMIUM"; dailyLogin: { xpReward: number; claimedToday: boolean; claimedAt: string | null }; missions: ProfileMission[] }>('/api/profile/missions', { method: 'GET' })
 }
 export function claimMission(missionId: string) {
-  return request<{ xp: number; xpEarned: number; missionId: string }>(`/api/profile/missions/${encodeURIComponent(missionId)}/claim`, { method: 'POST', body: JSON.stringify({}) })
+  return request<{ xp: number; level: number; xpEarned: number; missionId: string }>(`/api/profile/missions/${encodeURIComponent(missionId)}/claim`, { method: 'POST', body: JSON.stringify({}) })
 }
 export function getMyXp() {
-  return request<{ xp: number; tier: "FREE" | "PREMIUM"; premiumUntil?: string | null }>('/api/profile/xp', { method: 'GET' })
+  return request<{ xp: number; level: number; tier: "FREE" | "PREMIUM"; premiumUntil?: string | null }>('/api/profile/xp', { method: 'GET' })
 }
 export function deleteAccount(confirmText: string) {
   return request<void>('/api/profile', { method: 'DELETE', body: JSON.stringify({ confirmText }) })
@@ -519,7 +519,7 @@ export function deleteAdminMission(missionId: string) {
   return request<void>(`/api/admin/missions/${encodeURIComponent(missionId)}`, { method: 'DELETE' })
 }
 
-// ── Admin: promo codes (issue free Pro days / bonus XP) ─────────────────────
+// ── Admin: promo codes (issue Student Plus days / bonus XP) ────────────────
 export type AdminPromoCode = { id: string; code: string; description: string | null; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean; createdAt: string; redemptionCount: number; createdBy: string | null }
 
 export function getAdminPromoCodes() {
@@ -536,7 +536,7 @@ export function deleteAdminPromoCode(codeId: string) {
 }
 
 // Student side: redeem a promo code from the profile page.
-export type RedeemResult = { redeemed: boolean; code: string; premiumDays: number; xpBonus: number; premiumUntil: string | null; xp: number }
+export type RedeemResult = { redeemed: boolean; code: string; plan: "STUDENT_PLUS"; credits: number; premiumDays: number; xpBonus: number; premiumUntil: string | null; xp: number; level: number }
 export function redeemPromoCode(code: string) {
   return request<RedeemResult>('/api/profile/redeem', { method: 'POST', body: JSON.stringify({ code }) })
 }

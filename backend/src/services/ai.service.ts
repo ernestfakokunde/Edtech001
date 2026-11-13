@@ -175,7 +175,8 @@ export async function generateStudyItems(input: { text: string; kind: GeneratedS
     // when the reply itself was unusable (fenced prose, wrong shape, cut off).
     // A transport failure — bad key, rate limit, outage — is not fixed by
     // asking again, so it fails over immediately.
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const maxAttempts = input.kind === 'FLASHCARD' ? 1 : 2
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
         const { text: payload, model } = await provider.complete(SYSTEM_PROMPT, attempt === 1 ? prompt : `${prompt}${REPAIR_INSTRUCTION}`, input.pdfBase64 ? { pdfBase64: input.pdfBase64 } : undefined)
         return mapItems(parsePayloadItems(payload), input.kind, provider.id, model, input.length)

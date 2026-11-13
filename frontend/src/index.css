@@ -946,6 +946,20 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 .dashboard-first-practice .secondary-button { border-color: #d5c9eb !important; background: #ffffffb8 !important; color: var(--theme-brand) !important; }
 :root[data-theme="dark"] .dashboard-first-practice { border-color: #3a334c; background: linear-gradient(135deg, #242031, #1d1a26); }
 :root[data-theme="dark"] .dashboard-first-practice .secondary-button { border-color: #4b4162 !important; background: #2b2638 !important; }
+.dashboard-first-practice ol,
+.dashboard-first-practice ol li { background: transparent !important; }
+.dashboard-first-practice .secondary-button { backdrop-filter: blur(8px); }
+.choice-card { background: color-mix(in srgb, var(--theme-surface) 58%, transparent); border-color: var(--theme-line); }
+.choice-card[aria-pressed="true"] { border-color: var(--theme-brand); background: color-mix(in srgb, var(--theme-pale) 68%, transparent); }
+.upload-zone { border: 1.5px dashed color-mix(in srgb, var(--theme-brand) 42%, var(--theme-line)); border-radius: 18px; background: color-mix(in srgb, var(--theme-surface) 42%, transparent); color: var(--theme-brand); }
+.upload-zone:hover, .upload-zone:focus-within { border-color: var(--theme-brand); background: color-mix(in srgb, var(--theme-pale) 46%, transparent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-brand) 12%, transparent); }
+.upload-zone.has-error { border-color: #dc2626; background: color-mix(in srgb, #fef2f2 54%, transparent); color: #b91c1c; }
+:root[data-theme="dark"] .upload-zone.has-error { background: #3a242b; color: #ff9ca7; }
+@keyframes flashcard-content-in {
+  from { opacity: 0; transform: perspective(700px) rotateY(-12deg) translateY(5px); }
+  to { opacity: 1; transform: perspective(700px) rotateY(0) translateY(0); }
+}
+.flashcard-content { animation: flashcard-content-in 260ms ease-out both; }
 
 :root[data-theme="dark"] .profile-page .profile-avatar-success { background: #18302c; color: #8de0cb; }
 :root[data-theme="dark"] .profile-status-success { color: #8de0cb !important; }

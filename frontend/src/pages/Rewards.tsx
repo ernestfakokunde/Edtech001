@@ -7,6 +7,7 @@ export function RewardsPage() {
   const [missions, setMissions] = useState<ProfileMission[]>([]);
   const [referral, setReferral] = useState<ReferralInfo | null>(null);
   const [xp, setXp] = useState(0);
+  const [level, setLevel] = useState(1);
   const [dailyLogin, setDailyLogin] = useState<{ xpReward: number; claimedToday: boolean } | null>(null);
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
@@ -15,7 +16,7 @@ export function RewardsPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    getMyMissions().then((result) => { setMissions(result.missions); setXp(result.xp); setDailyLogin(result.dailyLogin); }).catch(() => setError("Could not load rewards."));
+    getMyMissions().then((result) => { setMissions(result.missions); setXp(result.xp); setLevel(result.level); setDailyLogin(result.dailyLogin); }).catch(() => setError("Could not load rewards."));
     getReferralInfo().then((result) => setReferral(result.referral)).catch(() => undefined);
   }, []);
 
@@ -24,7 +25,7 @@ export function RewardsPage() {
     try {
       const result = await claimMission(id);
       setMissions((current) => current.map((mission) => mission.id === id ? { ...mission, claimedAt: new Date().toISOString() } : mission));
-      setXp(result.xp); setMessage(`${result.xpEarned} XP added to your rewards.`);
+      setXp(result.xp); setLevel(result.level); setMessage(`${result.xpEarned} XP added to your rewards.`);
     } catch (reason) { setError(errorMessage(reason, "Could not claim this reward.")); }
     finally { setWorking(""); }
   }
@@ -33,8 +34,8 @@ export function RewardsPage() {
     setWorking("promo"); setError(""); setMessage("");
     try {
       const result = await redeemPromoCode(code.trim());
-      setXp(result.xp); setCode("");
-      const reward = [result.premiumDays ? `${result.premiumDays} Pro days` : "", result.xpBonus ? `${result.xpBonus} bonus XP` : ""].filter(Boolean).join(" and ");
+      setXp(result.xp); setLevel(result.level); setCode("");
+      const reward = [`Student Plus (${result.credits} AI credits/month)`, result.xpBonus ? `${result.xpBonus} bonus XP` : ""].filter(Boolean).join(" and ");
       setMessage(reward ? `Code redeemed — you received ${reward}.` : "Code redeemed.");
     } catch (reason) { setError(errorMessage(reason, "Could not redeem that code.")); }
     finally { setWorking(""); }
@@ -47,7 +48,7 @@ export function RewardsPage() {
   }
 
   return <PageFrame eyebrow="Your rewards" title="Rewards" subtitle="Earn XP, invite friends, and redeem codes in one place." back="dashboard">
-    <div className="mb-17 flex items-center gap-13 rounded-16 border border-[#e4e5f6] bg-[linear-gradient(110deg,#f1f0ff,#fff)] px-20 py-17"><span className="grid size-42 place-items-center rounded-13 bg-white text-brand"><Award size={22} /></span><div><small className="block text-10 text-muted">Your XP balance</small><strong className="mt-2 block font-grotesk text-[20px] font-extrabold text-[#312e81]">{xp} XP</strong></div><span className="ml-auto text-11 text-muted max-760:hidden">Keep studying to unlock more</span></div>
+    <div className="mb-17 flex items-center gap-13 rounded-16 border border-[#e4e5f6] bg-[linear-gradient(110deg,#f1f0ff,#fff)] px-20 py-17"><span className="grid size-42 place-items-center rounded-13 bg-white text-brand"><Award size={22} /></span><div><small className="block text-10 text-muted">Level {level}</small><strong className="mt-2 block font-grotesk text-[20px] font-extrabold text-[#312e81]">{xp} XP</strong></div><span className="ml-auto text-11 text-muted max-760:hidden">{200 - (xp % 200)} XP to level {level + 1}</span></div>
     {message && <p className="mt-16 flex items-center gap-7 text-12 font-semibold text-[#047857]"><Check size={15} /> {message}</p>}
     {error && <p className="mt-16 flex items-center gap-7 text-12 font-semibold text-red-700">{error}</p>}
     <div className="grid grid-cols-[1.1fr_.9fr] items-start gap-22 max-760:grid-cols-1">

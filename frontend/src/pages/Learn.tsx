@@ -84,12 +84,15 @@ export function LearnWithAI() {
     event?.preventDefault();
     const asked = (suggestion ?? question).trim();
     if (!asked || (!documentText && !activeTopic) || busy) return;
+    const history = messages.slice(-8);
     setQuestion(""); setError(""); setBusy(true);
+    setMessages((current) => [...current, { role: "user", content: asked }]);
     try {
-      const result = await askLearnTutor({ documentText: documentText || undefined, topic: activeTopic || undefined, question: asked, history: messages.slice(-8) });
-      setMessages((current) => [...current, { role: "user", content: asked }, { role: "assistant", content: result.answer }]);
+      const result = await askLearnTutor({ documentText: documentText || undefined, topic: activeTopic || undefined, question: asked, history });
+      setMessages((current) => [...current, { role: "assistant", content: result.answer }]);
       setQuota(result.quota);
     } catch (reason) {
+      setMessages((current) => current.slice(0, -1));
       setQuestion(asked);
       setError(errorMessage(reason, "Your tutor could not answer just now. Please try again."));
     } finally { setBusy(false); }
@@ -165,7 +168,7 @@ export function LearnWithAI() {
 
         <form className="sticky bottom-0 mb-8 grid grid-cols-[auto_1fr_auto] items-end gap-8 rounded-15 border border-line bg-white px-12 py-10 shadow-card focus-within:border-outline focus-within:shadow-focus" onSubmit={(event) => sessionTitle ? void sendQuestion(event) : void startTopicSession(event)}>
           <button className="grid size-34 place-items-center rounded-10 text-muted hover:bg-pale hover:text-brand" type="button" aria-label="Attach a PDF" disabled={uploading} onClick={() => fileInput.current?.click()}><Paperclip size={17} /></button>
-          <textarea className="max-h-120 min-h-34 resize-none border-0 bg-transparent py-8 text-13 leading-150 text-ink outline-0 placeholder:text-muted" rows={1} value={sessionTitle ? question : topicInput} onChange={(event) => sessionTitle ? setQuestion(event.target.value) : setTopicInput(event.target.value)} onKeyDown={sessionTitle ? onComposerKeyDown : undefined} placeholder={sessionTitle ? (isTopicSession ? `Ask about ${activeTopic}...` : "Ask a question about your PDF...") : "Start with a topic..." } disabled={busy || uploading} aria-label={sessionTitle ? "Ask your AI tutor" : "Topic to learn"} />
+          <textarea className="max-h-120 min-h-34 resize-none border-0 bg-transparent py-8 text-13 leading-150 text-ink outline-0 placeholder:text-muted" rows={1} value={sessionTitle ? question : topicInput} onChange={(event) => sessionTitle ? setQuestion(event.target.value) : setTopicInput(event.target.value)} onKeyDown={sessionTitle ? onComposerKeyDown : undefined} placeholder={sessionTitle ? (isTopicSession ? `Ask about ${activeTopic}...` : "Ask a question about your PDF...") : "Start with a topic..." } disabled={busy || uploading} aria-label={sessionTitle ? "Ask your AI tutor" : "Topic to learn"} aria-keyshortcuts={sessionTitle ? "Enter" : undefined} />
           <button className="grid size-34 place-items-center rounded-10 bg-brand text-white disabled:cursor-not-allowed disabled:opacity-40" type="submit" aria-label={sessionTitle ? "Send question" : "Start learning"} disabled={sessionTitle ? (!question.trim() || busy) : topicInput.trim().length < 2}><ArrowUp size={17} /></button>
         </form>
         <p className="mb-14 text-center text-10 text-muted">AI can make mistakes. Check important details against your original material.</p>

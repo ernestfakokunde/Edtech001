@@ -95,7 +95,7 @@ export function AdminPage({ section }: { section: string }) {
   const [missionForm, setMissionForm] = useState({ title: "", description: "", xpReward: 10 });
   const [creatingMission, setCreatingMission] = useState(false);
   const [promoCodes, setPromoCodes] = useState<AdminPromoCode[]>([]);
-  const [promoForm, setPromoForm] = useState({ code: "", description: "", premiumDays: 7, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
+  const [promoForm, setPromoForm] = useState({ code: "", description: "", premiumDays: 30, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
   const [creatingPromo, setCreatingPromo] = useState(false);
   const [copiedCode, setCopiedCode] = useState("");
   const [promoteEmail, setPromoteEmail] = useState("");
@@ -229,7 +229,7 @@ export function AdminPage({ section }: { section: string }) {
         maxRedemptions: promoForm.maxRedemptions.trim() ? Math.max(1, Math.round(Number(promoForm.maxRedemptions))) : null,
         expiresAt: promoForm.expiresAt ? new Date(`${promoForm.expiresAt}T23:59:59`).toISOString() : null,
       });
-      setPromoForm({ code: "", description: "", premiumDays: 7, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
+      setPromoForm({ code: "", description: "", premiumDays: 30, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
       setNotice(`Code ${result.promo.code} created — copy it and share it with students.`);
       await loadPromoCodes();
     } catch (reason) { setError(errorMessage(reason, "Could not create the code.")); }
@@ -547,7 +547,7 @@ export function AdminPage({ section }: { section: string }) {
                 <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Promo codes</p><h2>Give out free Pro</h2></div>
                 <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Ticket size={14} /> {promoCodes.length} codes</span>
               </div>
-              <p className="mb-14 mt-[-10px] text-12 text-muted">Share a code and students redeem it on their study desk or profile — free Pro days and/or bonus XP, once per student. Leave uses empty for unlimited.</p>
+              <p className="mb-14 mt-[-10px] text-12 text-muted">Share a code and students redeem Student Plus with 300 monthly AI credits, plus any bonus XP, once per student. Leave uses empty for unlimited.</p>
               <div className={`${adminFormGrid} grid-cols-[minmax(200px,240px)_minmax(220px,1fr)_auto] items-end`}>
                 <label className={adminLabel}>
                   Code
@@ -560,8 +560,8 @@ export function AdminPage({ section }: { section: string }) {
                 <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none h-42 w-full" disabled={!promoForm.code.trim() || creatingPromo} onClick={() => void createPromo()}><Plus size={15} /> Create code</button>
                 <div className="col-span-full grid grid-cols-4 gap-10 max-760:grid-cols-2">
                   <label className={adminLabel}>
-                    Pro days
-                    <input className={adminField} type="number" min={0} value={promoForm.premiumDays} onChange={(event) => setPromoForm({ ...promoForm, premiumDays: Number(event.target.value) })} />
+                    Student Plus days
+                    <input className={adminField} type="number" min={1} value={promoForm.premiumDays} onChange={(event) => setPromoForm({ ...promoForm, premiumDays: Number(event.target.value) })} />
                   </label>
                   <label className={adminLabel}>
                     Bonus XP
@@ -830,7 +830,8 @@ function PromoRow({ promo, copied, onCopy, onToggle, onDelete }: { promo: AdminP
   const usedUp = promo.maxRedemptions !== null && promo.redemptionCount >= promo.maxRedemptions;
   const expired = Boolean(promo.expiresAt && new Date(promo.expiresAt) <= new Date());
   const grants: string[] = [];
-  if (promo.premiumDays > 0) grants.push(`${promo.premiumDays} day${promo.premiumDays === 1 ? "" : "s"} of Pro`);
+  if (promo.premiumDays > 0) grants.push(`${promo.premiumDays} day${promo.premiumDays === 1 ? "" : "s"} of Student Plus`);
+  grants.push("300 AI credits/month");
   if (promo.xpBonus > 0) grants.push(`${promo.xpBonus} bonus XP`);
   return (
     <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-white px-14 py-12 max-760:flex-col max-760:items-start ${!promo.isActive || usedUp || expired ? "opacity-55" : ""}`}>

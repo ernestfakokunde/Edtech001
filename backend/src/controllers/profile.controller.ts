@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { prisma } from '../lib/prisma.js'
 import { supabase } from '../lib/supabase.js'
 import { env } from '../config/env.js'
+import { PLAN_CATALOG } from '../config/plans.js'
 import { slugify } from '../utils/course.js'
 
 /**
@@ -223,6 +224,7 @@ export async function listMissions(request: Request, response: Response) {
   const claimed = new Map(claims.map((claim) => [claim.missionId, claim.claimedAt]))
   response.json({
     xp: profile?.xp ?? 0,
+    level: Math.floor((profile?.xp ?? 0) / 200) + 1,
     tier: profile?.tier ?? 'FREE',
     dailyLogin: { xpReward: 100, claimedToday: Boolean(dailyLoginClaim), claimedAt: dailyLoginClaim?.createdAt ?? null },
     missions: missions.map((mission) => ({
@@ -251,7 +253,7 @@ export async function claimMission(request: Request, response: Response) {
     await prisma.userClaimedMission.create({ data: { profileId: me, missionId } })
     const profile = await prisma.profile.update({ where: { id: me }, data: { xp: { increment: mission.xpReward } }, select: { xp: true } })
     await prisma.auditEvent.create({ data: { actorId: me, action: 'MISSION_CLAIMED', entityType: 'Mission', entityId: missionId, metadata: { xpEarned: mission.xpReward } } })
-    response.status(201).json({ xp: profile.xp, xpEarned: mission.xpReward, missionId })
+    response.status(201).json({ xp: profile.xp, level: Math.floor(profile.xp / 200) + 1, xpEarned: mission.xpReward, missionId })
   } catch { response.status(500).json({ message: 'Could not claim that mission.' }) }
 }
 
@@ -317,10 +319,16 @@ export async function redeemPromoCode(request: Request, response: Response) {
         const current = await transaction.profile.findUnique({ where: { id: me }, select: { premiumUntil: true, xp: true } })
         if (!current) throw new Error('PROFILE_MISSING')
         const base = current.premiumUntil && current.premiumUntil > new Date() ? current.premiumUntil : new Date()
-        const premiumUntil = promo.premiumDays > 0 ? new Date(base.getTime() + promo.premiumDays * 86400000) : current.premiumUntil
+        const giftedDays = promo.premiumDays > 0 ? promo.premiumDays : 30
+        const premiumUntil = new Date(base.getTime() + giftedDays * 86400000)
         const updated = await transaction.profile.update({
           where: { id: me },
-          data: { premiumUntil, xp: promo.xpBonus > 0 ? { increment: promo.xpBonus } : undefined },
+          data: {
+            tier: 'PREMIUM',
+            subscriptionPlan: 'STUDENT_PLUS',
+            premiumUntil,
+            xp: promo.xpBonus > 0 ? { increment: promo.xpBonus } : undefined,
+          },
           select: { premiumUntil: true, xp: true },
         })
         await transaction.codeRedemption.create({ data: { codeId: promo.id, profileId: me } })
@@ -329,7 +337,7 @@ export async function redeemPromoCode(request: Request, response: Response) {
       { maxWait: 10000, timeout: 15000 },
     )
     await prisma.auditEvent.create({ data: { actorId: me, action: 'PROMO_CODE_REDEEMED', entityType: 'PromoCode', entityId: promo.id, metadata: { code: promo.code, premiumDays: promo.premiumDays, xpBonus: promo.xpBonus } } })
-    response.json({ redeemed: true, code: promo.code, premiumDays: promo.premiumDays, xpBonus: promo.xpBonus, premiumUntil: result.premiumUntil, xp: result.xp })
+    response.json({ redeemed: true, code: promo.code, plan: 'STUDENT_PLUS', credits: PLAN_CATALOG.STUDENT_PLUS.credits, premiumDays: promo.premiumDays > 0 ? promo.premiumDays : 30, xpBonus: promo.xpBonus, premiumUntil: result.premiumUntil, xp: result.xp, level: Math.floor(result.xp / 200) + 1 })
   } catch {
     response.status(500).json({ message: 'Could not redeem that code right now.' })
   }
@@ -337,5 +345,6 @@ export async function redeemPromoCode(request: Request, response: Response) {
 
 export async function getXp(request: Request, response: Response) {
   const me = await prisma.profile.findUnique({ where: { id: getProfile(request).id }, select: { xp: true, tier: true, premiumUntil: true } })
-  response.json({ xp: me?.xp ?? 0, tier: me?.tier ?? 'FREE', premiumUntil: me?.premiumUntil ?? null })
+  const xp = me?.xp ?? 0
+  response.json({ xp, level: Math.floor(xp / 200) + 1, tier: me?.tier ?? 'FREE', premiumUntil: me?.premiumUntil ?? null })
 }

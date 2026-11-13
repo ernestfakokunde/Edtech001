@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Check,
   Clock3,
+  Download,
   FlipHorizontal2,
   Loader2,
   Plus,
@@ -22,9 +23,10 @@ import {
   type GenerationQuota,
   type MySchool,
 } from "../lib/api";
+import { downloadQuestionPaperPdf } from "../lib/questionPdf";
 import type { Mode } from "../types";
 
-const LENGTH_OPTIONS = [10, 20, 30, 60];
+const LENGTH_OPTIONS = [5, 10, 15, 20];
 const TIME_OPTIONS = [30, 60] as const;
 
 type CourseOption = { id: string; code: string; title: string };
@@ -59,6 +61,7 @@ export function GenerateFlow({
   const [length, setLength] = useState(LENGTH_OPTIONS[0]);
   const [timePerQuestion, setTimePerQuestion] = useState<30 | 60>(30);
   const [busy, setBusy] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [error, setError] = useState("");
   const [quota, setQuota] = useState<GenerationQuota>({ tier: "FREE", limit: 20, used: 0, remaining: 20, resetsAt: "" });
 
@@ -135,6 +138,28 @@ export function GenerateFlow({
       setError(errorMessage(reason, "Could not generate the study set."));
       setBusy(false);
     }
+
+  }
+
+  async function downloadQuestionPaper() {
+    if (!selectedFile || fileProblem || pdfBusy || quota.remaining === 0) return;
+    setPdfBusy(true);
+    setError("");
+    try {
+      const set = await generateStudySet({
+        file: selectedFile,
+        ...(course ? { courseId: course.id } : {}),
+        type: "QUIZ",
+        length,
+        timePerQuestion: 60,
+      });
+      downloadQuestionPaperPdf(selectedFile.name, set);
+      setQuota((current) => ({ ...current, used: current.used + 1, remaining: Math.max(0, current.remaining - 1) }));
+    } catch (reason) {
+      setError(errorMessage(reason, "Could not create the question paper."));
+    } finally {
+      setPdfBusy(false);
+    }
   }
 
   if (busy) {
@@ -145,7 +170,7 @@ export function GenerateFlow({
           <strong className="font-grotesk text-18 font-bold text-ink">Generating your {mode === "quiz" ? "quiz" : "flashcard"} set</strong>
           <span className="max-w-[300px] text-12 leading-160">{mode === "quiz"
             ? "Quiz generation usually takes less than a minute. We’re reading your material, writing exam-style questions, and checking the answer choices. Larger files may take a little longer, so please keep this page open."
-            : `We’re reading your material and creating ${length} study cards. This usually takes under a minute.`}</span>
+            : `We’re reading your material and creating ${length} concise study cards. Smaller sets finish faster.`}</span>
           <div className="mt-12 flex flex-wrap justify-center gap-8 [&>span]:rounded-full [&>span]:bg-[#f1f5fb] [&>span]:px-10 [&>span]:py-4 [&>span]:text-10 [&>span]:font-bold [&>span]:text-muted [&>.active]:bg-brand [&>.active]:text-white"><span className="active">Upload material</span><span>Review key topics</span><span className="max-w-[300px] text-12 leading-160">{mode === "quiz" ? "Build quiz and answers" : "Create study cards"}</span></div>
         </div>
       </main>
@@ -188,7 +213,7 @@ export function GenerateFlow({
         </div>
       )}
 
-      <label className={`upload-zone relative mb-20 flex min-h-[124px] cursor-pointer flex-col items-center gap-6 px-18 py-22 text-center transition ${fileProblem ? "has-error" : ""} [&>span]:block [&>span]:w-full [&>span]:text-13 [&>span]:text-ink [&>span]:[overflow-wrap:anywhere] [&>small]:block [&>small]:w-full [&>small]:max-w-[420px] [&>small]:font-medium [&>small]:leading-150 [&>input]:pointer-events-none [&>input]:absolute [&>input]:opacity-0`}>
+      <label className={`upload-zone relative mb-20 flex min-h-[138px] cursor-pointer flex-col items-center justify-center gap-7 px-18 py-24 text-center transition ${fileProblem ? "has-error" : ""} [&>span]:block [&>span]:w-full [&>span]:text-13 [&>span]:font-bold [&>span]:text-ink [&>span]:[overflow-wrap:anywhere] [&>small]:block [&>small]:w-full [&>small]:max-w-[420px] [&>small]:font-medium [&>small]:leading-150 [&>input]:pointer-events-none [&>input]:absolute [&>input]:opacity-0`}>
         <Upload size={17} />
         <span>{selectedFile ? selectedFile.name : "Choose a PDF or DOCX file"}</span>
         <small>{fileProblem ?? (selectedFile ? "Ready to process" : `The file is used only to generate your private practice set — PDF or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
@@ -254,13 +279,23 @@ export function GenerateFlow({
 
       {error && <small className="upload-form-error">{error}</small>}
 
-      <button
-        className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none w-full"
-        disabled={!selectedFile || fileProblem !== null || quota.remaining === 0}
-        onClick={() => void submit()}
-      >
-        <Sparkles size={16} /> Create {mode === "quiz" ? "quiz" : "flashcards"}
-      </button>
+      <div className="grid gap-9">
+        <button
+          className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none w-full"
+          disabled={!selectedFile || fileProblem !== null || quota.remaining === 0 || pdfBusy}
+          onClick={() => void submit()}
+        >
+          <Sparkles size={16} /> Create {mode === "quiz" ? "quiz" : "flashcards"}
+        </button>
+        <button
+          type="button"
+          className="inline-flex min-h-40 w-fit items-center justify-center justify-self-center gap-7 rounded-9 border border-line bg-transparent px-14 text-12 font-bold text-brand transition-colors hover:border-brand hover:bg-pale disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={!selectedFile || fileProblem !== null || quota.remaining === 0 || busy}
+          onClick={() => void downloadQuestionPaper()}
+        >
+          <Download size={16} /> {pdfBusy ? "Preparing question paper…" : `Download question paper (${length} questions)`}
+        </button>
+      </div>
     </PageFrame>
   );
 }

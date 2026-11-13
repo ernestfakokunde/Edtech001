@@ -494,13 +494,15 @@ export function Flashcards({
   return (
     <PlayerFrame count={`Card ${Math.min(index + 1, Math.max(total, 1))} of ${total}`} onExit={onExit}>
       {card ? (
-        <button className="flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center gap-16 rounded-20 border border-line bg-white px-26 py-32 text-ink shadow-[0_20px_36px_rgba(15,23,42,.06)] transition-shadow hover:shadow-[0_24px_42px_rgba(15,23,42,.09)] max-680:min-h-[240px] max-680:px-16 max-680:py-20 [&>strong]:max-w-full [&>strong]:whitespace-pre-wrap [&>strong]:text-[19px] [&>strong]:font-bold [&>strong]:leading-[1.5] [&>strong]:[overflow-wrap:anywhere] [&>small]:inline-flex [&>small]:items-center [&>small]:gap-6 [&>small]:text-11 [&>small]:text-muted" onClick={() => setFlipped(!flipped)}>
-          <span className="rounded-999 bg-pale px-10 py-4 text-10 font-bold uppercase text-brand">{flipped ? "Answer" : "Question"}</span>
-          <strong>{flipped ? card.answer : card.prompt}</strong>
-          {flipped && card.explanation && <p className="max-w-420 text-12 leading-160 text-slate-700 max-680:max-w-full">{card.explanation}</p>}
-          <small>
-            <RotateCcw size={14} /> Tap to {flipped ? "see question" : "reveal answer"}
-          </small>
+        <button className="flashcard-surface flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center gap-16 rounded-20 border border-line bg-white px-26 py-32 text-ink shadow-[0_20px_36px_rgba(15,23,42,.06)] transition-shadow hover:shadow-[0_24px_42px_rgba(15,23,42,.09)] max-680:min-h-[240px] max-680:px-16 max-680:py-20" onClick={() => setFlipped(!flipped)}>
+          <div className="flashcard-content grid justify-items-center gap-16" key={`${index}-${flipped ? "answer" : "question"}`}>
+            <span className="rounded-999 bg-pale px-10 py-4 text-10 font-bold uppercase text-brand">{flipped ? "Answer" : "Question"}</span>
+            <strong className="max-w-full whitespace-pre-wrap text-[19px] font-bold leading-[1.5] [overflow-wrap:anywhere]">{flipped ? card.answer : card.prompt}</strong>
+            {flipped && card.explanation && <p className="max-w-420 text-12 leading-160 text-slate-700 max-680:max-w-full">{card.explanation}</p>}
+            <small className="inline-flex items-center gap-6 text-11 text-muted">
+              <RotateCcw size={14} /> Tap to {flipped ? "see question" : "reveal answer"}
+            </small>
+          </div>
         </button>
       ) : (
         <div className="grid min-h-[320px] w-full place-items-center rounded-20 border border-dashed border-[#bfdbfe] bg-[#f8fbff] text-12 text-muted">This set has no cards yet.</div>
