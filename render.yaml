@@ -57,7 +57,7 @@ services:
       # "https://recapp-pi.vercel.app,https://app.example.com".
       - key: FRONTEND_ORIGIN
         value: "https://recapp-pi.vercel.app,https://recapp-pi*.vercel.app"
-      # --- Cookie policy ---------------------------------------------------
+      # --- Cookies & email --------------------------------------------------
       # 'lax' when the app shares this API's registrable domain (app.example.com
       # → api.example.com), 'none' when the app is on a different site
       # (Vercel → onrender.com). 'none' needs HTTPS, which Render provides.
@@ -66,13 +66,23 @@ services:
       # with 'lax' the browser drops both and every sign-in fails.
       - key: COOKIE_SAME_SITE
         value: none
+      # Transactional email (verification links, password resets). Verify the
+      # sending domain in Resend before setting MAIL_FROM. Without a key the
+      # API auto-verifies new accounts so nobody is locked out.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: PUBLIC_APP_URL
+        value: "https://recapp-pi.vercel.app"
       # --- Pro checkout ----------------------------------------------------
       # In the Paystack Dashboard, register https://recappedu-api.onrender.com/api/payments/webhook
       # for charge.success and charge.failed events.
       # Paste the sk_live_ key from Paystack Dashboard ? Settings ? API Keys.
+      # Paid plans are monthly (30 days); prices live in backend/src/config/plans.ts.
       - key: PAYSTACK_SECRET_KEY
         sync: false
-      - key: PRO_SEMESTER_PRICE_KOBO
+      - key: PRO_MONTHLY_PRICE_KOBO
         sync: false
       - key: PAYMENT_RETURN_URL
         value: "https://recapp-pi.vercel.app/#profile"

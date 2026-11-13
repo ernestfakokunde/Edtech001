@@ -1,12 +1,18 @@
+import { randomUUID } from 'node:crypto'
 import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { prisma } from '../lib/prisma.js'
 import { supabase } from '../lib/supabase.js'
 import { env } from '../config/env.js'
-import { fileExtension } from '../utils/file.js'
+import { assertDocumentSignature, fileExtension } from '../utils/file.js'
 import { extractText } from '../utils/extractText.js'
 import { generateStudyItems, AiNotConfiguredError, GenerationFailedError, isAiConfigured, type GeneratedItem } from '../services/ai.service.js'
 import { recordGenerationFailure } from '../services/generationDiagnostics.js'
+import { AiCreditsExhaustedError, completeAiCredit, getAiCreditQuota, refundAiCredit, reserveAiCredit } from '../services/aiCredits.service.js'
+
+/** A hard ceiling on AI output: protects provider cost and keeps one request
+ * from monopolising the model for a minute. */
+const MAX_GENERATED_ITEMS = 60
 
 /**
  * Best-effort cleanup after any post-upload failure: removes the stored file
@@ -53,40 +59,14 @@ async function getQuickPracticeCourse() {
   })
 }
 
-const FREE_DAILY_QUIZ_LIMIT = 5
-
-function startOfUtcDay() {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-}
-
-/**
- * Daily quota for quiz generations. Free accounts get a fixed number of quiz
- * runs a day; PREMIUM (payment integration comes later) is unlimited. This is
- * deliberately UTC-day based so the count resets predictably.
- */
-/** Premium = the paying tier, or an active promo-code window (premiumUntil). */
-function effectiveTier(profile: { tier: 'FREE' | 'PREMIUM'; premiumUntil: Date | null }): 'FREE' | 'PREMIUM' {
-  if (profile.tier === 'PREMIUM') return 'PREMIUM'
-  return profile.premiumUntil && profile.premiumUntil > new Date() ? 'PREMIUM' : 'FREE'
-}
-
 export async function generationQuotaController(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
-  const quota = await getGenerationQuota(profile.id, effectiveTier(profile))
+  const quota = await getGenerationQuota(profile.id)
   response.json(quota)
 }
 
-export async function getGenerationQuota(userId: string, tier: 'FREE' | 'PREMIUM') {
-  const limit = tier === 'PREMIUM' ? null : FREE_DAILY_QUIZ_LIMIT
-  const used = tier === 'PREMIUM' ? 0 : await prisma.generatedSet.count({ where: { userId, type: 'QUIZ', createdAt: { gte: startOfUtcDay() } } })
-  return {
-    tier,
-    limit,
-    used,
-    remaining: limit === null ? null : Math.max(0, limit - used),
-    resetsAt: new Date(startOfUtcDay().getTime() + 86400000).toISOString(),
-  }
+export async function getGenerationQuota(userId: string) {
+  return getAiCreditQuota(userId)
 }
 
 /**
@@ -203,6 +183,9 @@ export async function generateStudySet(request: Request, response: Response) {
     response.status(400).json({ message: 'No file uploaded. A file is required.' })
     return
   }
+  // Reject renamed/mislabelled files before a Paper row or storage object is
+  // created. Throwing here reaches the shared upload error mapper.
+  assertDocumentSignature(file)
 
   const { courseId, type, length, timePerQuestion } = request.body as Partial<{
     courseId: string
@@ -224,19 +207,14 @@ export async function generateStudySet(request: Request, response: Response) {
     return
   }
 
-  if (type === 'QUIZ' && (!parsedTimePerQuestion || ![30, 60].includes(parsedTimePerQuestion))) {
-    response.status(400).json({ message: 'timePerQuestion is required for QUIZ type and must be 30 or 60.' })
+  if (parsedLength > MAX_GENERATED_ITEMS) {
+    response.status(400).json({ message: `Choose ${MAX_GENERATED_ITEMS} questions or fewer per set.` })
     return
   }
 
-  // Daily free quota for quizzes: FREE accounts get a set number per day,
-  // PREMIUM accounts (payments arrive later) are unlimited.
-  if (type === 'QUIZ' && effectiveTier(profile) !== 'PREMIUM') {
-    const quota = await getGenerationQuota(profile.id, effectiveTier(profile))
-    if (quota.remaining === 0) {
-      response.status(429).json({ message: `You have used all ${quota.limit} free quiz generations for today. Come back tomorrow or upgrade to PREMIUM for unlimited quizzes.`, quota })
-      return
-    }
+  if (type === 'QUIZ' && (!parsedTimePerQuestion || ![30, 60].includes(parsedTimePerQuestion))) {
+    response.status(400).json({ message: 'timePerQuestion is required for QUIZ type and must be 30 or 60.' })
+    return
   }
 
   const course = courseId
@@ -301,6 +279,21 @@ export async function generateStudySet(request: Request, response: Response) {
     return
   }
 
+  const creditRequestId = randomUUID()
+  let creditReservation: { id: string } | undefined
+  try {
+    creditReservation = await reserveAiCredit(profile.id, type === 'QUIZ' ? 'QUIZ' : 'FLASHCARD', creditRequestId)
+  } catch (reason) {
+    if (reason instanceof AiCreditsExhaustedError) {
+      await rollbackPersonalPaper(paper.id, path)
+      const quota = await getGenerationQuota(profile.id)
+      response.status(429).json({ message: `You have used all ${quota.limit} AI credits for this month. Your credits reset next month.`, quota })
+      return
+    }
+    await rollbackPersonalPaper(paper.id, path)
+    throw reason
+  }
+
   // 12–13. Send the extracted text to the AI, then parse and strictly validate
   // its JSON response before writing anything to the database. The server
   // chooses the configured generation service automatically.
@@ -326,6 +319,7 @@ export async function generateStudySet(request: Request, response: Response) {
       detail: reason instanceof Error ? reason.message : String(reason),
     })
     await rollbackPersonalPaper(paper.id, path)
+    if (creditReservation) await refundAiCredit(creditReservation.id)
     if (reason instanceof AiNotConfiguredError) {
       response.status(503).json({ code: 'AI_NOT_CONFIGURED', message: 'Practice generation is temporarily unavailable. Please try again later.' })
     } else if (reason instanceof GenerationFailedError && reason.code === 'AI_BAD_KEY') {
@@ -370,10 +364,12 @@ export async function generateStudySet(request: Request, response: Response) {
         items: { orderBy: { position: 'asc' }, include: { question: true } },
       },
     })
+    if (creditReservation) await completeAiCredit(creditReservation.id)
     response.status(201).json({ set })
   } catch (reason) {
     console.error('[generate] saving the generated set failed:', reason)
     await rollbackPersonalPaper(paper.id, path)
+    if (creditReservation) await refundAiCredit(creditReservation.id)
     response.status(500).json({ message: 'The study set could not be saved. Please try again.' })
   }
 }

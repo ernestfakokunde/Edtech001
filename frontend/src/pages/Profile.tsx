@@ -1,13 +1,32 @@
-import { useEffect, useState } from "react";
-import { BookOpen, Check, GraduationCap, Plus, Save, Trash2, UserRound, Sparkles, Loader2, Crown } from "lucide-react";
-import { PageFrame, go } from "../components/Layout";
+import { useEffect, useState, type ReactNode } from "react";
+import { BookOpen, ChevronRight, Crown, GraduationCap, Plus, Save, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { PageFrame, displayNameOf, go, initialsOf } from "../components/Layout";
 import {
-  addMyCourse, deleteAccount, errorMessage, getCurrentProfile, getMyCourses, removeMyCourse, saveMySchool, updateProfile, type AuthProfile, getProPricing, startProCheckout, getPaymentStatus,
+  addMyCourse, deleteAccount, errorMessage, getCurrentProfile, getMyCourses, removeMyCourse, saveMySchool, updateProfile, type AuthProfile, getPaymentStatus, startPlanCheckout,
 } from "../lib/api";
 import type { MySchool, SavedCourse } from "../lib/api";
 
-// Same per-student cap the backend enforces on POST /api/profile/courses.
 const MAX_SAVED_COURSES = 10;
+type ProfileTab = "personal" | "school" | "plans" | "account";
+
+const inputClass = "min-h-44 w-full rounded-10 border border-line bg-surface px-12 text-12 text-ink outline-none transition focus:border-outline focus:shadow-focus disabled:bg-pale disabled:text-slate-icon";
+const buttonClass = "inline-flex min-h-40 items-center justify-center gap-7 rounded-9 bg-brand px-14 text-12 font-bold text-white transition hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-50";
+
+function SectionCard({ icon, eyebrow, title, description, children, className = "" }: { icon: ReactNode; eyebrow?: string; title: string; description?: string; children: ReactNode; className?: string }) {
+  return (
+    <section className={`profile-card ${className}`}>
+      <header className="profile-card-heading">
+        <span className="profile-card-icon">{icon}</span>
+        <div className="min-w-0">
+          {eyebrow && <p className="profile-eyebrow">{eyebrow}</p>}
+          <h2>{title}</h2>
+          {description && <p>{description}</p>}
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
 
 export function ProfilePage({ profile: initialProfile = null }: { profile?: AuthProfile | null }) {
   const [profile, setProfile] = useState(() => ({
@@ -17,8 +36,6 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
     tier: (initialProfile?.tier ?? "FREE") as "FREE" | "PREMIUM",
     premiumUntil: initialProfile?.premiumUntil ?? null,
   }));
-  // The school is entered once here; Generate and the course picker read it
-  // from the backend afterwards, so the hierarchy is never walked again.
   const [school, setSchool] = useState<MySchool>(null);
   const [schoolForm, setSchoolForm] = useState({ universityName: "", facultyName: "" });
   const [courses, setCourses] = useState<SavedCourse[]>([]);
@@ -27,8 +44,9 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [proPrice, setProPrice] = useState<number | null>(null);
   const [proBusy, setProBusy] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"BASIC" | "STUDENT_PLUS" | "PREMIUM">("BASIC");
+  const [tab, setTab] = useState<ProfileTab>("personal");
 
   useEffect(() => {
     getCurrentProfile().then((result) => setProfile({
@@ -38,101 +56,166 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
       tier: result.profile.tier ?? "FREE",
       premiumUntil: result.profile.premiumUntil ?? null,
     })).catch(() => setError("Could not load your profile."));
-    getMyCourses().then((result) => { setSchool(result.school); setSchoolForm(result.school ? { universityName: result.school.universityName, facultyName: result.school.facultyName } : { universityName: "", facultyName: "" }); setCourses(result.courses); }).catch(() => setError("Could not load your school details."));
-    getProPricing().then((price) => { setProPrice(price.available ? price.amountNaira : null); }).catch(() => undefined);
+    getMyCourses().then((result) => {
+      setSchool(result.school);
+      setSchoolForm(result.school ? { universityName: result.school.universityName, facultyName: result.school.facultyName } : { universityName: "", facultyName: "" });
+      setCourses(result.courses);
+    }).catch(() => setError("Could not load your school details."));
     const match = `${window.location.search}&${window.location.hash}`.match(/[?&]reference=([^&]+)/);
     if (match) {
-      const reference = decodeURIComponent(match[1]);
-      getPaymentStatus(reference).then(async (result) => {
+      getPaymentStatus(decodeURIComponent(match[1])).then((result) => {
         if (result.status === "SUCCESS") {
           setProfile((current) => ({ ...current, tier: result.tier ?? "FREE", premiumUntil: result.premiumUntil ?? null }));
-          setMessage("Your Pro plan is active.");
-        } else if (result.status === "PENDING") setMessage("Payment received. Your Pro access will appear as soon as confirmation completes.");
+          setMessage("Your monthly plan is active.");
+        } else if (result.status === "PENDING") setMessage("Payment received. Your plan access will appear as soon as confirmation completes.");
         else setError("That payment was not completed. You can try again.");
       }).catch(() => setMessage("We’re checking your payment. Refresh this page shortly."));
     }
   }, []);
 
+  function reportSuccess(text: string) { setError(""); setMessage(text); }
+
   async function upgradeToPro() {
     setError(""); setProBusy(true);
-    try { const result = await startProCheckout(); window.location.assign(result.authorizationUrl); }
+    try { const result = await startPlanCheckout(selectedPlan); window.location.assign(result.authorizationUrl); }
     catch (reason) { setError(errorMessage(reason, "Could not start checkout. Please try again.")); setProBusy(false); }
   }
 
   async function saveProfile() {
-    setError(""); setMessage("");
-    try { const result = await updateProfile({ displayName: profile.displayName, username: profile.username }); setProfile((current) => ({ ...current, displayName: result.profile.displayName ?? "", username: result.profile.username ?? "" })); setMessage("Profile saved."); }
-    catch (reason) { setError(errorMessage(reason, "Could not save your profile.")); }
+    try {
+      const result = await updateProfile({ displayName: profile.displayName, username: profile.username });
+      setProfile((current) => ({ ...current, displayName: result.profile.displayName ?? "", username: result.profile.username ?? "" }));
+      reportSuccess("Profile saved.");
+    } catch (reason) { setError(errorMessage(reason, "Could not save your profile.")); }
   }
-  // Both names are resolve-or-create on the backend (by slug), so re-entering
-  // the same university or faculty never duplicates rows.
+
   async function saveSchool() {
-    setError(""); setMessage("");
     if (!schoolForm.universityName.trim()) { setError("Enter your university name."); return; }
     try {
       const result = await saveMySchool({ universityName: schoolForm.universityName.trim(), facultyName: schoolForm.facultyName.trim() });
-      setSchool(result.school); setSchoolForm({ universityName: result.school.universityName, facultyName: result.school.facultyName });
-      setMessage("School details saved.");
-    }
-    catch (reason) { setError(errorMessage(reason, "Could not save your school.")); }
+      setSchool(result.school);
+      setSchoolForm({ universityName: result.school.universityName, facultyName: result.school.facultyName });
+      reportSuccess("School details saved.");
+    } catch (reason) { setError(errorMessage(reason, "Could not save your school.")); }
   }
-  // Add a course by code and title; school details are optional.
+
   async function addCourse() {
-    setError(""); setMessage("");
     if (!courseForm.code.trim() || !courseForm.title.trim()) { setError("Enter the course code and title."); return; }
     try {
       const result = await addMyCourse({ code: courseForm.code.trim(), title: courseForm.title.trim() });
-      setCourses((current) => (current.some((item) => item.id === result.course.id) ? current : [...current, result.course]));
+      setCourses((current) => current.some((item) => item.id === result.course.id) ? current : [...current, result.course]);
       setCourseForm({ code: "", title: "" });
-      setMessage(`${result.course.code} added to your courses.`);
-    }
-    catch (reason) { setError(errorMessage(reason, "Could not save the course.")); }
+      reportSuccess(`${result.course.code} added to your courses.`);
+    } catch (reason) { setError(errorMessage(reason, "Could not save the course.")); }
   }
-  // Removing only unlinks the course from this profile; the shared Course
-  // entity (with any papers or generated sets) stays in the repository.
+
   async function removeCourse(courseId: string) {
-    setError(""); setMessage("");
-    try { await removeMyCourse(courseId); setCourses((current) => current.filter((item) => item.id !== courseId)); setMessage("Course removed from your list."); }
-    catch (reason) { setError(errorMessage(reason, "Could not remove the course.")); }
+    try {
+      await removeMyCourse(courseId);
+      setCourses((current) => current.filter((item) => item.id !== courseId));
+      reportSuccess("Course removed from your list.");
+    } catch (reason) { setError(errorMessage(reason, "Could not remove the course.")); }
   }
 
   async function confirmDeletion() {
-    setError(""); setMessage("");
     if (deleteConfirm.trim().toLowerCase() !== "delete") { setError("Type the word “delete” to confirm."); return; }
     setDeleting(true);
-    try {
-      await deleteAccount(deleteConfirm);
-      window.location.hash = "home";
-    } catch (reason) { setError(errorMessage(reason, "Could not delete your account.")); setDeleting(false); }
+    try { await deleteAccount(deleteConfirm); window.location.hash = "home"; }
+    catch (reason) { setError(errorMessage(reason, "Could not delete your account.")); setDeleting(false); }
   }
 
-  return <PageFrame eyebrow="Account" title="Your profile" subtitle="Manage your personal details, school, courses, and account." back="dashboard">
-    <div className="profile-layout">
-      <section className="profile-card profile-identity"><div className="profile-card-heading"><span className="profile-icon"><UserRound size={20} /></span><div><p className="eyebrow">Account</p><h2>Personal details</h2></div><div className={`profile-tier-chip ${tierLabel(profile.tier, profile.premiumUntil) === "Free" ? "" : "pro"}`}>{tierLabel(profile.tier, profile.premiumUntil)}</div></div><label className="field"><span>Display name</span><input value={profile.displayName} onChange={(event) => setProfile({ ...profile, displayName: event.target.value })} placeholder="How should we call you?" /></label><label className="field"><span>Username</span><input value={profile.username} onChange={(event) => setProfile({ ...profile, username: event.target.value })} placeholder="e.g. ernest_ade" /><small>3-24 lowercase letters, numbers, or underscores.</small></label><label className="field"><span>Email</span><input value={profile.email} disabled /></label><button className="primary-button" onClick={() => void saveProfile()}><Save size={16} /> Save profile</button>{!isProActive(profile.tier, profile.premiumUntil) && <div className="pro-upgrade-box"><div className="pro-upgrade-icon"><Crown size={18} /></div><div className="pro-upgrade-copy"><strong>Go Pro for a semester</strong><p>Unlimited quiz practice for 90 days{proPrice !== null ? ` · ${formatProPrice(proPrice)}` : ""}.</p></div><button className="primary-button" disabled={proBusy} onClick={() => void upgradeToPro()}>{proBusy ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />} Go Pro</button></div>}</section>
-      <section className="profile-card school-card"><div className="profile-card-heading"><span className="profile-icon blue"><GraduationCap size={20} /></span><div><p className="eyebrow">Optional</p><h2>School details</h2></div></div><p className="profile-help">Add your university and faculty if you want to browse or share papers in the course repository.</p><label className="field"><span>University</span><input value={schoolForm.universityName} onChange={(event) => setSchoolForm({ ...schoolForm, universityName: event.target.value })} placeholder="e.g. University of Lagos" /></label><label className="field"><span>Faculty</span><input value={schoolForm.facultyName} onChange={(event) => setSchoolForm({ ...schoolForm, facultyName: event.target.value })} placeholder="e.g. Faculty of Science" /></label><button className="primary-button" onClick={() => void saveSchool()}><Save size={16} /> {school ? "Update details" : "Save details"}</button>{school && <small className="profile-saved-note"><Check size={13} /> Saved: {school.universityName} · {school.facultyName}</small>}</section>
-      <section className="profile-card courses-card"><div className="profile-card-heading"><span className="profile-icon blue"><BookOpen size={20} /></span><div><p className="eyebrow">My courses</p><h2>Saved courses</h2></div></div><p className="profile-help">Up to {MAX_SAVED_COURSES} courses for quick access. Add just a code and a name; you can use these while practising without entering school details.</p><div className="course-form-grid two"><input value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" /><input value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Course title e.g. Data Structures" /></div><div className="profile-course-actions"><button className="secondary-button" disabled={!courseForm.code.trim() || !courseForm.title.trim() || courses.length >= MAX_SAVED_COURSES} onClick={() => void addCourse()}><Plus size={15} /> Add course</button><span className="course-count">{courses.length} of {MAX_SAVED_COURSES}</span></div>{courses.length > 0 && <ul className="my-course-list">{courses.map((course) => <li className="my-course-row" key={course.id}><div><strong>{course.code}</strong><span>{course.title}</span></div><button className="ghost-button danger" aria-label={`Remove ${course.code}`} onClick={() => void removeCourse(course.id)}><Trash2 size={14} /></button></li>)}</ul>}</section>
-    <section className="profile-card danger-card"><div className="profile-card-heading"><span className="profile-icon red"><Trash2 size={20} /></span><div><p className="eyebrow">Danger zone</p><h2>Delete your account</h2></div></div><p className="profile-help">Deleting your account removes your profile, papers, study sets and account history. Some deletion records may be retained for up to 6 months under our data retention policy. To confirm, type <strong>delete</strong> below.</p><label className="field"><input value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} placeholder="Type 'delete' to confirm" /></label><button className="danger-button" disabled={deleting} onClick={() => void confirmDeletion()}>{deleting ? "Deleting…" : "Permanently delete account"}</button></section>
-    </div>{message && <p className="profile-feedback success"><Check size={15} /> {message}</p>}{error && <p className="profile-feedback error">{error}</p>}
-    <section className="profile-card plan-details">
-      <div className="profile-card-heading"><span className="profile-icon gold"><Crown size={20} /></span><div><p className="eyebrow">Plans</p><h2>Free vs Pro</h2></div><span className="plan-details-current">{isProActive(profile.tier, profile.premiumUntil) ? "Your plan: Pro" : "Your plan: Free"}</span></div>
-      <p className="profile-help">Compare what is included before you decide whether Pro is right for your study routine.</p>
-      <div className="plan-comparison">
-        <div className={`plan-option ${!isProActive(profile.tier, profile.premiumUntil) ? "current" : ""}`}>
-          <div className="plan-option-heading"><strong>Free</strong><span>Get started</span></div>
-          <ul><li><Check size={14} /> Daily quiz generations</li><li><Check size={14} /> Flashcard practice</li><li><Check size={14} /> Course repository access</li><li><Check size={14} /> Upload and save study materials</li></ul>
-        </div>
-        <div className={`plan-option pro ${isProActive(profile.tier, profile.premiumUntil) ? "current" : ""}`}>
-          <div className="plan-option-heading"><strong>Pro</strong><span>{proPrice !== null ? formatProPrice(proPrice) : "90-day access"}</span></div>
-          <ul><li><Check size={14} /> Unlimited quiz generations</li><li><Check size={14} /> Flashcard practice</li><li><Check size={14} /> Course repository access</li><li><Check size={14} /> Upload and save study materials</li></ul>
-        </div>
+  const activePlan = isProActive(profile.tier, profile.premiumUntil);
+  const name = displayNameOf(profile);
+
+  return (
+    <PageFrame eyebrow="Account" title="Your profile" subtitle="Keep your account, study context, and plan in one place." back="dashboard">
+      <div className="profile-page w-full max-w-[1020px]">
+        <section className="profile-identity">
+          <div className="profile-monogram">{initialsOf(profile)}</div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-9">
+              <h2 className="truncate">{name}</h2>
+              <span className={`profile-tier-chip ${activePlan ? "pro" : ""}`}>{tierLabel(profile.tier, profile.premiumUntil)}</span>
+            </div>
+            <p>{profile.email}</p>
+            <small>{profile.username ? `@${profile.username}` : "Add a username to make your profile easier to find."}</small>
+          </div>
+          <button className={`${buttonClass} max-560:w-full`} onClick={() => setTab("personal")}><UserRound size={15} /> Edit profile</button>
+        </section>
+
+        <nav className="profile-tabs" aria-label="Profile sections">
+          {([
+            ["personal", "Personal"],
+            ["school", "School & courses"],
+            ["plans", "Plans"],
+            ["account", "Account"],
+          ] as [ProfileTab, string][]).map(([key, label]) => (
+            <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}>{label}</button>
+          ))}
+        </nav>
+
+        {(message || error) && <p className={`profile-notice ${error ? "error" : "success"}`}>{error || message}</p>}
+
+        {tab === "personal" && (
+          <div className="profile-content-grid">
+            <SectionCard icon={<UserRound size={18} />} eyebrow="Personal" title="Personal information" description="The details used across your RecappEdu account.">
+              <div className="profile-form-grid">
+                <label><span>Display name</span><input className={inputClass} value={profile.displayName} onChange={(event) => setProfile({ ...profile, displayName: event.target.value })} placeholder="How should we call you?" /></label>
+                <label><span>Username</span><input className={inputClass} value={profile.username} onChange={(event) => setProfile({ ...profile, username: event.target.value })} placeholder="e.g. ernest_ade" /><small>3–24 lowercase letters, numbers, or underscores.</small></label>
+                <label className="wide"><span>Email</span><input className={inputClass} value={profile.email} disabled /></label>
+              </div>
+              <div className="profile-card-actions"><button className={buttonClass} onClick={() => void saveProfile()}><Save size={15} /> Save changes</button></div>
+            </SectionCard>
+            <SectionCard icon={<GraduationCap size={18} />} eyebrow="Study context" title="Your learning setup" description={school ? `${school.universityName}${school.facultyName ? ` · ${school.facultyName}` : ""}` : "Add your school and courses to personalise your study space."}>
+              <button className="profile-link-row" onClick={() => setTab("school")}><span>{school ? "Manage school and courses" : "Add school details"}</span><ChevronRight size={16} /></button>
+              <button className="profile-link-row" onClick={() => setTab("plans")}><span>{activePlan ? "View your active plan" : "See monthly AI credit plans"}</span><ChevronRight size={16} /></button>
+            </SectionCard>
+          </div>
+        )}
+
+        {tab === "school" && (
+          <div className="profile-content-grid">
+            <SectionCard icon={<GraduationCap size={18} />} eyebrow="Optional" title="School details" description="Used to organise your course repository and study materials.">
+              <div className="profile-form-grid">
+                <label><span>University</span><input className={inputClass} value={schoolForm.universityName} onChange={(event) => setSchoolForm({ ...schoolForm, universityName: event.target.value })} placeholder="e.g. University of Lagos" /></label>
+                <label><span>Faculty</span><input className={inputClass} value={schoolForm.facultyName} onChange={(event) => setSchoolForm({ ...schoolForm, facultyName: event.target.value })} placeholder="e.g. Faculty of Science" /></label>
+              </div>
+              <div className="profile-card-actions"><button className={buttonClass} onClick={() => void saveSchool()}><Save size={15} /> {school ? "Update details" : "Save details"}</button></div>
+            </SectionCard>
+            <SectionCard icon={<BookOpen size={18} />} eyebrow={`${courses.length} of ${MAX_SAVED_COURSES}`} title="Saved courses" description="Quick access to the courses you study most.">
+              <div className="profile-add-course"><input className={inputClass} value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value })} placeholder="Course code" /><input className={inputClass} value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} placeholder="Course title" /><button className={buttonClass} onClick={() => void addCourse()} disabled={courses.length >= MAX_SAVED_COURSES}><Plus size={15} /> Add</button></div>
+              {courses.length > 0 ? <ul className="profile-course-list">{courses.map((course) => <li key={course.id}><span><strong>{course.code}</strong><small>{course.title}</small></span><button aria-label={`Remove ${course.code}`} onClick={() => void removeCourse(course.id)}><Trash2 size={15} /></button></li>)}</ul> : <p className="profile-empty">No saved courses yet.</p>}
+            </SectionCard>
+          </div>
+        )}
+
+        {tab === "plans" && (
+          <SectionCard icon={<Crown size={18} />} eyebrow="Monthly access" title="Plans & AI credits" description="One shared monthly allowance covers Learn with AI, quizzes, and flashcards.">
+            <div className="profile-plan-summary"><strong>{activePlan ? tierLabel(profile.tier, profile.premiumUntil) : "Free plan"}</strong><span>{activePlan ? "Your paid access is active." : "You currently have 20 monthly AI credits."}</span></div>
+            <div className="profile-plan-list">
+              <div><strong>Basic</strong><span>100 credits · ₦499 launch / ₦999 monthly</span></div>
+              <div><strong>Student Plus</strong><span>300 credits · ₦999 launch / ₦1,999 monthly</span></div>
+              <div><strong>Premium</strong><span>600 credits · ₦1,499 launch / ₦2,999 monthly</span></div>
+            </div>
+            <div className="profile-plan-controls"><label>Choose a monthly plan<select value={selectedPlan} onChange={(event) => setSelectedPlan(event.target.value as typeof selectedPlan)}><option value="BASIC">Basic</option><option value="STUDENT_PLUS">Student Plus</option><option value="PREMIUM">Premium</option></select></label><button className={buttonClass} disabled={proBusy} onClick={() => void upgradeToPro()}><Crown size={15} /> {proBusy ? "Opening checkout…" : "Continue to Paystack"}</button></div>
+          </SectionCard>
+        )}
+
+        {tab === "account" && (
+          <div className="profile-content-grid">
+            <SectionCard icon={<ShieldCheck size={18} />} eyebrow="Your information" title="Privacy and terms" description="Read how your account and study materials are handled.">
+              <div className="profile-card-actions"><button className="secondary-button" onClick={() => go("privacy")}>Privacy policy</button><button className="secondary-button" onClick={() => go("terms")}>Terms of use</button></div>
+            </SectionCard>
+            <SectionCard icon={<Trash2 size={18} />} eyebrow="Irreversible" title="Delete account" description="This removes your profile and associated personal data.">
+              <div className="profile-delete-row"><input className={inputClass} value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} placeholder='Type "delete" to confirm' /><button className="profile-danger-button" disabled={deleting} onClick={() => void confirmDeletion()}>{deleting ? "Deleting…" : "Delete account"}</button></div>
+            </SectionCard>
+          </div>
+        )}
       </div>
-      {!isProActive(profile.tier, profile.premiumUntil) && <button className="primary-button plan-details-action" disabled={proBusy} onClick={() => void upgradeToPro()}>{proBusy ? "Opening checkout…" : <><Crown size={16} /> Upgrade to Pro</>}</button>}
-    </section>
-    <section className="profile-card profile-policy-links"><div><p className="eyebrow">Your information</p><h2>Privacy and terms</h2><p className="profile-help">See how your information and study materials are handled, and the rules for sharing papers with the community.</p></div><div><button className="secondary-button" onClick={() => go("privacy")}>Read privacy policy</button><button className="secondary-button" onClick={() => go("terms")}>Read terms of use</button></div></section>
-  </PageFrame>;
+    </PageFrame>
+  );
 }
 
-// Free-Pro promo windows read friendlier as an expiry chip than a raw enum.
 function tierLabel(tier: "FREE" | "PREMIUM", premiumUntil: string | null) {
   const until = premiumUntil ? new Date(premiumUntil) : null;
   if (until && until > new Date()) return `Pro until ${until.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
@@ -141,8 +224,4 @@ function tierLabel(tier: "FREE" | "PREMIUM", premiumUntil: string | null) {
 
 function isProActive(tier: "FREE" | "PREMIUM", premiumUntil: string | null) {
   return tier === "PREMIUM" && (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
-}
-
-function formatProPrice(naira: number) {
-  return `₦${naira.toLocaleString()} (about $${((naira / 1000) * 0.7).toFixed(2)})`;
 }

@@ -133,15 +133,16 @@ async function postJson(
 }
 
 const MAX_TOKENS = 16384
+const MAX_CHAT_TOKENS = 1200
 
 /** Anthropic Messages API — https://platform.anthropic.com/docs/api/messages */
-async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>>, system: string, userText: string): Promise<{ text: string; model: string }> {
+async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>>, system: string, userText: string, _document?: { pdfBase64: string }, format: 'json' | 'text' = 'json'): Promise<{ text: string; model: string }> {
   const data = await postJson('Anthropic', 'https://api.anthropic.com/v1/messages', {
     'x-api-key': config.apiKey,
     'anthropic-version': '2023-06-01',
   }, {
     model: config.model,
-    max_tokens: MAX_TOKENS,
+    max_tokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
     system,
     messages: [{ role: 'user', content: userText }],
   })
@@ -164,6 +165,7 @@ async function completeOpenAiCompatible(
   config: Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
   system: string,
   userText: string,
+  format: 'json' | 'text' = 'json',
 ): Promise<{ text: string; model: string }> {
   const baseUrl = config.baseUrl.replace(/\/+$/, '')
   const data = await postJson(providerLabel, `${baseUrl}/chat/completions`, {
@@ -174,7 +176,7 @@ async function completeOpenAiCompatible(
       { role: 'system', content: system },
       { role: 'user', content: userText },
     ],
-    max_tokens: MAX_TOKENS,
+    max_tokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
     temperature: 0,
     stream: false,
   })
@@ -206,7 +208,7 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
           ],
         }],
         config: {
-          maxOutputTokens: MAX_TOKENS,
+          maxOutputTokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
           temperature: 0,
           responseMimeType: format === 'json' ? 'application/json' : 'text/plain',
           ...(format === 'json' ? { responseSchema: {
@@ -310,11 +312,12 @@ export function getConfiguredProviders(): AiProvider[] {
     configured.push(makeProvider({
       id: 'openai',
       config: providers.openai,
-      complete: (config, system, userText) => completeOpenAiCompatible(
+      complete: (config, system, userText, _document, format = 'json') => completeOpenAiCompatible(
         providers.openai.label,
         config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
         system,
         userText,
+        format,
       ),
     }))
   }
@@ -322,11 +325,12 @@ export function getConfiguredProviders(): AiProvider[] {
     configured.push(makeProvider({
       id: 'grok',
       config: providers.grok,
-      complete: (config, system, userText) => completeOpenAiCompatible(
+      complete: (config, system, userText, _document, format = 'json') => completeOpenAiCompatible(
         providers.grok.label,
         config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
         system,
         userText,
+        format,
       ),
     }))
   }
@@ -338,11 +342,12 @@ export function getConfiguredProviders(): AiProvider[] {
     configured.push(makeProvider({
       id: 'groq',
       config: providers.groq,
-      complete: (config, system, userText) => completeOpenAiCompatible(
+      complete: (config, system, userText, _document, format = 'json') => completeOpenAiCompatible(
         providers.groq.label,
         config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
         system,
         userText,
+        format,
       ),
     }))
   }
@@ -353,11 +358,12 @@ export function getConfiguredProviders(): AiProvider[] {
     configured.push(makeProvider({
       id: 'custom',
       config: providers.custom,
-      complete: (config, system, userText) => completeOpenAiCompatible(
+      complete: (config, system, userText, _document, format = 'json') => completeOpenAiCompatible(
         providers.custom.label,
         config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
         system,
         userText,
+        format,
       ),
     }))
   }

@@ -48,7 +48,8 @@ export function prefetchCsrfToken(): void {
 }
 
 export type AuthResponse = {
-  profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean; tier?: "FREE" | "PREMIUM"; xp?: number; referralCode?: string | null; premiumUntil?: string | null }
+  profile: { id: string; email: string | null; displayName: string | null; username: string | null; isAdmin: boolean; emailVerifiedAt?: string | null; tier?: "FREE" | "PREMIUM"; subscriptionPlan?: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; xp?: number; referralCode?: string | null; premiumUntil?: string | null }
+  verificationSent?: boolean
 }
 export type AuthProfile = AuthResponse["profile"]
 
@@ -91,8 +92,9 @@ export type QuizAttemptStats = { attempts: number; average: number; best: number
 export type ProfileMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; claimedAt: string | null }
 export type AdminMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; createdAt: string; claimCount: number }
 
-// Daily quiz-generation quota. `limit: null` means unlimited (PREMIUM).
-export type GenerationQuota = { tier: "FREE" | "PREMIUM"; limit: number | null; used: number; remaining: number | null; resetsAt: string }
+// Shared monthly AI-credit quota used by Learn, quizzes, and flashcards.
+export type GenerationQuota = { tier: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; limit: number; used: number; remaining: number; resetsAt: string }
+export type AiCreditQuota = GenerationQuota
 
 export type ReferralInfo = { referralCode: string | null; tier: "FREE" | "PREMIUM"; xp: number; invites: number }
 
@@ -258,6 +260,25 @@ export async function login(input: { email: string; password: string }) {
   return result
 }
 
+/** Sends a reset link. The server always answers generically, whether or not the address exists. */
+export async function requestPasswordReset(email: string) {
+  return request<{ message: string }>('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) })
+}
+
+/** Consumes a one-time reset link and revokes every existing session. */
+export async function resetPassword(input: { token: string; password: string }) {
+  return request<void>('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** Confirms an email-verification link. Safe to call twice. */
+export async function verifyEmailAddress(token: string) {
+  return request<{ verified: boolean; alreadyVerified: boolean }>('/api/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) })
+}
+
+export async function resendVerificationEmail() {
+  return request<{ sent: boolean }>('/api/auth/resend-verification', { method: 'POST', body: JSON.stringify({}) })
+}
+
 /** True when a non-expired identity is already cached — lets App skip its loading flash. */
 export function hasProfileCache() { return readProfileCache() !== null }
 
@@ -288,9 +309,8 @@ export function removeMyCourse(courseId: string) {
   return request<void>(`/api/profile/courses/${encodeURIComponent(courseId)}`, { method: 'DELETE' })
 }
 
-export type ProPricing = { available: boolean; amountNaira: number | null; durationDays: number; currency: string }
-export function getProPricing() { return request<ProPricing>('/api/payments/pricing', { method: 'GET' }) }
-export function startProCheckout() { return request<{ authorizationUrl: string }>('/api/payments/checkout', { method: 'POST', body: JSON.stringify({}) }) }
+export type PaidPlan = 'BASIC' | 'STUDENT_PLUS' | 'PREMIUM'
+export function startPlanCheckout(plan: PaidPlan) { return request<{ authorizationUrl: string }>('/api/payments/checkout', { method: 'POST', body: JSON.stringify({ plan }) }) }
 export function getPaymentStatus(reference: string) { return request<{ status: 'PENDING' | 'SUCCESS' | 'FAILED'; createdAt: string; tier?: 'FREE' | 'PREMIUM'; premiumUntil?: string | null }>(`/api/payments/status?reference=${encodeURIComponent(reference)}`, { method: 'GET' }) }
 
 export function getUniversities() { return request<{ universities: University[] }>('/api/hierarchy/universities', { method: 'GET' }) }
@@ -412,7 +432,7 @@ export async function uploadLearnDocument(file: File): Promise<{ title: string; 
   return { title: body.title, documentText: body.documentText, truncated: Boolean(body.truncated) }
 }
 export function askLearnTutor(input: { documentText?: string; topic?: string; question: string; history: LearnChatMessage[] }) {
-  return request<{ answer: string }>("/api/learn/chat", { method: "POST", body: JSON.stringify(input) })
+  return request<{ answer: string; quota: AiCreditQuota }>("/api/learn/chat", { method: "POST", body: JSON.stringify(input) })
 }
 
 /**
