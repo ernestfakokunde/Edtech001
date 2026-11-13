@@ -31,12 +31,18 @@ export function displayNameOf(profile: ProfileIdentity) {
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(() => document.documentElement.dataset.theme !== "light");
-  const toggle = () => setDark((value) => {
-    const next = !value;
+  useEffect(() => {
+    const syncTheme = () => setDark(document.documentElement.dataset.theme === "dark");
+    window.addEventListener("recappedu-theme-change", syncTheme);
+    return () => window.removeEventListener("recappedu-theme-change", syncTheme);
+  }, []);
+
+  const toggle = () => {
+    const next = document.documentElement.dataset.theme !== "dark";
     document.documentElement.dataset.theme = next ? "dark" : "light";
     window.localStorage.setItem("recappedu-theme", next ? "dark" : "light");
-    return next;
-  });
+    window.dispatchEvent(new Event("recappedu-theme-change"));
+  };
   return <button className="grid size-36 place-items-center rounded-9 border border-line bg-surface text-muted transition hover:bg-pale hover:text-ink" onClick={toggle} aria-label={`Switch to ${dark ? "light" : "dark"} mode`} title={`Switch to ${dark ? "light" : "dark"} mode`}>{dark ? <Sun size={16} /> : <Moon size={16} />}</button>;
 }
 

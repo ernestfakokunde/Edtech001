@@ -96,7 +96,7 @@
      Named by ROLE, never by hue, so a future rebrand is a one-line change.
      `--color-white` intentionally restates Tailwind's white (#fff) so the
      token set stays self-contained for the many `background: #fff` surfaces. */
-  --color-brand: #a895ff;      /* primary action / pixel accent */
+  --color-brand: var(--theme-brand); /* primary action / pixel accent */
   --color-brand-deep: var(--theme-link); /* high-contrast links and key labels */
   --color-ink: var(--theme-ink);
   --color-muted: var(--theme-muted);
@@ -114,7 +114,7 @@
   --color-ghost-surface: var(--theme-pale);
   --color-ghost-border: var(--theme-line);
   --color-panel: var(--theme-surface);
-  --color-heading: #172033;         /*  1  index.css :root base colour */
+  --color-heading: var(--theme-ink); /*  1  index.css :root base colour */
 
   /* â”€â”€ Colours â€” success / warning / danger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      Two green families coexist: a light/mint family for confirmations and a
@@ -226,13 +226,15 @@
    --------------------------------------------------------------------------- */
 :root {
   color-scheme: dark;
-  --theme-ink: #f2efff;
-  --theme-muted: #b9b6c4;
-  --theme-link: #c3b5ff;
-  --theme-line: #34333c;
-  --theme-wash: #0d0d11;
-  --theme-pale: #1b1a20;
-  --theme-surface: #17171c;
+  --theme-brand: #a78bfa;
+  --theme-brand-deep: #7c3aed;
+  --theme-ink: #faf9ff;
+  --theme-muted: #b7b2c9;
+  --theme-link: #c4b5fd;
+  --theme-line: #302b46;
+  --theme-wash: #070811;
+  --theme-pale: #1b1730;
+  --theme-surface: #121321;
   font-family: "DM Sans", sans-serif;
   color: var(--theme-ink);
   background: var(--theme-wash);
@@ -242,12 +244,14 @@
 }
 :root[data-theme="light"] {
   color-scheme: light;
+  --theme-brand: #6d28d9;
+  --theme-brand-deep: #5b21b6;
   --theme-ink: #172033;
   --theme-muted: #64748b;
-  --theme-link: #6d4cc2;
-  --theme-line: #e8e1f4;
+  --theme-link: #6d28d9;
+  --theme-line: #e6e0f2;
   --theme-wash: #fbfaff;
-  --theme-pale: #f3efff;
+  --theme-pale: #f1ecff;
   --theme-surface: #fff;
 }
 html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(--theme-ink); }
@@ -1064,4 +1068,155 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   :root[data-theme="dark"] .quiz-answer-wrong { border-color: #a95865 !important; background-color: #38252b !important; color: #ffe9ec !important; }
   :root[data-theme="dark"] .quiz-answer-wrong > span { background-color: #503039 !important; color: #ffabb4 !important; }
   :root[data-theme="dark"] .quiz-explanation { border-color: #355e4a !important; background-color: #1d2c25 !important; color: #e4fff1 !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   Final theme contract
+   ---------------------------------------------------------------------------
+   All screens consume the same role tokens. These compatibility selectors
+   cover older utility literals that remain in page markup, so a route cannot
+   accidentally keep a white or blue surface when the user changes theme.
+   --------------------------------------------------------------------------- */
+html,
+body,
+#root,
+.app-shell {
+  background: var(--theme-wash);
+  color: var(--theme-ink);
+}
+
+.primary-button,
+.bg-brand {
+  background: var(--theme-brand) !important;
+  color: #fff !important;
+}
+
+.primary-button:hover,
+.bg-brand:hover {
+  background: var(--theme-brand-deep) !important;
+}
+
+:root[data-theme="dark"] .dark-home,
+:root[data-theme="dark"] .landing-page {
+  background: var(--theme-wash) !important;
+  color: var(--theme-ink) !important;
+}
+
+:root[data-theme="light"] .dark-home,
+:root[data-theme="light"] .landing-page {
+  background: var(--theme-wash) !important;
+  color: var(--theme-ink) !important;
+}
+
+:root[data-theme="dark"] [class*="bg-white"],
+:root[data-theme="dark"] [class*="bg-[#fff"],
+:root[data-theme="dark"] [class*="bg-[#f8"],
+:root[data-theme="dark"] [class*="bg-[#f9"],
+:root[data-theme="dark"] [class*="bg-[#f7"],
+:root[data-theme="dark"] [class*="bg-[#f5"],
+:root[data-theme="dark"] [class*="bg-[#f3"],
+:root[data-theme="dark"] [class*="bg-[#f1"],
+:root[data-theme="dark"] [class*="bg-[#eff"],
+:root[data-theme="dark"] [class*="bg-[#edf"],
+:root[data-theme="dark"] [class*="bg-[#eef"] {
+  background-color: var(--theme-surface) !important;
+}
+
+:root[data-theme="dark"] [class*="text-[#0f172a"],
+:root[data-theme="dark"] [class*="text-[#172033"],
+:root[data-theme="dark"] [class*="text-[#1e293b"] {
+  color: var(--theme-ink) !important;
+}
+
+:root[data-theme="dark"] [class*="text-slate-"],
+:root[data-theme="dark"] [class*="text-gray-"] {
+  color: var(--theme-muted) !important;
+}
+
+:root[data-theme="dark"] [class*="border-[#"],
+:root[data-theme="dark"] [class*="border-white"],
+:root[data-theme="dark"] [class*="border-slate-"] {
+  border-color: var(--theme-line) !important;
+}
+
+:root[data-theme="dark"] [class*="text-blue-"],
+:root[data-theme="dark"] [class*="text-indigo-"],
+:root[data-theme="dark"] [class*="text-sky-"],
+:root[data-theme="dark"] [class*="text-[#2563eb"],
+:root[data-theme="dark"] [class*="text-[#1d4ed8"],
+:root[data-theme="dark"] [class*="text-[#4f46e5"] {
+  color: var(--theme-link) !important;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] option {
+  border-color: var(--theme-line) !important;
+  background-color: var(--theme-surface) !important;
+  color: var(--theme-ink) !important;
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] .site-header:not(.home-header) {
+  background: color-mix(in srgb, var(--theme-surface) 94%, transparent) !important;
+  border-color: var(--theme-line) !important;
+}
+
+:root[data-theme="light"] .site-header:not(.home-header) {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-line) !important;
+}
+
+.profile-page {
+  gap: 20px;
+}
+
+.profile-identity,
+.profile-card {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-line) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--theme-brand-deep) 10%, transparent);
+}
+
+.profile-tabs {
+  gap: 22px;
+  border-color: var(--theme-line);
+}
+
+.profile-tabs button {
+  color: var(--theme-muted);
+}
+
+.profile-tabs button:hover,
+.profile-tabs button.active {
+  border-bottom-color: var(--theme-brand);
+  color: var(--theme-ink);
+}
+
+.profile-plan-card,
+.profile-promo-surface,
+.profile-plan-card-pro,
+.profile-danger-surface {
+  background: var(--theme-surface) !important;
+}
+
+.profile-page .profile-tier-chip.pro,
+.profile-page .profile-plan-badge {
+  background: var(--theme-pale);
+  color: var(--theme-brand);
+}
+
+@media (max-width: 760px) {
+  .profile-page {
+    gap: 14px;
+  }
+
+  .profile-identity {
+    align-items: flex-start;
+  }
+
+  .profile-tabs {
+    gap: 16px;
+  }
 }
