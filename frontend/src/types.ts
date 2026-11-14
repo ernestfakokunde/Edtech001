@@ -12,6 +12,7 @@ export type Route =
   | "courses"
   | "course"
   | "generate"
+  | "paper"
   | "learn"
   | "flashcards"
   | "quiz"

@@ -11,6 +11,7 @@ import {
   Flashcards,
   Quiz,
   Results,
+  QuestionPaper,
 } from "./pages/Study";
 import { GenerateFlow } from "./pages/Generate";
 import { getRepositoryPaper, recordQuizAttempt, type RepositoryPaper, type GeneratedSet } from "./lib/api";
@@ -30,6 +31,7 @@ import { Sparkles } from "lucide-react";
 
 const protectedRoutes: Route[] = [
   "dashboard",
+  "paper",
   "personal",
   "learn",
   "hierarchy",
@@ -80,6 +82,7 @@ const ROUTE_TITLES: Record<Route, string> = {
   courses: "Courses",
   course: "Course",
   generate: "Generate a study set",
+  paper: "Question paper",
   flashcards: "Flashcards",
   quiz: "Quiz",
   results: "Quiz results",
@@ -125,12 +128,13 @@ function App() {
     hashRoute(),
   );
   const [sub, setSub] = useState(hashSub());
+  const hadCachedProfile = useRef(hasProfileCache()).current;
   const [selectedMaterial, setSelectedMaterial] = useState<RepositoryPaper | null>(null);
   const [generatedSet, setGeneratedSet] = useState<GeneratedSet | null>(null);
   const [quizResult, setQuizResult] = useState<{ score: number; total: number } | null>(null);
   // A warm identity cache means we already know who this is, so the app never
   // shows the "Checking your session..." flash on every reload.
-  const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">(hasProfileCache() ? "authenticated" : "checking");
+  const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">(hadCachedProfile ? "authenticated" : "checking");
   const [isAdmin, setIsAdmin] = useState(false);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [authNotice, setAuthNotice] = useState("");
@@ -170,7 +174,7 @@ function App() {
         setProfile(result.profile);
         if (hashRoute() === "home") go("dashboard");
       })
-      .catch((reason: unknown) => {
+      .catch((reason) => {
         setAuthStatus("anonymous");
         setProfile(null);
         // Only explain the failure when the visitor was trying to open a
@@ -267,8 +271,18 @@ function App() {
             setQuizResult(null);
             go(set.type === "QUIZ" ? `quiz/${set.id}` : `flashcards/${set.id}`);
           }}
+          onQuestionPaper={(set) => {
+            setGeneratedSet(set);
+            setQuizResult(null);
+            go(`paper/${set.id}`);
+          }}
         />
       )}
+      {route === "paper" && (generatedSet?.type === "QUIZ" ? (
+        <QuestionPaper set={generatedSet} onBack={() => go("generate")} />
+      ) : (
+        <MissingSet back="generate" />
+      ))}
       {route === "flashcards" && (generatedSet && generatedSet.type === "FLASHCARD" ? (
         <Flashcards set={generatedSet} onExit={() => { setGeneratedSet(null); go("dashboard"); }} />
       ) : (

@@ -6,6 +6,7 @@ import {
   Check,
   ChevronRight,
   Clock3,
+  Download,
   FileText,
   FlipHorizontal2,
   Pencil,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import { courses, papers } from "../data";
 import { go, PageFrame } from "../components/Layout";
+import { downloadQuestionPaperPdf } from "../lib/questionPdf";
 import {
   errorMessage,
   getPaperDownloadUrl,
@@ -76,14 +78,15 @@ export function Hierarchy({
   const [paperRefresh, setPaperRefresh] = useState(0);
   return (
     <PageFrame
-      title="Find study material"
-      subtitle="Search the shared course library by PDF name, course, level, or description."
+      eyebrow="Your learning library"
+      title="Course repository"
+      subtitle="Find course notes and past questions, or manage the PDFs you’ve shared."
       back="dashboard"
     >
       <div className="grid min-w-0 gap-22">
         <RepositoryBrowser onMaterial={onMaterial} />
-        <RepositoryUpload onUploaded={() => setPaperRefresh((value) => value + 1)} />
         <MyPapers refreshKey={paperRefresh} />
+        <RepositoryUpload onUploaded={() => setPaperRefresh((value) => value + 1)} />
       </div>
     </PageFrame>
   );
@@ -573,17 +576,15 @@ export function Generate({
       subtitle="AI will generate a set from this study material's questions."
       back="course"
     >
-      <div className="flex items-center gap-12">
-        <div className="grid size-34 shrink-0 place-items-center rounded-10 bg-pale text-brand">
-          <FileText size={16} />
+      <section className="practice-material-card" aria-label="Selected course material">
+        <div className="practice-material-icon"><FileText size={18} /></div>
+        <div className="practice-material-copy">
+          <span className="practice-material-eyebrow">PRACTICE MATERIAL</span>
+          <strong className="practice-material-title">{paper.title}</strong>
+          <span className="practice-material-course"><b>{course.code}</b><span aria-hidden="true">·</span>{course.title}</span>
         </div>
-        <div>
-          <strong>{paper.title}</strong>
-          <span>
-            {course.code} · {course.title}
-          </span>
-        </div>
-      </div>
+        <span className="practice-material-badge">Selected</span>
+      </section>
       <div className="choice-grid">
         {(
           [
@@ -614,16 +615,18 @@ export function Generate({
           </button>
         ))}
       </div>
-      <div className="length-control">
-        <label>Set length</label>
+      <div className="length-control" role="group" aria-label="Choose set length">
+        <div className="length-heading"><label>Set length</label><span>Choose how many cards to practise</span></div>
         <div className="lengths">
           {["15", "30", "60", "All"].map((option) => (
             <button
-              className={length === option ? "selected" : ""}
+              className={`length-option ${length === option ? "selected" : ""}`}
               key={option}
+              type="button"
+              aria-pressed={length === option}
               onClick={() => onLength(option)}
             >
-              {option}
+              <strong>{option}</strong><small>{option === "All" ? "Available" : "cards"}</small>
             </button>
           ))}
         </div>
@@ -666,6 +669,35 @@ function PlayerFrame({
     </main>
   );
 }
+export function QuestionPaper({ set, onBack }: { set: GeneratedSet; onBack: () => void }) {
+  return (
+    <PageFrame eyebrow="Generated question paper" title={set.title} subtitle="Review every question and answer choice at your own pace. This page does not start a quiz or record answers.">
+      <div className="question-paper-actions mb-18 flex flex-wrap items-center justify-between gap-10 rounded-13 border border-line bg-white/55 p-14">
+        <span className="text-11 font-semibold text-muted">{set.items.length} questions · ready to save or print</span>
+        <div className="flex flex-wrap gap-8">
+          <button type="button" className="secondary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 border border-line bg-white px-14 text-12 font-bold text-brand" onClick={onBack}><ArrowLeft size={14} /> Back</button>
+          <button type="button" className="primary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 px-14 text-12 font-bold text-white" onClick={() => downloadQuestionPaperPdf(set.title, set)}><Download size={15} /> Save as PDF</button>
+        </div>
+      </div>
+      <ol className="question-paper-list">
+        {set.items.map((item, index) => {
+          const question = item.question;
+          const options = Array.isArray(question.metadata?.options) ? question.metadata.options : [];
+          return (
+            <li className="question-paper-item" key={`${index}-${question.prompt}`}>
+              <span className="question-paper-number">{String(index + 1).padStart(2, "0")}</span>
+              <div className="min-w-0">
+                <h2>{question.prompt}</h2>
+                {options.length > 0 && <ol className="question-paper-options">{options.map((option, optionIndex) => <li key={`${optionIndex}-${option}`}><span>{String.fromCharCode(65 + optionIndex)}</span>{option}</li>)}</ol>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </PageFrame>
+  );
+}
+
 export function Flashcards({
   set,
   onExit,

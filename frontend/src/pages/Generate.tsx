@@ -23,7 +23,6 @@ import {
   type GenerationQuota,
   type MySchool,
 } from "../lib/api";
-import { downloadQuestionPaperPdf } from "../lib/questionPdf";
 import type { Mode } from "../types";
 
 const LENGTH_OPTIONS = [5, 10, 15, 20];
@@ -42,9 +41,11 @@ type CourseOption = { id: string; code: string; title: string };
 export function GenerateFlow({
   courseId,
   onComplete,
+  onQuestionPaper,
 }: {
   courseId?: string;
   onComplete: (set: GeneratedSet) => void;
+  onQuestionPaper: (set: GeneratedSet) => void;
 }) {
   const [course, setCourse] = useState<CourseOption | null>(null);
   const [courseOptions, setCourseOptions] = useState<CourseOption[]>([]);
@@ -159,7 +160,7 @@ export function GenerateFlow({
         length,
         timePerQuestion: 60,
       });
-      downloadQuestionPaperPdf(selectedFile.name, set);
+      onQuestionPaper(set);
       setQuota((current) => ({ ...current, used: current.used + 1, remaining: Math.max(0, current.remaining - 1) }));
     } catch (reason) {
       setError(errorMessage(reason, "Could not create the question paper."));
@@ -263,12 +264,12 @@ export function GenerateFlow({
 
       {mode === "quiz" && <p className="quiz-note -mt-5 mb-18 rounded-r-9 border-l-[3px] px-13 py-11 text-11 leading-[1.55]">Each question has four answer choices. Your answer key and explanations are saved with the quiz, so you can review them after you finish.</p>}
 
-      <div className="mb-18 [&>label]:mb-7 [&>label]:block [&>label]:text-12 [&>label]:font-bold [&>small]:mt-6 [&>small]:block [&>small]:text-11 [&>small]:text-muted">
-        <label>Set length</label>
-        <div className="flex flex-wrap gap-8">
+      <div className="generation-length-control mb-18 [&>label]:mb-7 [&>label]:block [&>label]:text-12 [&>label]:font-bold [&>small]:mt-6 [&>small]:block [&>small]:text-11 [&>small]:text-muted">
+        <div className="generation-length-heading"><label>Set length</label><span>Choose how many questions or cards to practise.</span></div>
+        <div className="generation-length-options" role="group" aria-label="Choose set length">
           {LENGTH_OPTIONS.map((option) => (
-            <button key={option} type="button" aria-pressed={length === option} className="option-pill" onClick={() => setLength(option)}>
-              {option}
+            <button key={option} type="button" aria-pressed={length === option} className={`option-pill ${length === option ? "selected" : ""}`} onClick={() => setLength(option)}>
+              <strong>{option}</strong><small>{mode === "quiz" ? "questions" : "cards"}</small>
             </button>
           ))}
           <button type="button" aria-pressed={!LENGTH_OPTIONS.includes(length)} className="option-pill inline-flex items-center gap-6" onClick={() => setLength(customLength)}>
@@ -333,7 +334,7 @@ export function GenerateFlow({
           disabled={!selectedFile || fileProblem !== null || quota.remaining === 0 || busy}
           onClick={() => void downloadQuestionPaper()}
         >
-          <Download size={16} /> {pdfBusy ? "Preparing question paper…" : `Download question paper (${length} questions)`}
+          <Download size={16} /> {pdfBusy ? "Preparing question paper…" : `View questions & save as PDF (${length})`}
         </button>
       </div>
     </PageFrame>

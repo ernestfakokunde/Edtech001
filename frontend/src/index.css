@@ -1127,6 +1127,92 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 @media (max-width: 760px) {
   .profile-content-grid { grid-template-columns: 1fr; }
 }
+
+/* Compact student rail: study destinations stay together, account actions sit
+   in a quiet footer at the bottom. */
+.user-sidebar {
+  width: 216px;
+  box-shadow: 8px 0 28px color-mix(in srgb, var(--theme-brand-deep) 6%, transparent);
+}
+.user-sidebar nav button { min-height: 36px; padding: 6px 9px; font-size: 11px; gap: 9px; }
+.user-sidebar nav button > span:first-child { width: 26px; height: 26px; }
+.user-sidebar nav > div + div { padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--theme-line) 72%, transparent); }
+.user-sidebar-footer { background: color-mix(in srgb, var(--theme-surface) 82%, transparent); }
+.user-sidebar-footer > div:first-child > span {
+  color: var(--theme-ink) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: .015em;
+  opacity: 1;
+}
+.user-sidebar-profile,
+.user-sidebar-signout {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border-radius: 9px;
+  padding: 7px 8px;
+  text-align: left;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+.user-sidebar-profile { color: var(--theme-muted); }
+.user-sidebar-profile:hover { background: var(--theme-pale); color: var(--theme-ink); }
+.user-sidebar-profile > span:nth-child(2) { display: grid; gap: 2px; }
+.user-sidebar-profile strong { overflow: hidden; color: var(--theme-ink); font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.user-sidebar-profile small { overflow: hidden; color: var(--theme-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.user-sidebar-avatar { display: grid; width: 27px; height: 27px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--theme-pale); color: var(--theme-brand); font-size: 9px; font-weight: 800; }
+.user-sidebar-profile > svg { margin-left: auto; }
+.user-sidebar-signout { color: var(--theme-muted); font-size: 10px; font-weight: 650; }
+.user-sidebar-signout:hover { background: color-mix(in srgb, #dc2626 8%, transparent); color: #b91c1c; }
+.user-sidebar-signout:active { transform: scale(.985); }
+@media (max-width: 1020px) {
+  .user-sidebar { width: min(216px, calc(100vw - 48px)); }
+}
+
+/* Practice setup: clarify the selected source and make set length feel like a
+   deliberate, responsive choice rather than a row of generic buttons. */
+.practice-material-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  border: 1px solid color-mix(in srgb, var(--theme-brand) 18%, var(--theme-line));
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: color-mix(in srgb, var(--theme-surface) 76%, var(--theme-pale));
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--theme-brand-deep) 6%, transparent), inset 0 1px 0 color-mix(in srgb, white 40%, transparent);
+}
+.practice-material-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border: 1px solid color-mix(in srgb, var(--theme-brand) 16%, transparent); border-radius: 12px; background: var(--theme-pale); color: var(--theme-brand); }
+.practice-material-copy { display: grid; min-width: 0; gap: 4px; }
+.practice-material-eyebrow { color: var(--theme-brand); font-size: 9px; font-weight: 800; letter-spacing: .13em; }
+.practice-material-title { overflow: hidden; color: var(--theme-ink); font-size: 13px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.practice-material-course { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--theme-muted); font-size: 11px; line-height: 1.4; }
+.practice-material-course b { color: var(--theme-ink); font-weight: 700; }
+.practice-material-badge { margin-left: auto; flex: 0 0 auto; border: 1px solid color-mix(in srgb, var(--theme-brand) 18%, transparent); border-radius: 999px; padding: 5px 9px; background: color-mix(in srgb, var(--theme-pale) 78%, transparent); color: var(--theme-brand); font-size: 9px; font-weight: 750; }
+.length-control { display: grid; gap: 11px; margin: 24px 0; }
+.length-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 5px 12px; }
+.length-heading label { color: var(--theme-ink); font-size: 12px; font-weight: 750; }
+.length-heading > span { color: var(--theme-muted); font-size: 10px; }
+.lengths { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.length-option { position: relative; display: grid; min-height: 58px; align-content: center; justify-items: center; gap: 2px; border: 1px solid var(--theme-line); border-radius: 11px; background: var(--theme-surface); color: var(--theme-ink); cursor: pointer; transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, color 180ms ease; }
+.length-option strong { font-size: 14px; font-weight: 800; line-height: 1.1; }
+.length-option small { color: var(--theme-muted); font-size: 9px; transition: color 180ms ease; }
+.length-option:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--theme-brand) 45%, var(--theme-line)); }
+.length-option.selected { border-color: var(--theme-brand); background: color-mix(in srgb, var(--theme-pale) 78%, var(--theme-surface)); color: var(--theme-brand); box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-brand) 12%, transparent), 0 6px 16px color-mix(in srgb, var(--theme-brand-deep) 9%, transparent); }
+.length-option.selected small { color: color-mix(in srgb, var(--theme-brand) 78%, var(--theme-muted)); }
+.length-option:active { transform: translateY(0) scale(.97); }
+.length-option:focus-visible { outline: 3px solid color-mix(in srgb, var(--theme-brand) 35%, transparent); outline-offset: 2px; }
+@media (max-width: 480px) {
+  .practice-material-card { align-items: flex-start; gap: 10px; padding: 13px; }
+  .practice-material-icon { width: 36px; height: 36px; }
+  .practice-material-badge { display: none; }
+  .lengths { gap: 6px; }
+  .length-option { min-height: 54px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .length-option, .user-sidebar-profile, .user-sidebar-signout { transition: none; }
+}
 @media (max-width: 560px) {
   .profile-identity { flex-wrap: wrap; padding: 18px; }
   .profile-identity .profile-monogram { width: 44px; height: 44px; border-radius: 12px; }
@@ -1329,6 +1415,81 @@ body,
 .profile-plan-card-pro,
 .profile-danger-surface {
   background: var(--theme-surface) !important;
+}
+
+/* A calm desktop workspace: soft color blooms sit behind translucent panels. */
+.user-shell-content {
+  background:
+    radial-gradient(ellipse 820px 520px at 88% 0%, color-mix(in srgb, var(--theme-brand) 11%, transparent), transparent 72%),
+    radial-gradient(ellipse 700px 460px at 8% 28%, color-mix(in srgb, #8b78d8 7%, transparent), transparent 76%),
+    var(--theme-wash);
+}
+.user-sidebar,
+.user-topbar {
+  background: color-mix(in srgb, var(--theme-surface) 76%, transparent) !important;
+  border-color: color-mix(in srgb, var(--theme-line) 80%, transparent) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+.user-sidebar { box-shadow: 12px 0 40px color-mix(in srgb, var(--theme-brand-deep) 5%, transparent); }
+.user-topbar { box-shadow: 0 8px 28px color-mix(in srgb, var(--theme-brand-deep) 5%, transparent); }
+.user-shell-content article[class*="bg-white"],
+.user-shell-content section[class*="bg-white"],
+.user-shell-content [class*="rounded-"][class*="bg-white"]:not(button) {
+  background: color-mix(in srgb, var(--theme-surface) 76%, transparent) !important;
+  border-color: color-mix(in srgb, var(--theme-line) 76%, transparent);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--theme-brand-deep) 6%, transparent), inset 0 1px 0 color-mix(in srgb, white 32%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+  backdrop-filter: blur(16px) saturate(135%);
+}
+.dashboard-workspace { max-width: 1280px; }
+.dashboard-first-practice {
+  position: relative;
+  background: color-mix(in srgb, var(--theme-surface) 66%, transparent) !important;
+  border-color: color-mix(in srgb, var(--theme-brand) 26%, var(--theme-line)) !important;
+  box-shadow: 0 22px 52px color-mix(in srgb, var(--theme-brand-deep) 12%, transparent), inset 0 1px 0 color-mix(in srgb, white 42%, transparent) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+.dashboard-fold {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--theme-line) 78%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--theme-surface) 68%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  backdrop-filter: blur(14px) saturate(130%);
+}
+.dashboard-fold > summary {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  color: var(--theme-ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  list-style: none;
+}
+.dashboard-fold > summary::-webkit-details-marker { display: none; }
+.dashboard-fold > summary::after { content: "+"; color: var(--theme-brand); font-size: 18px; line-height: 1; transition: transform 180ms ease; }
+.dashboard-fold[open] > summary::after { transform: rotate(45deg); }
+.dashboard-fold[open] > section { padding: 0 14px 14px; }
+
+/* Shared tactile feedback keeps every app action feeling responsive. */
+.user-shell-content button {
+  transition: transform 180ms cubic-bezier(.2,.8,.2,1), box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+.user-shell-content button:not(:disabled):hover { transform: translateY(-1px); }
+.user-shell-content button:not(:disabled):active { transform: translateY(0) scale(.97); }
+.user-shell-content button:focus-visible,
+.dashboard-fold > summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--theme-brand) 50%, transparent);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .user-shell-content button, .dashboard-fold > summary::after { transition: none !important; }
 }
 
 .profile-page .profile-tier-chip.pro,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Award, Check, Copy, PartyPopper, Sparkles, Ticket } from "lucide-react";
 import { PageFrame } from "../components/Layout";
 import { claimMission, errorMessage, getMyMissions, getReferralInfo, redeemPromoCode, type ProfileMission, type ReferralInfo } from "../lib/api";
@@ -30,7 +30,8 @@ export function RewardsPage() {
     finally { setWorking(""); }
   }
 
-  async function redeem() {
+  async function redeem(event?: FormEvent) {
+    event?.preventDefault();
     setWorking("promo"); setError(""); setMessage("");
     try {
       const result = await redeemPromoCode(code.trim());
@@ -43,7 +44,7 @@ export function RewardsPage() {
 
   async function copyInvite() {
     if (!referral?.referralCode) return;
-    try { await navigator.clipboard.writeText(referral.referralCode); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }
+    try { await navigator.clipboard.writeText(referral.referralCode); setCopied(true); window.setTimeout(() => setCopied(false), 1600); }
     catch { setError("Could not copy the code. Select it and copy manually."); }
   }
 

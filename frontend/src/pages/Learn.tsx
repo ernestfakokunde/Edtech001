@@ -137,6 +137,13 @@ export function LearnWithAI() {
       )}
 
       <section className="mx-auto flex w-full max-w-[820px] flex-1 flex-col px-[clamp(14px,4vw,28px)]">
+        {sessionTitle && <div className="learn-session-context">
+          <div className="flex min-w-0 items-center gap-9">
+            <span className="grid size-30 shrink-0 place-items-center rounded-9 bg-pale text-brand">{isTopicSession ? <Lightbulb size={15} /> : <FileText size={15} />}</span>
+            <div className="min-w-0"><strong className="block truncate text-11 text-ink">{sessionTitle}</strong><small className="block truncate text-9 text-muted">{truncated ? "Using the first section of your PDF" : "Private study session"}</small></div>
+          </div>
+          <div className="flex shrink-0 items-center gap-8">{quota && <span className="rounded-full bg-pale px-9 py-6 text-10 font-semibold text-brand">{quota.remaining} credits</span>}<button className="inline-flex shrink-0 items-center gap-6 rounded-9 border border-line bg-white px-10 py-8 text-11 font-semibold text-muted hover:border-brand hover:text-brand" onClick={resetSession}><RotateCcw size={14} /> New chat</button></div>
+        </div>}
         <div className={`flex-1 overflow-y-auto py-[clamp(28px,8vh,80px)] ${messages.length ? "content-start" : "grid place-items-center"}`} aria-live="polite">
           {!sessionTitle ? (
             <div className="w-full max-w-[610px] text-center">

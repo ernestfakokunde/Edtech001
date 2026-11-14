@@ -143,13 +143,12 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
               </button>
             )}
           </nav>
-      <div className="flex items-center gap-10"><ThemeToggle /><button className="avatar size-35 rounded-full bg-pale text-12 font-bold text-brand" aria-label="Open profile" onClick={() => go("profile")}>
+      <div className="flex items-center gap-10"><button className="avatar size-35 rounded-full bg-pale text-12 font-bold text-brand" aria-label="Open profile" onClick={() => go("profile")}>
             {initialsOf(profile)}
       </button></div>
         </>
       ) : (
         <nav className="ml-auto flex items-center gap-12">
-          <ThemeToggle />
           <button className={navButton} onClick={() => go("login")}>Log in</button>
           <button className="btn btn-primary btn-sm" onClick={() => go("signup")}>Sign up</button>
         </nav>
@@ -236,15 +235,15 @@ function UserSidebar({ route, sub, isAdmin, open, onClose, onLogout }: {
   onClose: () => void;
   onLogout: () => void;
 }) {
-  const items = USER_NAV.filter((item) => !item.adminOnly || isAdmin);
+  const items = USER_NAV.filter((item) => item.key !== "profile" && (!item.adminOnly || isAdmin));
   return (
     <aside
       id="student-navigation"
       aria-label="Student navigation"
       className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col border-r border-line transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
     >
-      <div className="flex h-64 items-center gap-11 border-b border-line px-18">
-        <BrandLogo className="h-30" />
+      <div className="flex h-56 items-center gap-11 border-b border-line px-15">
+        <BrandLogo className="h-27" />
         <span className="flex-1" />
         <button className="hidden h-32 w-32 shrink-0 place-items-center rounded-10 text-muted hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close navigation" onClick={onClose}>
           <X size={16} />
@@ -254,8 +253,8 @@ function UserSidebar({ route, sub, isAdmin, open, onClose, onLogout }: {
 
       <nav className="flex flex-1 flex-col gap-22 overflow-y-auto p-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(["Study", "Account"] as const).map((group) => (
-          <div key={group} className="grid gap-5">
-            <p className="px-12 text-[10px] font-extrabold uppercase tracking-[.13em] text-muted">{group}</p>
+          <div key={group} className="grid gap-3">
+            <p className="px-10 pb-2 text-[9px] font-extrabold uppercase tracking-[.14em] text-muted">{group}</p>
             {items.filter((item) => item.group === group).map((item) => {
               const active = navActive(item, route, sub);
               return (
