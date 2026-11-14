@@ -1,14 +1,13 @@
 import {
   ArrowRight,
   BookOpen,
-  Check,
   FileText,
-  Flame,
   History,
-  Layers3,
   Plus,
   Sparkles,
   Crown,
+  Trophy,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { displayNameOf, go } from "../components/Layout";
@@ -57,89 +56,120 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
+    <main className="mx-auto min-w-0 w-full max-w-[1180px] overflow-x-hidden px-[clamp(20px,4vw,40px)] pt-36 pb-56 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-28 max-860:pb-48 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
       {firstPractice && (
-        <section className="dashboard-first-practice mb-8 grid grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] items-center gap-28 overflow-hidden rounded-20 border border-[#e5dcf4] bg-[linear-gradient(135deg,#f8f5fcaa,#eee8fa66)] px-[clamp(22px,3vw,38px)] py-30 shadow-[0_18px_38px_#6d4cc214] max-760:grid-cols-1 max-760:rounded-20 max-760:px-20 max-760:py-24">
-          <div className="max-w-[560px] text-ink [&_.eyebrow]:mb-10 [&_.eyebrow]:text-brand [&_h2]:mb-10 [&_h2]:text-[clamp(24px,3vw,32px)] [&>p:not(.eyebrow)]:m-0 [&>p:not(.eyebrow)]:text-13 [&>p:not(.eyebrow)]:leading-170 [&>p:not(.eyebrow)]:text-muted">
-            <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand"><Sparkles size={14} /> Start here</p>
-            <h2>Create your first practice</h2>
-            <p>
+        <section className="panel mb-24 grid grid-cols-[minmax(0,1.2fr)_minmax(0,.8fr)] items-center gap-24 overflow-hidden max-760:grid-cols-1 max-760:p-18">
+          <div className="min-w-0">
+            <p className="eyebrow"><Sparkles size={14} /> Start here</p>
+            <h2 className="m-0 mb-8 font-grotesk text-[clamp(22px,3vw,29px)] leading-[1.15] tracking-[-.02em]">Create your first practice</h2>
+            <p className="m-0 max-w-[560px] text-13 leading-170 text-muted">
               This is what RecappEdu is for: your notes or an exam PDF become
               practice you can mark yourself — flashcards to flip, or a timed
               quiz that scores you.
             </p>
-            <ol className="mt-18 grid list-none gap-8 bg-transparent p-0 [&>li]:flex [&>li]:items-center [&>li]:gap-9 [&>li]:bg-transparent [&>li]:text-12 [&>li]:text-muted [&_li_span]:grid [&_li_span]:size-20 [&_li_span]:shrink-0 [&_li_span]:place-items-center [&_li_span]:rounded-full [&_li_span]:border [&_li_span]:border-brand/40 [&_li_span]:bg-transparent [&_li_span]:font-grotesk [&_li_span]:text-10 [&_li_span]:font-bold [&_li_span]:text-brand">
-              <li><span>1</span> Bring a PDF — yours, or one from your course archive</li>
-              <li><span>2</span> Choose flashcards or a timed quiz</li>
-              <li><span>3</span> Answer, get scored, and watch your streak build</li>
+            <ol className="m-0 mt-16 grid list-none gap-8 p-0">
+              {[
+                "Bring a PDF — yours, or one from your course archive",
+                "Choose flashcards or a timed quiz",
+                "Answer, get scored, and watch your streak build",
+              ].map((step, index) => (
+                <li key={step} className="flex items-center gap-9 text-12 leading-145 text-muted">
+                  <span className="grid size-20 shrink-0 place-items-center rounded-half border border-brand/40 font-grotesk text-10 font-bold text-brand">{index + 1}</span>
+                  {step}
+                </li>
+              ))}
             </ol>
-            <div className="mt-22 flex flex-wrap gap-10 [&_.primary-button]:bg-brand [&_.primary-button]:text-white [&_.primary-button]:shadow-[0_8px_18px_#6d4cc226] [&_.secondary-button]:border-[#d5c9eb] [&_.secondary-button]:bg-white/70 [&_.secondary-button]:text-brand hover:[&_.secondary-button]:bg-white">
-              <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("generate")}>
-                Use my own PDF <ArrowRight size={16} />
+            <div className="mt-20 flex flex-wrap gap-9">
+              <button className="btn btn-primary btn-sm" onClick={() => go("generate")}>
+                Use my own PDF <ArrowRight size={15} />
               </button>
-              <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d5c9eb] bg-white/70 px-14 text-12 font-bold leading-[1.25] text-brand transition-colors duration-200 hover:border-outline hover:bg-white disabled:cursor-not-allowed disabled:opacity-50" onClick={() => go("hierarchy")}>Find my course</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => go("hierarchy")}>Find my course</button>
             </div>
           </div>
-          <img className="h-full max-h-[224px] w-full rounded-16 border border-white/15 object-cover shadow-[0_18px_30px_#0f172a3d] -rotate-[1.5deg] max-760:hidden" src={practiceArt} alt="" />
+          <img className="h-full max-h-[220px] w-full rounded-16 border border-line object-cover shadow-card -rotate-[1.5deg] max-760:hidden" src={practiceArt} alt="" />
         </section>
       )}
 
-      <section className="mt-47 mb-23 [&>.eyebrow]:mb-12 [&>h1]:mb-5 [&>h1]:mt-0 [&>h1]:text-[clamp(24px,3vw,32px)] [&>p:last-child]:m-0 [&>p:last-child]:text-13 [&>p:last-child]:text-muted">
-        <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Your study desk</p>
-        <h1>Welcome back, {displayNameOf(profile)}</h1>
-        <p>{school ? `${school.facultyName} · ${school.universityName}` : "Add your school on your profile to organize PDFs by course."}</p>
+      <section className="mb-20 mt-8">
+        <p className="eyebrow">Your study desk</p>
+        <h1 className="m-0 mb-6 text-[clamp(24px,3vw,32px)] leading-[1.15] tracking-[-.03em]">Welcome back, {displayNameOf(profile)}</h1>
+        <p className="m-0 text-13 text-muted">{school ? `${school.facultyName} · ${school.universityName}` : "Add your school on your profile to organize PDFs by course."}</p>
       </section>
 
-      {!activePro && <section className="mb-22 flex items-center gap-17 rounded-18 border border-[#cddcff] bg-[linear-gradient(110deg,#eef4ff,#fafbff_70%)] px-22 py-20 shadow-[0_10px_28px_#1d4ed80c] max-[640px]:flex-wrap max-[640px]:items-start [&>.primary-button]:shrink-0 max-[640px]:[&>.primary-button]:w-full">
-        <div className="grid size-44 shrink-0 place-items-center rounded-14 bg-[#2858dc] text-white"><Crown size={20} /></div>
-        <div className="flex-1 max-[640px]:min-w-[calc(100%-65px)] [&_.eyebrow]:mb-4 [&_.eyebrow]:text-10 [&_.eyebrow]:font-extrabold [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.08em] [&_.eyebrow]:text-[#315bca] [&_h2]:m-0 [&_h2]:font-grotesk [&_h2]:text-18 [&_h2]:font-bold [&_h2]:text-ink [&_p]:mb-0 [&_p]:mt-4 [&_p]:text-12 [&_p]:text-ink/75"><span className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get 100 AI credits monthly with Basic: ₦499 for month one, then ₦999/month.</p></div>
-        <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)]" onClick={() => go("profile")}>Choose a plan <ArrowRight size={16} /></button>
-      </section>}
-      {quota && quota.limit !== null && <section className={`-mb-[8px] mt-[-8px] mb-24 flex flex-wrap items-center gap-8 rounded-11 border border-[#dbeafe] bg-[#f8fbff] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
-        <Sparkles size={14} />
-        <span><strong>{quota.tier.replace("_", " ")} plan:</strong> {quota.remaining} of {quota.limit} AI credits left this month{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString()}` : ""}.</span>
-        <button type="button" className="bg-brand" onClick={() => go(quota.remaining === 0 ? "profile" : "generate")}>{quota.remaining === 0 ? "View plans" : "Practice now"}</button>
-      </section>}
+      {!activePro && (
+        <section className="notice notice-info mb-18 flex-wrap items-center gap-14">
+          <span className="grid size-42 shrink-0 place-items-center rounded-13 bg-brand text-[var(--theme-on-brand)]"><Crown size={20} /></span>
+          <div className="min-w-0 flex-1">
+            <p className="eyebrow mb-3">RecappEdu Pro</p>
+            <h2 className="m-0 font-grotesk text-17 font-bold text-ink">Practice without limits</h2>
+            <p className="m-0 mt-3 text-12 font-normal leading-150 text-muted">Get 100 AI credits monthly with Basic: ₦499 for month one, then ₦999/month.</p>
+          </div>
+          <button className="btn btn-primary btn-sm shrink-0 max-[640px]:w-full" onClick={() => go("profile")}>Choose a plan <ArrowRight size={15} /></button>
+        </section>
+      )}
+      {quota && quota.limit !== null && (
+        <section className={`notice ${quota.remaining === 0 ? "notice-warning" : "notice-info"} mb-20 items-center`}>
+          <Sparkles size={15} className="mt-1 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <strong>{quota.tier.replace("_", " ")} plan:</strong> {quota.remaining} of {quota.limit} AI credits left this month{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString()}` : ""}.
+          </span>
+          <button type="button" className="btn btn-secondary btn-sm shrink-0" onClick={() => go(quota.remaining === 0 ? "profile" : "generate")}>{quota.remaining === 0 ? "View plans" : "Practice now"}</button>
+        </section>
+      )}
 
-      <section className="mb-31 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-10 max-760:gap-14">
-        <Metric icon={<Flame size={15} />} value={String(stats.streak)} label="Day streak" tone="amber" />
-        <Metric icon={<Layers3 size={15} />} value={String(stats.attempts)} label="Quizzes taken" tone="blue" />
-        <Metric icon={<Check size={15} />} value={stats.attempts ? `${stats.average}%` : "—"} label="Avg. quiz score" tone="green" />
+      <section className="stat-grid mb-26">
+        <Metric icon={<Zap size={19} />} value={String(stats.streak)} label="Day streak" tone="amber" />
+        <Metric icon={<BookOpen size={19} />} value={String(stats.attempts)} label="Quizzes taken" tone="brand" />
+        <Metric icon={<Trophy size={19} />} value={stats.attempts ? `${stats.average}%` : "—"} label="Avg. quiz score" tone="green" />
       </section>
 
       <DashboardSection title="Your courses" action="Manage" onAction={() => go("profile")}>
-        <div className="grid grid-cols-2 gap-18 max-760:gap-14 max-680:grid-cols-1">
+        <div className="grid min-w-0 grid-cols-2 gap-14 max-860:grid-cols-1">
           {courses.length === 0 ? (
-            <div className="grid min-h-[145px] place-content-center justify-items-center gap-7 rounded-16 border border-dashed border-[#bfdbfe] bg-[#f8fbff] p-18 text-center text-muted [&>svg]:text-brand [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>span]:text-11"><BookOpen size={20} /><strong>No course added yet</strong><span>Browse course PDFs or add a course on your profile.</span></div>
+            <div className="empty-state min-h-[170px]">
+              <BookOpen size={22} />
+              <strong>No course added yet</strong>
+              <span>Browse course PDFs or add a course on your profile.</span>
+            </div>
           ) : (
             courses.slice(0, 4).map((course) => (
-              <article className="flex min-h-[145px] flex-col items-stretch rounded-15 border border-line bg-white p-16 text-left hover:border-outline" key={course.id}>
-                <div className="grid min-w-0 gap-4 [&>strong]:font-grotesk [&>strong]:text-18 [&>strong]:font-bold [&>strong]:leading-[1.25] [&>strong]:text-ink [&>small]:overflow-hidden [&>small]:text-ellipsis [&>small]:whitespace-nowrap [&>small]:text-13 [&>small]:text-muted">
-                  <strong>{course.code}</strong>
-                  <small>{course.title}</small>
+              <article className="flex min-h-[160px] min-w-0 flex-col items-stretch rounded-15 border border-line bg-surface p-17 transition-colors hover:border-outline" key={course.id}>
+                <div className="grid min-w-0 gap-4">
+                  <strong className="font-grotesk text-18 font-bold leading-[1.25] text-ink">{course.code}</strong>
+                  <small className="overflow-hidden text-ellipsis whitespace-nowrap text-13 text-muted">{course.title}</small>
                 </div>
-                <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50 mt-5 min-h-44 w-full justify-center" onClick={() => go(`generate/${encodeURIComponent(course.id)}`)}><Sparkles size={14} /> Practice</button>
+                <button className="btn btn-secondary btn-sm mt-auto w-full" onClick={() => go(`generate/${encodeURIComponent(course.id)}`)}><Sparkles size={14} /> Practice</button>
               </article>
             ))
           )}
-          <button className="flex min-h-[145px] flex-col items-center justify-center gap-9 rounded-16 border-[1.5px] border-dashed border-outline bg-[#f8fbff] p-16 text-12 text-brand hover:border-brand hover:bg-pale [&>span]:grid [&>span]:size-32 [&>span]:place-items-center [&>span]:rounded-9 [&>span]:bg-pale" onClick={() => { setCourseFormOpen((open) => !open); setCourseError(""); }}><span><Plus size={15} /></span><strong>Add a course</strong></button>
+          <button className="flex min-h-[170px] flex-col items-center justify-center gap-9 rounded-16 border-[1.5px] border-dashed border-outline bg-surface p-16 text-12 font-semibold text-brand transition-colors hover:border-brand hover:bg-pale" onClick={() => { setCourseFormOpen((open) => !open); setCourseError(""); }}>
+            <span className="grid size-34 place-items-center rounded-10 bg-pale"><Plus size={20} /></span>
+            <strong>Add a course</strong>
+          </button>
         </div>
-        {courseFormOpen && <div className="mt-12 grid grid-cols-[1fr_1.4fr_auto] items-center gap-9 rounded-14 border border-line bg-white p-14 max-[600px]:grid-cols-1 [&>input]:h-40 [&>input]:min-w-0 [&>input]:rounded-9 [&>input]:border [&>input]:border-line [&>input]:bg-white [&>input]:px-11 [&>input]:text-12 [&>small]:col-span-full [&>small]:text-11 [&>small]:text-muted max-[600px]:[&>small]:col-auto [&>div]:flex [&>div]:justify-end [&>div]:gap-8">
-          {!school && <small>Save your university and faculty on Profile first to organize courses.</small>}
-          <input aria-label="Course code" placeholder="Course code e.g. CSC 201" value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value.toUpperCase() })} disabled={!school} />
-          <input aria-label="Course title" placeholder="Course title e.g. Data Structures" value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} disabled={!school} />
-          {courseError && <small className="upload-form-error">{courseError}</small>}
-          <div><button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={() => setCourseFormOpen(false)}>Cancel</button>{school ? <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" disabled={savingCourse || courses.length >= 10} onClick={() => void saveCourse()}>{savingCourse ? "Saving…" : "Save course"}</button> : <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("profile")}>Go to profile</button>}</div>
-        </div>}
-        {courseMessage && <p className="mt-9 text-12 text-green-700">{courseMessage}</p>}
-        {courseError && !courseFormOpen && <p className="upload-form-error">{courseError}</p>}
+        {courseFormOpen && (
+          <div className="mt-12 grid grid-cols-[1fr_1.4fr_auto] items-center gap-9 rounded-14 border border-line bg-surface p-14 max-[600px]:grid-cols-1">
+            {!school && <small className="col-span-full text-11 text-muted max-[600px]:col-auto">Save your university and faculty on Profile first to organize courses.</small>}
+            <input className="field-input" aria-label="Course code" placeholder="Course code e.g. CSC 201" value={courseForm.code} onChange={(event) => setCourseForm({ ...courseForm, code: event.target.value.toUpperCase() })} disabled={!school} />
+            <input className="field-input" aria-label="Course title" placeholder="Course title e.g. Data Structures" value={courseForm.title} onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })} disabled={!school} />
+            {courseError && <small className="danger text-11">{courseError}</small>}
+            <div className="flex justify-end gap-8 max-[600px]:justify-stretch max-[600px]:[&>button]:flex-1">
+              <button className="btn btn-secondary btn-sm" onClick={() => setCourseFormOpen(false)}>Cancel</button>
+              {school
+                ? <button className="btn btn-primary btn-sm" disabled={savingCourse || courses.length >= 10} onClick={() => void saveCourse()}>{savingCourse ? "Saving…" : "Save course"}</button>
+                : <button className="btn btn-primary btn-sm" onClick={() => go("profile")}>Go to profile</button>}
+            </div>
+          </div>
+        )}
+        {courseMessage && <p className="m-0 mt-9 text-12 font-semibold text-success-deep">{courseMessage}</p>}
+        {courseError && !courseFormOpen && <p className="m-0 mt-9 text-12 text-danger">{courseError}</p>}
       </DashboardSection>
 
-      <section className="mt-34 grid gap-9 [&_button]:flex [&_button]:w-full [&_button]:items-center [&_button]:gap-12 [&_button]:rounded-13 [&_button]:border [&_button]:border-[#bfdbfe] [&_button]:bg-[#f8fbff] [&_button]:px-16 [&_button]:py-14 [&_button]:text-left [&_button]:text-brand [&_button_span]:flex-1 [&_button_strong]:block [&_button_strong]:text-12 [&_button_strong]:text-ink [&_button_small]:mt-3 [&_button_small]:block [&_button_small]:text-10 [&_button_small]:text-muted">
-        <button onClick={() => go("generate")}><Sparkles size={16} /><span><strong>Create from my PDF</strong><small>Private AI practice set</small></span><ArrowRight size={16} /></button>
-        <button onClick={() => go("hierarchy")}><FileText size={16} /><span><strong>Browse course library</strong><small>Find PDFs by course</small></span><ArrowRight size={16} /></button>
-        <button onClick={() => go("history")}><History size={16} /><span><strong>My quizzes</strong><small>Saved quizzes and answer keys</small></span><ArrowRight size={16} /></button>
-        <button onClick={() => go("rewards")}><Sparkles size={16} /><span><strong>Rewards</strong><small>XP, invites and promo codes</small></span><ArrowRight size={16} /></button>
+      <section className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-10 max-680:grid-cols-1">
+        <QuickLink icon={<Sparkles size={19} />} title="Create from my PDF" meta="Private AI practice set" onClick={() => go("generate")} />
+        <QuickLink icon={<FileText size={19} />} title="Browse course library" meta="Find PDFs by course" onClick={() => go("hierarchy")} />
+        <QuickLink icon={<History size={19} />} title="My quizzes" meta="Saved quizzes and answer keys" onClick={() => go("history")} />
+        <QuickLink icon={<Sparkles size={19} />} title="Rewards" meta="XP, invites and promo codes" onClick={() => go("rewards")} />
       </section>
     </main>
   );
@@ -149,6 +179,40 @@ function isProActive(tier?: "FREE" | "PREMIUM", premiumUntil?: string | null) {
   return tier === "PREMIUM" && (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
 }
 
+function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) {
+  const toneClass = tone === "amber" ? "bg-warning-surface text-warning" : tone === "green" ? "bg-success-soft text-success-icon" : "bg-pale text-brand";
+  return (
+    <div className="metric-card">
+      <span className={`metric-icon ${toneClass}`}>{icon}</span>
+      <div className="min-w-0">
+        <strong>{value}</strong>
+        <small>{label}</small>
+      </div>
+    </div>
+  );
+}
 
-function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) { return <div className="min-h-[124px] rounded-16 border border-line bg-white px-18 py-14 max-760:px-12 max-760:py-13 [&>span]:mb-12 [&>span]:block [&>strong]:block [&>strong]:font-grotesk [&>strong]:text-[20px] [&>strong]:font-bold [&>small]:mt-2 [&>small]:block [&>small]:text-11 [&>small]:text-muted"><span className={`mb-12 grid size-30 place-items-center rounded-9 ${tone === "amber" ? "bg-[#fef3c7] text-[#d97706]" : tone === "green" ? "bg-[#ecfdf5] text-[#059669]" : "bg-pale text-brand"}`}>{icon}</span><strong>{value}</strong><small>{label}</small></div>; }
-function DashboardSection({ title, action, onAction, children }: { title: string; action: string; onAction: () => void; children: React.ReactNode }) { return <section className="mb-29"><div className="mb-13 flex items-center justify-between [&>h2]:m-0 [&>h2]:text-16 [&>h2]:tracking-[-.02em] [&>button]:text-12 [&>button]:font-bold [&>button]:text-brand"><h2>{title}</h2><button onClick={onAction}>{action}</button></div>{children}</section>; }
+function DashboardSection({ title, action, onAction, children }: { title: string; action: string; onAction: () => void; children: React.ReactNode }) {
+  return (
+    <section className="mb-29">
+      <div className="mb-13 flex items-center justify-between gap-12">
+        <h2 className="m-0 font-grotesk text-17 tracking-[-.02em]">{title}</h2>
+        <button className="btn btn-ghost btn-sm -mx-6" onClick={onAction}>{action}</button>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function QuickLink({ icon, title, meta, onClick }: { icon: React.ReactNode; title: string; meta: string; onClick: () => void }) {
+  return (
+    <button className="group flex w-full items-center gap-12 rounded-14 border border-line bg-surface px-16 py-14 text-left transition-colors hover:border-outline hover:bg-pale" onClick={onClick}>
+      <span className="grid size-36 shrink-0 place-items-center rounded-10 bg-pale text-brand transition-colors group-hover:bg-surface">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <strong className="block text-12 font-semibold text-ink">{title}</strong>
+        <small className="mt-2 block text-11 text-muted">{meta}</small>
+      </span>
+      <ArrowRight size={17} className="shrink-0 text-muted" />
+    </button>
+  );
+}

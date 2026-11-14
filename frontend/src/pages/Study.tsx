@@ -47,11 +47,23 @@ import type { Course, Mode, Paper } from "../types";
 export function PersonalPractice() {
   return (
     <PageFrame
-      title="Study tools are in progress"
-      subtitle="Flashcards and quizzes will be added once the course library is ready."
+      title="Practice from my PDF"
+      subtitle="Upload a PDF to the course library, then turn it into a private flashcard set or quiz."
       back="dashboard"
     >
-      <div className="grid place-items-center gap-7 rounded-14 border border-dashed border-ghost-border bg-ghost-surface p-30 text-center text-12 text-muted [&>strong]:text-15 [&>strong]:font-bold [&>strong]:text-ink"><Upload size={22} /><strong>Personal study workspace</strong><span>Bring your notes or PDFs here for private study.</span></div>
+      <div className="empty-state">
+        <Upload size={22} />
+        <strong>Start with a course PDF</strong>
+        <span>Open the course repository to upload material or pick an approved paper, then create a practice set from it.</span>
+        <div className="mt-8 flex flex-wrap justify-center gap-9">
+          <button className="btn btn-primary btn-sm" onClick={() => go("hierarchy")}>
+            <Upload size={14} /> Open course repository
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => go("dashboard")}>
+            <ArrowLeft size={14} /> Study desk
+          </button>
+        </div>
+      </div>
     </PageFrame>
   );
 }
@@ -68,7 +80,7 @@ export function Hierarchy({
       subtitle="Search the shared course library by PDF name, course, level, or description."
       back="dashboard"
     >
-      <div className="grid gap-22">
+      <div className="grid min-w-0 gap-22">
         <RepositoryBrowser onMaterial={onMaterial} />
         <RepositoryUpload onUploaded={() => setPaperRefresh((value) => value + 1)} />
         <MyPapers refreshKey={paperRefresh} />
@@ -95,7 +107,69 @@ function RepositoryBrowser({ onMaterial }: { onMaterial: (paper: RepositoryPaper
   useEffect(() => { setDepartments([]); setDepartmentId(""); if (facultyId) getDepartments(facultyId).then((result) => setDepartments(result.departments)).catch(() => setDepartments([])); }, [facultyId]);
   useEffect(() => { setLoading(true); getRepositoryPapers({ search, level, universityId, facultyId, departmentId, page: pages.page }).then((result) => { setRepositoryPapers(result.papers); setPages(result.pagination); }).catch(() => { setRepositoryPapers([]); setPages((current) => ({ ...current, total: 0, pages: 1 })); }).finally(() => setLoading(false)); }, [search, level, universityId, facultyId, departmentId, pages.page]);
   function resetPage() { setPages((current) => ({ ...current, page: 1 })); }
-  return <div className="grid gap-14"><div className="flex max-w-860 flex-wrap items-center gap-8 [&>.search-field]:min-h-40 [&>.search-field]:max-w-340 [&>select]:min-h-40 [&>select]:min-w-130 [&>select]:max-w-170 [&>select]:flex-[0_1_150px] [&>select]:rounded-10 [&>select]:border [&>select]:border-line [&>select]:bg-white [&>select]:px-10 [&>select]:text-11 [&>select]:text-muted max-860:[&>.search-field]:max-w-none max-860:[&>select]:max-w-none"><div className="mb-14 flex min-h-44 max-w-460 items-center gap-8 rounded-10 border border-line bg-white px-12 text-muted"><Search size={16} /><input value={search} onChange={(event) => { setSearch(event.target.value); resetPage(); }} placeholder="Search PDF, course, or description" /></div><select value={level} onChange={(event) => { setLevel(event.target.value); resetPage(); }}><option value="">All levels</option><option>100 level</option><option>200 level</option><option>300 level</option><option>400 level</option><option>500 level</option></select><select value={universityId} onChange={(event) => { setUniversityId(event.target.value); resetPage(); }}><option value="">All universities</option>{universities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={facultyId} disabled={!universityId} onChange={(event) => { setFacultyId(event.target.value); resetPage(); }}><option value="">All faculties</option>{faculties.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={departmentId} disabled={!facultyId} onChange={(event) => { setDepartmentId(event.target.value); resetPage(); }}><option value="">All departments</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>{loading ? <div className="grid min-h-140 max-w-860 place-items-center gap-6 rounded-12 border border-dashed border-ghost-border bg-ghost-surface p-18 text-center text-12 text-muted [&>strong]:text-15 [&>strong]:font-bold [&>strong]:text-ink">Loading repository...</div> : repositoryPapers.length ? <><div className="grid max-w-860 grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-12">{repositoryPapers.map((paper) => <article className="min-w-0 cursor-pointer rounded-13 border border-line bg-white p-16 shadow-[0_12px_25px_rgba(29,78,216,.04)] focus-visible:outline-3 focus-visible:outline-[#bfdbfe] focus-visible:outline-offset-2 [&>h3]:mb-6 [&>h3]:mt-0 [&>h3]:text-15 [&>h3]:font-bold [&>strong]:text-11 [&>strong]:text-brand [&>p]:my-10 [&>p]:mb-12 [&>p]:line-clamp-2 [&>p]:text-11 [&>p]:leading-[1.55] [&>p]:text-muted" key={paper.id} tabIndex={0} role="button" onClick={() => onMaterial(paper)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onMaterial(paper); }}><div className="mb-10 flex items-center justify-between"><span className="grid size-34 shrink-0 place-items-center rounded-10 bg-pale text-brand"><FileText size={17} /></span><span className="badge active">{paper.level}</span></div><h3>{paper.course.code} · {paper.course.title}</h3><strong>{paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</strong><p>{paper.description}</p><div className="flex items-center justify-between gap-8 text-10 text-slate-icon"><span>View material details</span><ChevronRight size={14} /></div></article>)}</div><div className="mt-12 flex max-w-860 items-center justify-between gap-12 text-11 text-muted max-760:flex-col max-760:items-stretch [&>div]:flex [&>div]:items-center [&>div]:gap-9 max-760:[&>div]:justify-between"><span>{pages.total} approved materials</span><div><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" disabled={pages.page <= 1} onClick={() => setPages((current) => ({ ...current, page: current.page - 1 }))}>Previous</button><span>Page {pages.page} of {pages.pages}</span><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" disabled={pages.page >= pages.pages} onClick={() => setPages((current) => ({ ...current, page: current.page + 1 }))}>Next</button></div></div></> : <div className="repository-empty"><FileText size={20} /><strong>No approved PDFs found</strong><span>Try another course, level, or search phrase.</span></div>}</div>;
+  return (
+    <div className="grid min-w-0 gap-14">
+      <div className="grid min-w-0 grid-cols-[minmax(220px,1.5fr)_repeat(4,minmax(0,1fr))] gap-8 max-1020:grid-cols-2 max-680:grid-cols-1">
+        <label className="flex min-h-44 min-w-0 cursor-text items-center gap-8 rounded-10 border border-line bg-surface px-12 text-muted transition-[border-color,box-shadow] focus-within:border-outline focus-within:shadow-focus">
+          <Search size={16} className="shrink-0" />
+          <input className="w-full min-w-0 border-0 bg-transparent text-12 text-ink outline-0" value={search} onChange={(event) => { setSearch(event.target.value); resetPage(); }} placeholder="Search PDF, course, or description" aria-label="Search study material" />
+        </label>
+        <select className="field-select" value={level} onChange={(event) => { setLevel(event.target.value); resetPage(); }} aria-label="Filter by level">
+          <option value="">All levels</option>
+          {[100, 200, 300, 400, 500].map((value) => <option key={value}>{value} level</option>)}
+        </select>
+        <select className="field-select" value={universityId} onChange={(event) => { setUniversityId(event.target.value); resetPage(); }} aria-label="Filter by university">
+          <option value="">All universities</option>
+          {universities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        <select className="field-select" value={facultyId} disabled={!universityId} onChange={(event) => { setFacultyId(event.target.value); resetPage(); }} aria-label="Filter by faculty">
+          <option value="">All faculties</option>
+          {faculties.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        <select className="field-select" value={departmentId} disabled={!facultyId} onChange={(event) => { setDepartmentId(event.target.value); resetPage(); }} aria-label="Filter by department">
+          <option value="">All departments</option>
+          {departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+      </div>
+      {loading ? (
+        <div className="empty-state min-h-140" role="status"><span className="spinner" aria-hidden="true" /><span>Loading repository…</span></div>
+      ) : repositoryPapers.length ? (
+        <>
+          <div className="grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(250px,100%),1fr))] gap-12">
+            {repositoryPapers.map((paper) => (
+              <article
+                className="flex min-w-0 cursor-pointer flex-col rounded-14 border border-line bg-surface p-16 shadow-card transition-colors hover:border-outline focus-visible:border-brand focus-visible:outline-none"
+                key={paper.id}
+                tabIndex={0}
+                role="button"
+                onClick={() => onMaterial(paper)}
+                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onMaterial(paper); } }}
+              >
+                <div className="mb-10 flex items-center justify-between gap-8">
+                  <span className="grid size-34 shrink-0 place-items-center rounded-10 bg-pale text-brand"><FileText size={17} /></span>
+                  <span className="badge active">{paper.level}</span>
+                </div>
+                <h3 className="m-0 mb-6 [overflow-wrap:anywhere] text-15 font-bold leading-[1.35] text-ink">{paper.course.code} · {paper.course.title}</h3>
+                <strong className="text-11 font-semibold text-brand">{paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</strong>
+                <p className="my-10 mb-12 line-clamp-2 text-11 leading-155 text-muted">{paper.description}</p>
+                <div className="mt-auto flex items-center justify-between gap-8 text-10 text-slate-icon"><span>View material details</span><ChevronRight size={14} /></div>
+              </article>
+            ))}
+          </div>
+          <div className="flex min-w-0 items-center justify-between gap-12 text-11 text-muted max-760:flex-col max-760:items-stretch">
+            <span>{pages.total} approved materials</span>
+            <div className="flex items-center gap-9 max-760:justify-between">
+              <button className="btn btn-secondary btn-sm" disabled={pages.page <= 1} onClick={() => setPages((current) => ({ ...current, page: current.page - 1 }))}>Previous</button>
+              <span>Page {pages.page} of {pages.pages}</span>
+              <button className="btn btn-secondary btn-sm" disabled={pages.page >= pages.pages} onClick={() => setPages((current) => ({ ...current, page: current.page + 1 }))}>Next</button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="empty-state"><FileText size={20} /><strong>No approved PDFs found</strong><span>Try another course, level, or search phrase.</span></div>
+      )}
+    </div>
+  );
 }
 
 function MyPapers({ refreshKey }: { refreshKey: number }) {
@@ -113,7 +187,67 @@ function MyPapers({ refreshKey }: { refreshKey: number }) {
   async function save(paperId: string) { setBusy(paperId); setError(""); try { const result = await updateMyPaper(paperId, { ...form, year: Number(form.year) }); setPapers((current) => current.map((paper) => paper.id === paperId ? result.paper : paper)); setEditing(null); setMessage("Study file details saved."); } catch (reason) { setError(errorMessage(reason, "Could not save file details.")); } finally { setBusy(""); } }
   async function remove(paperId: string) { if (!window.confirm("Delete this private PDF?")) return; setBusy(paperId); setError(""); try { await deleteMyPaper(paperId); setPapers((current) => current.filter((paper) => paper.id !== paperId)); setMessage("PDF deleted."); } catch (reason) { setError(errorMessage(reason, "Could not delete PDF.")); } finally { setBusy(""); } }
   async function submit(paperId: string) { setConfirmSubmit(null); setBusy(paperId); setError(""); try { const result = await submitPaper(paperId); setPapers((current) => current.map((paper) => paper.id === paperId ? result.paper : paper)); setMessage("PDF submitted for review."); } catch (reason) { setError(errorMessage(reason, "Could not submit PDF.")); } finally { setBusy(""); } }
-  return <section className="grid max-w-860 gap-14 rounded-13 border border-[#dbeafe] bg-[#f8fbff] p-20">{confirmSubmit && <SubmitConfirmDialog onCancel={() => setConfirmSubmit(null)} onConfirm={() => { if (confirmSubmit) void submit(confirmSubmit); }} />}<div className="flex items-center justify-between gap-18 max-760:items-stretch max-760:flex-col [&_h2]:mb-6 [&_h2]:mt-2 [&_h2]:text-19 [&_h2]:font-bold [&_h2]:text-ink"><div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Your uploads</p><h2>Your uploads</h2><p>Track private PDFs, resubmit rejected files, or update details before review.</p></div><span className="admin-status">{papers.length} PDFs</span></div>{loading ? <div className="repository-empty">Loading your uploads...</div> : papers.length === 0 ? <div className="repository-empty"><FileText size={20} /><strong>No uploads yet</strong><span>Your private PDFs will appear here after upload.</span></div> : <div className="grid gap-10">{papers.map((paper) => <article className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-14 rounded-12 border border-line bg-white p-15 max-760:grid-cols-1 max-760:items-stretch" key={paper.id}><div className="grid min-w-0 gap-4 [&>strong]:truncate [&>strong]:text-13 [&>strong]:text-ink [&>span]:text-10 [&>span]:text-muted [&>small]:text-10 [&>small]:leading-[1.45] [&>small]:text-muted"><strong>{paper.course.code} · {paper.course.title}</strong><span>{paper.level} · {paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</span><small>{paper.description}</small></div><span className={`badge ${paper.status === "APPROVED" ? "active" : paper.status === "REJECTED" ? "text-danger bg-red-100" : "empty"}`}>{paper.status}</span><div className="flex flex-wrap justify-end gap-6 max-760:justify-start"><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" onClick={() => go(`generate/${paper.course.id}`)}><Sparkles size={14} /> Create practice set</button>{(paper.status === "DRAFT" || paper.status === "REJECTED") && <><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" disabled={busy === paper.id} onClick={() => startEdit(paper)}><Pencil size={14} /> Edit</button><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" disabled={busy === paper.id} onClick={() => void remove(paper.id)}><Trash2 size={14} /> Delete</button><button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" disabled={busy === paper.id} onClick={() => setConfirmSubmit(paper.id)}><Send size={14} /> Submit</button></>}</div>{editing === paper.id && <div className="col-span-full grid gap-9 border-t border-line pt-12 [&>textarea]:min-h-60 [&>textarea]:resize-y"><textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /><div className="grid grid-cols-4 gap-8 max-760:grid-cols-1 [&>input]:min-h-38 [&>input]:rounded-8 [&>input]:border [&>input]:border-line [&>input]:bg-white [&>input]:px-10 [&>input]:py-9 [&>input]:text-11 [&>select]:min-h-38 [&>select]:rounded-8 [&>select]:border [&>select]:border-line [&>select]:bg-white [&>select]:px-10 [&>select]:py-9 [&>select]:text-11"><input value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })} placeholder="Level" /><input value={form.session} onChange={(event) => setForm({ ...form, session: event.target.value })} placeholder="Session" /><input type="number" value={form.year} onChange={(event) => setForm({ ...form, year: event.target.value })} placeholder="Year" /><select value={form.semester} onChange={(event) => setForm({ ...form, semester: event.target.value as "FIRST" | "SECOND" })}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></div><button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" disabled={busy === paper.id} onClick={() => void save(paper.id)}><Check size={14} /> Save changes</button><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" onClick={() => setEditing(null)}>Cancel</button></div>}</article>)}</div>}{message && <small className="text-success-deep">{message}</small>}{error && <small className="text-danger">{error}</small>}</section>;
+  return (
+    <section className="panel grid w-full min-w-0 gap-14">
+      {confirmSubmit && <SubmitConfirmDialog onCancel={() => setConfirmSubmit(null)} onConfirm={() => { if (confirmSubmit) void submit(confirmSubmit); }} />}
+      <div className="flex items-center justify-between gap-18 max-760:flex-col max-760:items-stretch">
+        <div className="min-w-0">
+          <p className="eyebrow">Your uploads</p>
+          <h2 className="m-0 font-grotesk text-19 tracking-[-.02em]">Private files and review status</h2>
+          <p className="m-0 mt-5 text-12 leading-155 text-muted">Track private PDFs, resubmit rejected files, or update details before review.</p>
+        </div>
+        <span className="badge active shrink-0 self-start">{papers.length} PDFs</span>
+      </div>
+      {loading ? (
+        <div className="empty-state min-h-140" role="status"><span className="spinner" aria-hidden="true" /><span>Loading your uploads…</span></div>
+      ) : papers.length === 0 ? (
+        <div className="empty-state"><FileText size={20} /><strong>No uploads yet</strong><span>Your private PDFs will appear here after upload.</span></div>
+      ) : (
+        <div className="grid gap-10">
+          {papers.map((paper) => (
+            <article className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-14 rounded-12 border border-line bg-surface p-15 max-760:grid-cols-1 max-760:items-stretch" key={paper.id}>
+              <div className="grid min-w-0 gap-4">
+                <strong className="truncate text-13 text-ink">{paper.course.code} · {paper.course.title}</strong>
+                <span className="text-10 text-muted">{paper.level} · {paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</span>
+                <small className="text-10 leading-145 text-muted">{paper.description}</small>
+              </div>
+              <span className={`badge ${paper.status === "APPROVED" ? "active" : paper.status === "REJECTED" ? "text-danger bg-danger-surface" : "empty"}`}>{paper.status}</span>
+              <div className="flex flex-wrap justify-end gap-6 max-760:justify-start">
+                <button className="btn btn-secondary btn-sm" onClick={() => go(`generate/${paper.course.id}`)}><Sparkles size={14} /> Create practice set</button>
+                {(paper.status === "DRAFT" || paper.status === "REJECTED") && (
+                  <>
+                    <button className="btn btn-secondary btn-sm" disabled={busy === paper.id} onClick={() => startEdit(paper)}><Pencil size={14} /> Edit</button>
+                    <button className="btn btn-secondary btn-sm" disabled={busy === paper.id} onClick={() => void remove(paper.id)}><Trash2 size={14} /> Delete</button>
+                    <button className="btn btn-primary btn-sm" disabled={busy === paper.id} onClick={() => setConfirmSubmit(paper.id)}><Send size={14} /> Submit</button>
+                  </>
+                )}
+              </div>
+              {editing === paper.id && (
+                <div className="col-span-full grid gap-9 border-t border-line pt-12">
+                  <textarea className="field-textarea" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} aria-label="Description" />
+                  <div className="grid grid-cols-4 gap-8 max-760:grid-cols-1">
+                    <input className="field-input" value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })} placeholder="Level" aria-label="Level" />
+                    <input className="field-input" value={form.session} onChange={(event) => setForm({ ...form, session: event.target.value })} placeholder="Session" aria-label="Session" />
+                    <input className="field-input" type="number" value={form.year} onChange={(event) => setForm({ ...form, year: event.target.value })} placeholder="Year" aria-label="Year" />
+                    <select className="field-select" value={form.semester} onChange={(event) => setForm({ ...form, semester: event.target.value as "FIRST" | "SECOND" })} aria-label="Semester">
+                      <option value="FIRST">First semester</option>
+                      <option value="SECOND">Second semester</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap gap-8">
+                    <button className="btn btn-primary btn-sm" disabled={busy === paper.id} onClick={() => void save(paper.id)}><Check size={14} /> Save changes</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setEditing(null)}>Cancel</button>
+                  </div>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+      {message && <small className="text-12 font-semibold text-success-deep">{message}</small>}
+      {error && <small className="text-12 text-danger">{error}</small>}
+    </section>
+  );
 }
 
 export function MaterialDetails({ paper }: { paper: RepositoryPaper }) {
@@ -122,7 +256,31 @@ export function MaterialDetails({ paper }: { paper: RepositoryPaper }) {
     try { const result = await getPaperDownloadUrl(paper.id); window.open(result.url, "_blank", "noopener,noreferrer"); }
     catch (reason) { setError(errorMessage(reason, "Could not download this material.")); }
   }
-  return <PageFrame eyebrow="Repository material" title={`${paper.course.code} · ${paper.course.title}`} subtitle="Material details and download"><div className="grid max-w-560 gap-18 rounded-13 border border-line bg-white p-20 [&_dl]:m-0 [&_dl]:grid [&_dl]:gap-14 [&_dl>div]:grid [&_dl>div]:gap-4 [&_dl>div]:border-b [&_dl>div]:border-panel-line [&_dl>div]:pb-12 [&_dt]:text-10 [&_dt]:font-bold [&_dt]:uppercase [&_dt]:text-slate-icon [&_dd]:m-0 [&_dd]:text-13 [&_dd]:leading-[1.5] [&_dd]:text-ink"><div className="grid size-52 place-items-center rounded-12 bg-pale text-brand"><FileText size={26} /></div><dl><div><dt>Level</dt><dd>{paper.level}</dd></div><div><dt>Academic session</dt><dd>{paper.year}/{paper.session}</dd></div><div><dt>Semester</dt><dd>{paper.semester === "FIRST" ? "First" : "Second"} semester</dd></div><div><dt>Description</dt><dd>{paper.description}</dd></div></dl><div className="flex flex-wrap gap-9"><button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => void download()}><FileText size={15} /> Download material</button><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" onClick={() => go(`generate/${paper.course.id}`)}><Sparkles size={15} /> Create practice set</button></div>{error && <small className="text-danger">{error}</small>}</div></PageFrame>;
+  return (
+    <PageFrame eyebrow="Repository material" title={`${paper.course.code} · ${paper.course.title}`} subtitle="Material details and download" back="hierarchy">
+      <div className="panel grid max-w-[580px] gap-18">
+        <div className="grid size-52 place-items-center rounded-13 bg-pale text-brand"><FileText size={26} /></div>
+        <dl className="m-0 grid gap-14">
+          {[
+            ["Level", paper.level],
+            ["Academic session", `${paper.year}/${paper.session}`],
+            ["Semester", `${paper.semester === "FIRST" ? "First" : "Second"} semester`],
+            ["Description", paper.description],
+          ].map(([label, value]) => (
+            <div className="grid gap-4 border-b border-line pb-12 last:border-b-0 last:pb-0" key={label}>
+              <dt className="text-10 font-bold uppercase tracking-[.08em] text-slate-icon">{label}</dt>
+              <dd className="m-0 text-13 leading-150 text-ink">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="flex flex-wrap gap-9">
+          <button className="btn btn-primary" onClick={() => void download()}><FileText size={15} /> Download material</button>
+          <button className="btn btn-secondary" onClick={() => go(`generate/${paper.course.id}`)}><Sparkles size={15} /> Create practice set</button>
+        </div>
+        {error && <small className="text-12 text-danger">{error}</small>}
+      </div>
+    </PageFrame>
+  );
 }
 
 function RepositoryUpload({ onUploaded }: { onUploaded: () => void }) {
@@ -179,33 +337,52 @@ function RepositoryUpload({ onUploaded }: { onUploaded: () => void }) {
   }
 
   return (
-    <section className="max-w-860 rounded-14 border border-[#dbeafe] bg-[#f8fbff] p-20">
+    <section className="panel min-w-0">
       {confirming && <SubmitConfirmDialog onCancel={() => setConfirming(false)} onConfirm={() => void submit()} />}
-      <div className="flex items-center justify-between gap-18 max-760:items-stretch max-760:flex-col [&_h2]:mb-6 [&_h2]:mt-2 [&_h2]:text-19 [&_h2]:font-bold [&_h2]:text-ink">
-        <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Contribute to the repository</p><h2>Have notes or an exam PDF?</h2><p>Upload a PDF or Word document and submit it for review. Approved PDFs become visible to other students.</p></div>
-        <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => setOpen(!open)}><Upload size={15} /> {open ? "Close upload form" : "Upload a PDF"}</button>
+      <div className="flex items-center justify-between gap-18 max-760:flex-col max-760:items-stretch">
+        <div className="min-w-0">
+          <p className="eyebrow">Contribute to the repository</p>
+          <h2 className="m-0 font-grotesk text-19 tracking-[-.02em]">Have notes or an exam PDF?</h2>
+          <p className="m-0 mt-5 text-12 leading-155 text-muted">Upload a PDF or Word document and submit it for review. Approved PDFs become visible to other students.</p>
+        </div>
+        <button className="btn btn-secondary btn-sm shrink-0 self-start" onClick={() => setOpen(!open)}><Upload size={15} /> {open ? "Close upload form" : "Upload a PDF"}</button>
       </div>
-      {open && <div className="my-14 mb-20 rounded-14 border border-[#dbeafe] bg-[#f8fbff] p-20 [&>h3]:mb-6 [&>h3]:mt-0 [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:mb-17 [&>p]:mt-0 [&>p]:text-11 [&>p]:leading-[1.5] [&>p]:text-muted [&_.field]:mb-13 [&_.field]:grid [&_.field]:gap-7 [&_.field]:text-11 [&_.field]:font-bold [&_.field]:text-muted [&_input]:min-h-41 [&_input]:w-full [&_input]:rounded-9 [&_input]:border [&_input]:border-line [&_input]:bg-white [&_input]:px-10 [&_input]:text-11 [&_input]:font-normal [&_input]:text-ink [&_input]:outline-none [&_select]:min-h-41 [&_select]:w-full [&_select]:rounded-9 [&_select]:border [&_select]:border-line [&_select]:bg-white [&_select]:px-10 [&_select]:text-11 [&_select]:font-normal [&_select]:text-ink [&_select]:outline-none [&_textarea]:min-h-70 [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-9 [&_textarea]:border [&_textarea]:border-line [&_textarea]:bg-white [&_textarea]:p-10 [&_textarea]:text-11 [&_textarea]:text-ink [&_textarea]:outline-none [&_input:focus]:border-outline [&_input:focus]:shadow-focus [&_select:focus]:border-outline [&_select:focus]:shadow-focus [&_textarea:focus]:border-outline [&_textarea:focus]:shadow-focus">
-        <h3>Upload a PDF to the course library</h3>
-        <p>Your upload stays private until you submit it and an admin approves it.</p>
-        <div className="mb-13 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] justify-start gap-9">
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>University name</span><input value={form.universityName} onChange={(event) => updateField("universityName", event.target.value)} placeholder="e.g. Federal University of Technology Minna" /></label>
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Faculty name</span><input value={form.facultyName} onChange={(event) => updateField("facultyName", event.target.value)} placeholder="e.g. Computing" /></label>
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Course name</span><input value={form.courseTitle} onChange={(event) => updateField("courseTitle", event.target.value)} placeholder="e.g. Human Computer Interaction" /></label>
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Course code</span><input value={form.courseCode} onChange={(event) => updateField("courseCode", event.target.value)} placeholder="e.g. CPT 412" /></label>
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>PDF or Word file</span><input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} /></label>
+      {open && (
+        <div className="mt-16 rounded-14 border border-line bg-wash p-18">
+          <h3 className="m-0 mb-6 font-grotesk text-17">Upload a PDF to the course library</h3>
+          <p className="m-0 mb-16 text-11 leading-150 text-muted">Your upload stays private until you submit it and an admin approves it.</p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-9">
+            <label className="field-label">University name<input className="field-input" value={form.universityName} onChange={(event) => updateField("universityName", event.target.value)} placeholder="e.g. Federal University of Technology Minna" /></label>
+            <label className="field-label">Faculty name<input className="field-input" value={form.facultyName} onChange={(event) => updateField("facultyName", event.target.value)} placeholder="e.g. Computing" /></label>
+            <label className="field-label">Course name<input className="field-input" value={form.courseTitle} onChange={(event) => updateField("courseTitle", event.target.value)} placeholder="e.g. Human Computer Interaction" /></label>
+            <label className="field-label">Course code<input className="field-input" value={form.courseCode} onChange={(event) => updateField("courseCode", event.target.value)} placeholder="e.g. CPT 412" /></label>
+            <label className="field-label">PDF or Word file<input className="field-input py-9" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} /></label>
+          </div>
+          <div className="mt-9 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-9">
+            <label className="field-label">Level
+              <select className="field-select" value={form.level} onChange={(event) => updateField("level", event.target.value)}>
+                <option value="">Choose level</option>
+                {[100, 200, 300, 400, 500].map((value) => <option key={value}>{value} level</option>)}
+              </select>
+            </label>
+            <label className="field-label">Session<input className="field-input" value={form.session} onChange={(event) => updateField("session", event.target.value)} placeholder="2024/2025" /></label>
+            <label className="field-label">Year<input className="field-input" type="number" value={form.year} onChange={(event) => updateField("year", event.target.value)} placeholder="2024" /></label>
+            <label className="field-label">Semester
+              <select className="field-select" value={form.semester} onChange={(event) => updateField("semester", event.target.value as "FIRST" | "SECOND")}>
+                <option value="FIRST">First semester</option>
+                <option value="SECOND">Second semester</option>
+              </select>
+            </label>
+          </div>
+          <label className="field-label mt-9">Description<textarea className="field-textarea" value={form.description} onChange={(event) => updateField("description", event.target.value)} placeholder="Describe this PDF so students can find it in the course library." /></label>
+          <div className="mt-14 flex flex-wrap gap-9">
+            <button className="btn btn-primary btn-sm" disabled={busy || Boolean(uploadedPaper) || !selectedFile || uploadFileProblem(selectedFile) !== null || !form.universityName.trim() || !form.facultyName.trim() || !form.courseTitle.trim() || !form.courseCode.trim() || !form.description.trim() || !form.level || !form.session.trim() || !form.year} onClick={() => void upload()}><Upload size={15} /> {busy ? "Uploading…" : "Upload PDF"}</button>
+            {uploadedPaper && <button className="btn btn-secondary btn-sm" disabled={busy || confirming || uploadedPaper.status === "PENDING"} onClick={() => setConfirming(true)}><Send size={14} /> {uploadedPaper.status === "PENDING" ? "Pending review" : "Submit for review"}</button>}
+          </div>
+          {message && <p className="notice notice-success mt-12">{message}</p>}
+          {error && <p className="notice notice-error mt-12">{error}</p>}
         </div>
-        <div className="mb-13 grid grid-cols-[repeat(auto-fit,minmax(150px,200px))] justify-start gap-9">
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Level</span><select value={form.level} onChange={(event) => updateField("level", event.target.value)}><option value="">Choose level</option>{[100, 200, 300, 400, 500].map((value) => <option key={value}>{value} level</option>)}</select></label>
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Session</span><input value={form.session} onChange={(event) => updateField("session", event.target.value)} placeholder="2024/2025" /></label>
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Year</span><input type="number" value={form.year} onChange={(event) => updateField("year", event.target.value)} placeholder="2024" /></label>
-          <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Semester</span><select value={form.semester} onChange={(event) => updateField("semester", event.target.value as "FIRST" | "SECOND")}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></label>
-        </div>
-        <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Description</span><textarea value={form.description} onChange={(event) => updateField("description", event.target.value)} placeholder="Describe this PDF so students can find it in the course library." /></label>
-        <div className="mt-6 flex flex-wrap gap-9"><button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" disabled={busy || Boolean(uploadedPaper) || !selectedFile || uploadFileProblem(selectedFile) !== null || !form.universityName.trim() || !form.facultyName.trim() || !form.courseTitle.trim() || !form.courseCode.trim() || !form.description.trim() || !form.level || !form.session.trim() || !form.year} onClick={() => void upload()}><Upload size={15} /> {busy ? "Uploading..." : "Upload PDF"}</button>{uploadedPaper && <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" disabled={busy || confirming || uploadedPaper.status === "PENDING"} onClick={() => setConfirming(true)}><Send size={14} /> {uploadedPaper.status === "PENDING" ? "Pending review" : "Submit for review"}</button>}</div>
-        {message && <small className="text-success-deep">{message}</small>}
-        {error && <small className="text-danger">{error}</small>}
-      </div>}
+      )}
     </section>
   );
 }
@@ -228,7 +405,7 @@ export function CourseSelection({
       subtitle="Your courses will appear here after they are added."
       back="hierarchy"
     >
-      <div className="mb-14 flex min-h-44 max-w-460 items-center gap-8 rounded-10 border border-line bg-white px-12 text-muted">
+      <div className="mb-14 flex min-h-44 max-w-460 items-center gap-8 rounded-10 border border-line bg-white px-12 text-muted search-field">
         <Search size={16} />
         <input
           value={search}
@@ -254,7 +431,7 @@ export function CourseSelection({
               <ChevronRight size={18} />
             </div>
           </button>
-        )) : <div className="repository-empty"><BookOpen size={20} /><strong>No course added yet</strong><span>Browse the course library for PDFs or add a course.</span><button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("hierarchy")}>Browse PDFs</button></div>}
+        )) : <div className="repository-empty"><BookOpen size={20} /><strong>No course added yet</strong><span>Browse the course library for PDFs or add a course.</span><button className="primary-button" onClick={() => go("hierarchy")}>Browse PDFs</button></div>}
       </div>
     </PageFrame>
   );
@@ -314,7 +491,7 @@ export function CoursePage({
         <small>Upload privately first, then submit it for admin review.</small>
         <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => { const file = event.target.files?.[0] || null; setSelectedFile(file); setUploadError(file ? uploadFileProblem(file) ?? "" : ""); setUploadMessage(""); }} />
       </label>
-      {selectedFile && !uploadedPaper && <div className="my-14 mb-20 rounded-14 border border-[#dbeafe] bg-[#f8fbff] p-20 [&>h3]:mb-6 [&>h3]:mt-0 [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:mb-17 [&>p]:mt-0 [&>p]:text-11 [&>p]:leading-[1.5] [&>p]:text-muted [&_.field]:mb-13 [&_.field]:grid [&_.field]:gap-7 [&_.field]:text-11 [&_.field]:font-bold [&_.field]:text-muted [&_input]:min-h-41 [&_input]:w-full [&_input]:rounded-9 [&_input]:border [&_input]:border-line [&_input]:bg-white [&_input]:px-10 [&_input]:text-11 [&_input]:font-normal [&_input]:text-ink [&_input]:outline-none [&_select]:min-h-41 [&_select]:w-full [&_select]:rounded-9 [&_select]:border [&_select]:border-line [&_select]:bg-white [&_select]:px-10 [&_select]:text-11 [&_select]:font-normal [&_select]:text-ink [&_select]:outline-none [&_textarea]:min-h-70 [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-9 [&_textarea]:border [&_textarea]:border-line [&_textarea]:bg-white [&_textarea]:p-10 [&_textarea]:text-11 [&_textarea]:text-ink [&_textarea]:outline-none [&_input:focus]:border-outline [&_input:focus]:shadow-focus [&_select:focus]:border-outline [&_select:focus]:shadow-focus [&_textarea:focus]:border-outline [&_textarea:focus]:shadow-focus"><h3>Describe this study file</h3><p>These details help students find the right PDF and help admins review contributions.</p><div className="mb-13 grid grid-cols-[repeat(auto-fit,minmax(150px,200px))] justify-start gap-9"><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>PDF name</span><input value={uploadForm.title} onChange={(event) => setUploadForm({ ...uploadForm, title: event.target.value })} placeholder="e.g. CPT 412 First semester exam" /></label><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Level</span><select value={uploadForm.level} onChange={(event) => setUploadForm({ ...uploadForm, level: event.target.value })}><option value="">Choose level</option>{[100, 200, 300, 400, 500].map((value) => <option key={value}>{value} level</option>)}</select></label><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Session</span><input value={uploadForm.session} onChange={(event) => setUploadForm({ ...uploadForm, session: event.target.value })} placeholder="2024/2025" /></label><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Year</span><input type="number" value={uploadForm.year} onChange={(event) => setUploadForm({ ...uploadForm, year: event.target.value })} placeholder="2024" /></label><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Semester</span><select value={uploadForm.semester} onChange={(event) => setUploadForm({ ...uploadForm, semester: event.target.value as "FIRST" | "SECOND" })}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></label></div><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Description</span><textarea value={uploadForm.description} onChange={(event) => setUploadForm({ ...uploadForm, description: event.target.value })} placeholder="Briefly describe what these notes or this PDF cover." /></label><button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" disabled={uploading || !course.id || !uploadForm.title.trim() || !uploadForm.description.trim() || !uploadForm.level || !uploadForm.session.trim() || !uploadForm.year} onClick={() => { if (!selectedFile || !course.id) return; const fileProblem = uploadFileProblem(selectedFile); if (fileProblem) { setUploadError(fileProblem); return } setUploading(true); setUploadError(""); void uploadPaper({ file: selectedFile, courseId: course.id, ...uploadForm }).then((result) => { setUploadedPaper(result.paper); onUpload(); setUploadMessage("PDF saved privately. You can submit it for review."); }).catch((reason) => setUploadError(errorMessage(reason, "Could not upload PDF."))).finally(() => setUploading(false)); }}>{uploading ? "Uploading..." : "Upload privately"} <Upload size={15} /></button>{!course.id && <small className="mt-10 block text-10 text-warning">This demo course is not connected to a database course yet.</small>}{uploadMessage && <div className="mt-12 flex items-center gap-8 rounded-10 bg-success-soft px-14 py-11 text-11 text-success-deep"><Check size={16} /> {uploadMessage}</div>}{uploadError && <div className="profile-feedback error">{uploadError}</div>}</div>}
+      {selectedFile && !uploadedPaper && <div className="my-14 mb-20 rounded-14 border border-[#dbeafe] bg-[#f8fbff] p-20 [&>h3]:mb-6 [&>h3]:mt-0 [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:mb-17 [&>p]:mt-0 [&>p]:text-11 [&>p]:leading-[1.5] [&>p]:text-muted [&_.field]:mb-13 [&_.field]:grid [&_.field]:gap-7 [&_.field]:text-11 [&_.field]:font-bold [&_.field]:text-muted [&_input]:min-h-41 [&_input]:w-full [&_input]:rounded-9 [&_input]:border [&_input]:border-line [&_input]:bg-white [&_input]:px-10 [&_input]:text-11 [&_input]:font-normal [&_input]:text-ink [&_input]:outline-none [&_select]:min-h-41 [&_select]:w-full [&_select]:rounded-9 [&_select]:border [&_select]:border-line [&_select]:bg-white [&_select]:px-10 [&_select]:text-11 [&_select]:font-normal [&_select]:text-ink [&_select]:outline-none [&_textarea]:min-h-70 [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-9 [&_textarea]:border [&_textarea]:border-line [&_textarea]:bg-white [&_textarea]:p-10 [&_textarea]:text-11 [&_textarea]:text-ink [&_textarea]:outline-none [&_input:focus]:border-outline [&_input:focus]:shadow-focus [&_select:focus]:border-outline [&_select:focus]:shadow-focus [&_textarea:focus]:border-outline [&_textarea:focus]:shadow-focus"><h3>Describe this study file</h3><p>These details help students find the right PDF and help admins review contributions.</p><div className="mb-13 grid grid-cols-[repeat(auto-fit,minmax(150px,200px))] justify-start gap-9"><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>PDF name</span><input value={uploadForm.title} onChange={(event) => setUploadForm({ ...uploadForm, title: event.target.value })} placeholder="e.g. CPT 412 First semester exam" /></label><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Level</span><select value={uploadForm.level} onChange={(event) => setUploadForm({ ...uploadForm, level: event.target.value })}><option value="">Choose level</option>{[100, 200, 300, 400, 500].map((value) => <option key={value}>{value} level</option>)}</select></label><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Session</span><input value={uploadForm.session} onChange={(event) => setUploadForm({ ...uploadForm, session: event.target.value })} placeholder="2024/2025" /></label><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Year</span><input type="number" value={uploadForm.year} onChange={(event) => setUploadForm({ ...uploadForm, year: event.target.value })} placeholder="2024" /></label><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Semester</span><select value={uploadForm.semester} onChange={(event) => setUploadForm({ ...uploadForm, semester: event.target.value as "FIRST" | "SECOND" })}><option value="FIRST">First semester</option><option value="SECOND">Second semester</option></select></label></div><label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block"><span>Description</span><textarea value={uploadForm.description} onChange={(event) => setUploadForm({ ...uploadForm, description: event.target.value })} placeholder="Briefly describe what these notes or this PDF cover." /></label><button className="primary-button" disabled={uploading || !course.id || !uploadForm.title.trim() || !uploadForm.description.trim() || !uploadForm.level || !uploadForm.session.trim() || !uploadForm.year} onClick={() => { if (!selectedFile || !course.id) return; const fileProblem = uploadFileProblem(selectedFile); if (fileProblem) { setUploadError(fileProblem); return } setUploading(true); setUploadError(""); void uploadPaper({ file: selectedFile, courseId: course.id, ...uploadForm }).then((result) => { setUploadedPaper(result.paper); onUpload(); setUploadMessage("PDF saved privately. You can submit it for review."); }).catch((reason) => setUploadError(errorMessage(reason, "Could not upload PDF."))).finally(() => setUploading(false)); }}>{uploading ? "Uploading..." : "Upload privately"} <Upload size={15} /></button>{!course.id && <small className="mt-10 block text-10 text-warning">This demo course is not connected to a database course yet.</small>}{uploadMessage && <div className="mt-12 flex items-center gap-8 rounded-10 bg-success-soft px-14 py-11 text-11 text-success-deep"><Check size={16} /> {uploadMessage}</div>}{uploadError && <div className="profile-feedback error">{uploadError}</div>}</div>}
       <div className="grid gap-9">
         {list.map((paper) => (
           <article className="flex items-center justify-between gap-12 rounded-12 border border-line bg-white p-15 transition-colors hover:border-outline max-760:flex-col max-760:items-start" key={paper.id}>
@@ -349,15 +526,24 @@ function PaperActions({ paperId }: { paperId: string }) {
   return <div className="flex flex-wrap items-center gap-8"><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" onClick={() => void download()}>Download PDF</button><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" onClick={() => void share()}><Share2 size={14} /> Share</button>{message && <small className="text-11 text-muted">{message}</small>}</div>;
 }
 function SubmitConfirmDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", onKey);
+    document.body.classList.add("scroll-lock");
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.classList.remove("scroll-lock");
+    };
+  }, [onCancel]);
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-[#0f172a66] p-20">
-      <div className="relative w-full max-w-[440px] rounded-17 bg-white p-26 shadow-[0_25px_60px_rgba(15,23,42,.2)] [&>h2]:mb-9 [&>h2]:mt-6 [&>h2]:text-[22px] [&>h2]:font-bold [&>p:not(.eyebrow)]:m-0 [&>p:not(.eyebrow)]:text-12 [&>p:not(.eyebrow)]:leading-160 [&>p:not(.eyebrow)]:text-muted">
-        <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Before you submit</p>
-        <h2>Share this PDF with your course?</h2>
+    <div className="dialog-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
+      <div className="dialog-card" role="dialog" aria-modal="true" aria-labelledby="submit-dialog-title">
+        <p className="eyebrow">Before you submit</p>
+        <h2 id="submit-dialog-title">Share this PDF with your course?</h2>
         <p>Once approved, this PDF will be visible to every student in the repository with your name linked to it. Approved PDFs stay visible, so read your details carefully before submitting.</p>
-        <div className="mt-20 flex justify-end gap-9">
-          <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onCancel}>Not yet</button>
-          <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={onConfirm}>Yes, submit for review</button>
+        <div className="mt-20 flex justify-end gap-9 max-680:flex-col">
+          <button className="btn btn-secondary" onClick={onCancel}>Not yet</button>
+          <button className="btn btn-primary" onClick={onConfirm}>Yes, submit for review</button>
         </div>
       </div>
     </div>
@@ -442,7 +628,7 @@ export function Generate({
           ))}
         </div>
       </div>
-      <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none full" onClick={onGenerate}>
+      <button className="primary-button full" onClick={onGenerate}>
         <Sparkles size={16} /> Create {mode}
       </button>
     </PageFrame>
@@ -452,17 +638,19 @@ export function Generate({
 function PlayerFrame({
   children,
   count,
+  progress = 0,
   onExit,
 }: {
   children: React.ReactNode;
   count: string;
+  progress?: number;
   onExit: () => void;
 }) {
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-88px)] w-full max-w-800 content-center px-[clamp(18px,3vw,32px)] pt-30 pb-52 max-680:min-w-0 max-680:px-18">
+    <main className="mx-auto grid min-h-[calc(100vh-64px)] w-full max-w-800 grid-cols-1 content-center px-[clamp(18px,3vw,32px)] pt-30 pb-52 max-680:min-w-0 max-680:px-18">
       <div className="mb-16 flex max-w-800 items-center justify-between text-11 font-semibold text-muted">
         <button
-          className="grid size-46 place-items-center rounded-full border border-line bg-white text-muted transition-colors hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-40"
+          className="icon-button size-44"
           onClick={onExit}
           aria-label="Exit practice"
         >
@@ -471,8 +659,8 @@ function PlayerFrame({
         <span>{count}</span>
         <Sparkles size={15} className="text-brand" />
       </div>
-      <div className="quiz-progress-track mb-26 h-5 max-w-800 overflow-hidden rounded-full bg-[#e7edf6]">
-        <span className="block h-full w-[34%] rounded-full bg-brand" />
+      <div className="mb-26 h-5 max-w-800 overflow-hidden rounded-full bg-pale" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+        <span className="block h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
       </div>
       {children}
     </main>
@@ -492,20 +680,20 @@ export function Flashcards({
   const total = set.items.length;
   const card = total > 0 ? set.items[index]?.question : undefined;
   return (
-    <PlayerFrame count={`Card ${Math.min(index + 1, Math.max(total, 1))} of ${total}`} onExit={onExit}>
+    <PlayerFrame count={`Card ${Math.min(index + 1, Math.max(total, 1))} of ${total}`} progress={total ? ((index + 1) / total) * 100 : 0} onExit={onExit}>
       {card ? (
-        <button className="flashcard-surface flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center gap-16 rounded-20 border border-line bg-white px-26 py-32 text-ink shadow-[0_20px_36px_rgba(15,23,42,.06)] transition-shadow hover:shadow-[0_24px_42px_rgba(15,23,42,.09)] max-680:min-h-[240px] max-680:px-16 max-680:py-20" onClick={() => setFlipped(!flipped)}>
+        <button className="flashcard-surface flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center gap-16 rounded-20 border border-line px-26 py-32 text-ink shadow-card transition-shadow hover:shadow-dialog max-680:min-h-[240px] max-680:px-16 max-680:py-20" onClick={() => setFlipped(!flipped)}>
           <div className="flashcard-content grid justify-items-center gap-16" key={`${index}-${flipped ? "answer" : "question"}`}>
             <span className="rounded-999 bg-pale px-10 py-4 text-10 font-bold uppercase text-brand">{flipped ? "Answer" : "Question"}</span>
             <strong className="max-w-full whitespace-pre-wrap text-[19px] font-bold leading-[1.5] [overflow-wrap:anywhere]">{flipped ? card.answer : card.prompt}</strong>
-            {flipped && card.explanation && <p className="max-w-420 text-12 leading-160 text-slate-700 max-680:max-w-full">{card.explanation}</p>}
+            {flipped && card.explanation && <p className="max-w-420 text-12 leading-160 text-muted max-680:max-w-full">{card.explanation}</p>}
             <small className="inline-flex items-center gap-6 text-11 text-muted">
               <RotateCcw size={14} /> Tap to {flipped ? "see question" : "reveal answer"}
             </small>
           </div>
         </button>
       ) : (
-        <div className="grid min-h-[320px] w-full place-items-center rounded-20 border border-dashed border-[#bfdbfe] bg-[#f8fbff] text-12 text-muted">This set has no cards yet.</div>
+        <div className="empty-state min-h-[320px] w-full">This set has no cards yet.</div>
       )}
       <div className="mt-22 flex items-center justify-center gap-12">
         <button
@@ -515,10 +703,11 @@ export function Flashcards({
             setIndex(index - 1);
             setFlipped(false);
           }}
+          aria-label="Previous card"
         >
           <ArrowLeft size={17} />
         </button>
-        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={total === 0} onClick={() => setFlipped(!flipped)}>
+        <button className="btn btn-secondary" disabled={total === 0} onClick={() => setFlipped(!flipped)}>
           <FlipHorizontal2 size={15} /> Flip card
         </button>
         <button
@@ -528,12 +717,13 @@ export function Flashcards({
             setIndex(index + 1);
             setFlipped(false);
           }}
+          aria-label="Next card"
         >
           <ArrowRight size={17} />
         </button>
       </div>
       {onQuiz && (
-        <button className="mt-22 inline-flex items-center gap-6 border-0 bg-transparent text-12 font-semibold text-brand" onClick={onQuiz}>
+        <button className="mt-22 inline-flex min-h-36 items-center justify-center gap-6 bg-transparent text-12 font-semibold text-brand hover:underline" onClick={onQuiz}>
           Try this as a quiz <ArrowRight size={14} />
         </button>
       )}
@@ -589,7 +779,7 @@ export function Quiz({
   }
 
   return (
-    <PlayerFrame count={`Question ${Math.min(index + 1, Math.max(total, 1))} of ${total}`} onExit={onExit}>
+    <PlayerFrame count={`Question ${Math.min(index + 1, Math.max(total, 1))} of ${total}`} progress={total ? ((index + 1) / total) * 100 : 0} onExit={onExit}>
       <div className="flex items-center justify-between gap-10 text-11 font-semibold text-muted max-680:items-start">
         <span className="min-w-0 truncate">{set.title}</span>
         <button className="quiz-create-new inline-flex shrink-0 items-center gap-6 rounded-9 border border-line px-10 py-7 text-10 font-bold text-brand transition-colors hover:border-brand" onClick={onCreateNew}>
@@ -609,7 +799,7 @@ export function Quiz({
             ? selected === answer ? "selected" : ""
             : answer === item?.answer ? "correct" : selected === answer ? "wrong" : "";
           return (
-            <button className={`quiz-answer flex min-h-[52px] w-full items-center gap-12 rounded-13 border border-line bg-white px-16 py-13 text-left text-ink transition-colors hover:border-outline disabled:cursor-default ${state === "selected" ? "quiz-answer-selected" : state === "correct" ? "quiz-answer-correct" : state === "wrong" ? "quiz-answer-wrong" : ""} [&>span]:grid [&>span]:size-28 [&>span]:shrink-0 [&>span]:place-items-center [&>span]:rounded-9 [&>span]:bg-pale [&>span]:text-12 [&>span]:font-bold [&>span]:text-brand`} key={answer} onClick={() => choose(answer)} disabled={revealed}>
+            <button className={`quiz-answer flex min-h-[52px] w-full items-center gap-12 rounded-13 border border-line bg-surface px-16 py-13 text-left text-ink transition-colors hover:border-outline disabled:cursor-default ${state === "selected" ? "quiz-answer-selected" : state === "correct" ? "quiz-answer-correct" : state === "wrong" ? "quiz-answer-wrong" : ""} [&>span]:grid [&>span]:size-28 [&>span]:shrink-0 [&>span]:place-items-center [&>span]:rounded-9 [&>span]:bg-pale [&>span]:text-12 [&>span]:font-bold [&>span]:text-brand`} key={answer} onClick={() => choose(answer)} disabled={revealed}>
               <span>{String.fromCharCode(65 + optionIndex)}</span>
               {answer}
             </button>
@@ -619,7 +809,7 @@ export function Quiz({
       {revealed && item?.explanation && <div className="quiz-explanation mt-18 rounded-13 border px-16 py-14 text-13 leading-160 text-ink [&>strong]:mb-4 [&>strong]:block [&>p]:m-0"><strong>Why this is correct</strong><p>{item.explanation}</p></div>}
       <div className="mt-24 flex items-center justify-between gap-10">
         <button className="border-0 bg-transparent text-12 font-semibold text-muted hover:text-brand" onClick={next}>Skip question</button>
-        <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={next}>
+        <button className="primary-button" onClick={next}>
           {index === total - 1 ? "Finish" : "Next"} <ArrowRight size={15} />
         </button>
       </div>
@@ -644,35 +834,28 @@ export function Results({
   const pass = percent >= 50;
   return (
     <PageFrame title="Quiz complete" subtitle={set.title} back="dashboard">
-      <div className="grid justify-items-center gap-14 rounded-20 border border-line bg-white px-26 py-38 text-center shadow-[0_22px_40px_rgba(15,23,42,.07)] max-680:px-16 max-680:py-24 [&>span]:text-15 [&>span]:font-bold [&>span]:text-brand [&>small]:max-w-380 [&>small]:text-12 [&>small]:leading-160 [&>small]:text-muted">
-        <div className="grid size-[148px] place-items-center rounded-full border-[10px] border-[#dbeafe] border-r-brand border-t-brand [&>strong]:text-[34px] [&>strong]:font-bold">
-          <strong>{percent}%</strong>
+      <div className="grid justify-items-center gap-14 rounded-20 border border-line bg-surface px-26 py-38 text-center shadow-card max-680:px-16 max-680:py-24">
+        <div className="grid size-[148px] place-items-center rounded-full p-[10px]" style={{ background: `conic-gradient(var(--theme-brand) ${percent * 3.6}deg, var(--theme-line) 0deg)` }}>
+          <div className="grid size-full place-items-center rounded-full bg-surface">
+            <strong className="text-[34px] font-bold text-ink">{percent}%</strong>
+          </div>
         </div>
-        <span>{pass ? "Strong pass" : "Keep practising"}</span>
-        <small>
+        <span className="text-15 font-bold text-brand">{pass ? "Strong pass" : "Keep practising"}</span>
+        <small className="max-w-380 text-12 leading-160 text-muted">
           {pass ? "Nice work. Review the ones you missed and go again." : "A few more rounds will get you there — check the questions you missed."}
         </small>
       </div>
-      <div className="mt-18 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-12 [&>div]:grid [&>div]:place-items-center [&>div]:gap-6 [&>div]:rounded-14 [&>div]:border [&>div]:border-line [&>div]:bg-white [&>div]:p-16 [&_strong]:text-24 [&_strong]:font-bold [&_span]:text-11 [&_span]:text-muted">
-        <div>
-          <strong>{score}</strong>
-          <span>Correct</span>
-        </div>
-        <div>
-          <strong className={missed ? "quiz-missed" : ""}>{missed}</strong>
-          <span>Missed</span>
-        </div>
-        <div>
-          <strong>{set.timePerQuestion ?? 30}s</strong>
-          <span>Per question</span>
-        </div>
+      <div className="mt-18 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-12">
+        <div className="grid place-items-center gap-6 rounded-14 border border-line bg-surface p-16"><strong className="text-24 font-bold text-ink">{score}</strong><span className="text-11 text-muted">Correct</span></div>
+        <div className="grid place-items-center gap-6 rounded-14 border border-line bg-surface p-16"><strong className={`text-24 font-bold ${missed ? "quiz-missed" : "text-ink"}`}>{missed}</strong><span className="text-11 text-muted">Missed</span></div>
+        <div className="grid place-items-center gap-6 rounded-14 border border-line bg-surface p-16"><strong className="text-24 font-bold text-ink">{set.timePerQuestion ?? 30}s</strong><span className="text-11 text-muted">Per question</span></div>
       </div>
-      <div className="mt-26 flex flex-wrap gap-10 [&>button]:flex-1 max-760:flex-col">
-        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onRetake}>
+      <div className="mt-26 flex flex-wrap gap-10 max-760:flex-col [&>button]:flex-1">
+        <button className="btn btn-secondary" onClick={onRetake}>
           Retake quiz
         </button>
-        <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={onBack}>
-          Back to dashboard
+        <button className="btn btn-primary" onClick={onBack}>
+          View my quizzes
         </button>
       </div>
     </PageFrame>

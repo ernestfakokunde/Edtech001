@@ -63,6 +63,10 @@ const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
 const MAX_ATTEMPTS = 3 // 1 initial attempt + 2 retries
 const BASE_BACKOFF_MS = 800
 const MAX_BACKOFF_MS = 8000
+// A provider that never answers must not leave the practice-set spinner (and a
+// reserved AI credit) hanging forever. One minute is generous for a 5–20 item
+// set; a slower call is retried or reported instead of stalling the request.
+const REQUEST_TIMEOUT_MS = 60_000
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -92,9 +96,13 @@ async function postJson(
         method: 'POST',
         headers: { 'content-type': 'application/json', ...headers },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })
     } catch (reason) {
-      lastError = new AiProviderTransportError(providerLabel, reason instanceof Error ? reason.message : 'network error')
+      const detail = reason instanceof Error
+        ? reason.name === 'TimeoutError' ? `no response within ${REQUEST_TIMEOUT_MS / 1000}s` : reason.message
+        : 'network error'
+      lastError = new AiProviderTransportError(providerLabel, detail)
       if (attempt < maxAttempts) { await sleep(BASE_BACKOFF_MS * attempt); continue }
       throw lastError
     }
@@ -195,7 +203,9 @@ async function completeOpenAiCompatible(
 
 /** Google Gemini generateContent API — https://ai.google.dev/api/generate-content */
 async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] }, system: string, userText: string, document?: { pdfBase64: string }, format: 'json' | 'text' = 'json'): Promise<{ text: string; model: string }> {
-  const ai = new GoogleGenAI({ apiKey: config.apiKey })
+  // The SDK has no default deadline; without this a blocked endpoint can hold
+  // the generation request open until the client or proxy gives up.
+  const ai = new GoogleGenAI({ apiKey: config.apiKey, httpOptions: { timeout: REQUEST_TIMEOUT_MS } })
   const generateWithModel = async (model: string): Promise<string> => {
     try {
       const response = await ai.models.generateContent({

@@ -118,41 +118,43 @@ export function LearnWithAI() {
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
     >
-      <header className="flex min-h-62 items-center justify-between border-b border-line px-[clamp(16px,5vw,56px)]">
-        <div className="flex min-w-0 items-center gap-10">
-          <span className="grid size-34 shrink-0 place-items-center rounded-10 bg-pale text-brand">
-            {sessionTitle ? (isTopicSession ? <Lightbulb size={17} /> : <FileText size={17} />) : <Sparkles size={17} />}
-          </span>
-          <div className="min-w-0">
-            <strong className="block truncate text-13 text-ink">{sessionTitle || "Learn with AI"}</strong>
-            <small className="block truncate text-10 text-muted">{sessionTitle ? (truncated ? "Using the first section of your PDF" : "Private study session") : "Your personal study tutor"}</small>
+      {sessionTitle && (
+        <header className="flex min-h-62 items-center justify-between border-b border-line px-[clamp(16px,5vw,56px)]">
+          <div className="flex min-w-0 items-center gap-10">
+            <span className="grid size-34 shrink-0 place-items-center rounded-10 bg-pale text-brand">
+              {isTopicSession ? <Lightbulb size={17} /> : <FileText size={17} />}
+            </span>
+            <div className="min-w-0">
+              <strong className="block truncate text-13 text-ink">{sessionTitle}</strong>
+              <small className="block truncate text-10 text-muted">{truncated ? "Using the first section of your PDF" : "Private study session"}</small>
+            </div>
           </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-8">
-          {quota && <span className="rounded-full bg-pale px-9 py-6 text-10 font-semibold text-brand">{quota.remaining} credits</span>}
-          {sessionTitle && <button className="inline-flex shrink-0 items-center gap-6 rounded-9 border border-line bg-white px-10 py-8 text-11 font-semibold text-muted hover:border-brand hover:text-brand" onClick={resetSession}><RotateCcw size={14} /> <span className="max-480:hidden">New chat</span></button>}
-        </div>
-      </header>
+          <div className="flex shrink-0 items-center gap-8">
+            {quota && <span className="rounded-full bg-pale px-9 py-6 text-10 font-semibold text-brand">{quota.remaining} credits</span>}
+            <button className="inline-flex shrink-0 items-center gap-6 rounded-9 border border-line bg-surface px-10 py-8 text-11 font-semibold text-muted transition-colors hover:border-brand hover:text-brand" onClick={resetSession}><RotateCcw size={14} /> <span className="max-480:hidden">New chat</span></button>
+          </div>
+        </header>
+      )}
 
       <section className="mx-auto flex w-full max-w-[820px] flex-1 flex-col px-[clamp(14px,4vw,28px)]">
         <div className={`flex-1 overflow-y-auto py-[clamp(28px,8vh,80px)] ${messages.length ? "content-start" : "grid place-items-center"}`} aria-live="polite">
           {!sessionTitle ? (
             <div className="w-full max-w-[610px] text-center">
-              <span className="mx-auto mb-18 grid size-56 place-items-center rounded-18 border border-line bg-white text-brand shadow-card"><Lightbulb size={25} /></span>
+              <span className="mx-auto mb-18 grid size-56 place-items-center rounded-18 border border-line bg-surface text-brand shadow-card"><Lightbulb size={25} /></span>
               <h1 className="m-0 text-[clamp(26px,5vw,38px)] font-bold tracking-[-.04em] text-ink">What would you like to learn?</h1>
               <p className="mx-auto mt-10 max-w-480 text-14 leading-170 text-muted">Ask anything and learn through a natural conversation. You can also attach a PDF and ask questions about it.</p>
               <form className="mx-auto mt-24 flex max-w-560 gap-8 max-560:flex-col" onSubmit={startTopicSession}>
-                <input className="h-46 min-w-0 flex-1 rounded-11 border border-line bg-white px-13 text-13 text-ink outline-none focus:border-outline focus:shadow-focus" value={topicInput} onChange={(event) => setTopicInput(event.target.value)} maxLength={200} placeholder="e.g. Photosynthesis, algebra, Nigerian history..." aria-label="Topic to learn" />
-                <button className="primary-button inline-flex min-h-46 items-center justify-center gap-7 rounded-11 px-15 text-12 font-bold text-white" type="submit" disabled={topicInput.trim().length < 2}><Sparkles size={15} /> Start learning</button>
+                <input className="field-input h-46 min-w-0 flex-1" value={topicInput} onChange={(event) => setTopicInput(event.target.value)} maxLength={200} placeholder="e.g. Photosynthesis, algebra, Nigerian history..." aria-label="Topic to learn" />
+                <button className="btn btn-primary min-h-46 shrink-0" type="submit" disabled={topicInput.trim().length < 2}><Sparkles size={15} /> Start learning</button>
               </form>
-              <button className="mt-14 inline-flex items-center gap-7 text-11 font-semibold text-brand hover:underline" type="button" disabled={uploading} onClick={() => fileInput.current?.click()}><Paperclip size={14} /> {uploading ? "Reading your PDF..." : "Attach a PDF instead"}</button>
+              <button className="mt-14 inline-flex items-center gap-7 px-5 py-6 text-11 font-semibold text-brand hover:underline" type="button" disabled={uploading} onClick={() => fileInput.current?.click()}><Paperclip size={14} /> {uploading ? "Reading your PDF..." : "Attach a PDF instead"}</button>
             </div>
           ) : (
             <div className="w-full space-y-20">
               {messages.map((message, index) => (
                 <article key={`${index}-${message.role}`} className={`flex items-start gap-10 ${message.role === "user" ? "justify-end" : ""}`}>
                   {message.role === "assistant" && <span className="grid size-30 shrink-0 place-items-center rounded-10 bg-pale text-brand"><Sparkles size={14} /></span>}
-                  <div className={`max-w-[min(680px,86%)] whitespace-pre-line break-words text-13 leading-160 ${message.role === "user" ? "rounded-14 bg-brand px-14 py-10 text-white" : "pt-5 text-ink"}`}>
+                  <div className={`max-w-[min(680px,86%)] whitespace-pre-line break-words text-13 leading-160 ${message.role === "user" ? "rounded-14 bg-brand px-14 py-10 text-[var(--theme-on-brand)]" : "pt-5 text-ink"}`}>
                     {message.role === "assistant" ? displayTutorText(message.content) : message.content}
                   </div>
                 </article>
@@ -163,13 +165,13 @@ export function LearnWithAI() {
           )}
         </div>
 
-        {sessionTitle && messages.length <= 1 && <div className="flex flex-wrap gap-7 pb-12"><span className="w-full text-10 text-muted">Try asking</span>{suggestions.map((item) => <button className="rounded-full border border-line bg-white px-10 py-8 text-10 font-semibold text-brand hover:border-brand" key={item} disabled={busy} onClick={() => void sendQuestion(undefined, item)}>{item}<ArrowUp className="ml-5 inline" size={12} /></button>)}</div>}
+        {sessionTitle && messages.length <= 1 && <div className="flex flex-wrap gap-7 pb-12"><span className="w-full text-10 text-muted">Try asking</span>{suggestions.map((item) => <button className="rounded-full border border-line bg-surface px-10 py-8 text-10 font-semibold text-brand transition-colors hover:border-brand" key={item} disabled={busy} onClick={() => void sendQuestion(undefined, item)}>{item}<ArrowUp className="ml-5 inline" size={12} /></button>)}</div>}
         {error && <p className="m-0 pb-9 text-12 text-danger">{error}</p>}
 
-        <form className="sticky bottom-0 mb-8 grid grid-cols-[auto_1fr_auto] items-end gap-8 rounded-15 border border-line bg-white px-12 py-10 shadow-card focus-within:border-outline focus-within:shadow-focus" onSubmit={(event) => sessionTitle ? void sendQuestion(event) : void startTopicSession(event)}>
+        <form className="sticky bottom-0 mb-8 grid grid-cols-[auto_1fr_auto] items-end gap-8 rounded-15 border border-line bg-surface px-12 py-10 shadow-card focus-within:border-outline focus-within:shadow-focus" onSubmit={(event) => sessionTitle ? void sendQuestion(event) : void startTopicSession(event)}>
           <button className="grid size-34 place-items-center rounded-10 text-muted hover:bg-pale hover:text-brand" type="button" aria-label="Attach a PDF" disabled={uploading} onClick={() => fileInput.current?.click()}><Paperclip size={17} /></button>
           <textarea className="max-h-120 min-h-34 resize-none border-0 bg-transparent py-8 text-13 leading-150 text-ink outline-0 placeholder:text-muted" rows={1} value={sessionTitle ? question : topicInput} onChange={(event) => sessionTitle ? setQuestion(event.target.value) : setTopicInput(event.target.value)} onKeyDown={sessionTitle ? onComposerKeyDown : undefined} placeholder={sessionTitle ? (isTopicSession ? `Ask about ${activeTopic}...` : "Ask a question about your PDF...") : "Start with a topic..." } disabled={busy || uploading} aria-label={sessionTitle ? "Ask your AI tutor" : "Topic to learn"} aria-keyshortcuts={sessionTitle ? "Enter" : undefined} />
-          <button className="grid size-34 place-items-center rounded-10 bg-brand text-white disabled:cursor-not-allowed disabled:opacity-40" type="submit" aria-label={sessionTitle ? "Send question" : "Start learning"} disabled={sessionTitle ? (!question.trim() || busy) : topicInput.trim().length < 2}><ArrowUp size={17} /></button>
+          <button className="grid size-36 place-items-center rounded-10 bg-brand text-[var(--theme-on-brand)] disabled:cursor-not-allowed disabled:opacity-40" type="submit" aria-label={sessionTitle ? "Send question" : "Start learning"} disabled={sessionTitle ? (!question.trim() || busy) : topicInput.trim().length < 2}><ArrowUp size={17} /></button>
         </form>
         <p className="mb-14 text-center text-10 text-muted">AI can make mistakes. Check important details against your original material.</p>
         <input ref={fileInput} className="hidden" type="file" accept="application/pdf,.pdf" onChange={(event) => void chooseFile(event.target.files?.[0])} />

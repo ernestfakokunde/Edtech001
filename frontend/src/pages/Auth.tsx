@@ -1,17 +1,83 @@
-﻿import { useState } from "react";
-import { ArrowRight, Check, LockKeyhole, Mail } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Check, LockKeyhole, Mail, Quote, UserRound } from "lucide-react";
 import { BrandLogo } from "../components/BrandLogo";
 import { go } from "../components/Layout";
 import { errorMessage, login, signup, type AuthProfile } from "../lib/api";
+import storyImage from "../assets/brand2.png";
 
-/* Community snapshot for the signup panel — same card language as the admin
-   directory rows (monogram avatar, name, meta, stat chip). Sample profiles;
-   swap for a real members feed when the backend exposes a public endpoint. */
-const SIGNUP_STUDENTS = [
-  { initials: "NA", name: "Ngozi A.", meta: "300 level · Medicine", stat: "14 study PDFs" },
-  { initials: "TO", name: "Tunde O.", meta: "Final year · Law", stat: "520 XP" },
-  { initials: "AK", name: "Amara K.", meta: "200 level · Computer science", stat: "92% avg" },
-];
+const STORY = {
+  eyebrow: "Welcome back to your study space",
+  eyebrowSignup: "Your study space starts here",
+  title: "Make every study session count.",
+  copy: "Bring your course materials together, then turn them into a clear plan for what to learn next.",
+  quote: "Bring your notes. Leave with a clearer next step.",
+  quoteLabel: "Your study space, ready when you are",
+  footnote: "A calmer way to turn study material into progress.",
+  chipTitle: "Made for focused learning",
+  chipCopy: "Flashcards · Quizzes · Course notes",
+};
+
+/** Full-height photographic panel shown beside the form on desktop. */
+function StoryPanel({ isSignup }: { isSignup: boolean }) {
+  return (
+    <aside className="relative hidden overflow-hidden min-[1020px]:block" aria-hidden="true">
+      <img src={storyImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(13,8,26,.66)_0%,rgba(13,8,26,.26)_38%,rgba(8,5,16,.82)_100%)]" />
+      <div className="relative flex h-full flex-col justify-between p-[clamp(34px,4.4vw,64px)] text-white">
+        <div className="mt-[13%] max-w-[500px]">
+          <p className="mb-14 text-[10px] font-bold uppercase tracking-[.18em] text-white/65">
+            {isSignup ? STORY.eyebrowSignup : STORY.eyebrow}
+          </p>
+          <h2 className="m-0 text-[clamp(34px,3.5vw,54px)] font-bold leading-[1.06] tracking-[-.035em] text-white">
+            {STORY.title}
+          </h2>
+          <p className="mt-16 max-w-[430px] text-[13px] leading-[1.7] text-white/70">{STORY.copy}</p>
+        </div>
+
+        <div>
+          <div className="relative ml-auto w-[min(100%,470px)] rounded-14 border border-white/15 bg-[#120d20]/55 p-22 shadow-[0_18px_50px_rgba(0,0,0,.35)] backdrop-blur-md">
+            <Quote size={22} className="absolute right-18 top-16 text-white/25" />
+            <p className="m-0 max-w-[340px] text-[18px] font-semibold leading-[1.35] text-white">{STORY.quote}</p>
+            <div className="mt-18 flex gap-6">
+              <span className="h-2 w-14 rounded-full bg-white/35" />
+              <span className="h-2 w-14 rounded-full bg-white/35" />
+              <span className="h-2 w-14 rounded-full bg-white/35" />
+            </div>
+            <p className="mt-12 text-[9px] font-bold uppercase tracking-[.16em] text-white/55">{STORY.quoteLabel}</p>
+          </div>
+
+          <div className="relative -mt-5 mr-10 ml-auto flex w-fit max-w-full items-center gap-10 rounded-10 border border-line bg-surface px-12 py-9 shadow-card">
+            <span className="grid size-24 shrink-0 place-items-center rounded-half bg-brand text-[var(--theme-on-brand)]">
+              <Check size={13} />
+            </span>
+            <span className="min-w-0">
+              <strong className="block truncate text-11 font-semibold text-ink">{STORY.chipTitle}</strong>
+              <small className="block truncate text-[9px] text-muted">{STORY.chipCopy}</small>
+            </span>
+          </div>
+
+          <p className="mt-22 text-[10px] text-white/55">{STORY.footnote}</p>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/** Short photographic banner above the form on phones and tablets. */
+function StoryBanner({ isSignup }: { isSignup: boolean }) {
+  return (
+    <div className="relative h-[188px] overflow-hidden min-[1020px]:hidden" aria-hidden="true">
+      <img src={storyImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(13,8,26,.5)_0%,rgba(13,8,26,.32)_45%,rgba(8,5,16,.88)_100%)]" />
+      <div className="absolute inset-x-0 bottom-0 p-20">
+        <p className="mb-7 text-[9px] font-bold uppercase tracking-[.18em] text-white/60">
+          {isSignup ? STORY.eyebrowSignup : STORY.eyebrow}
+        </p>
+        <p className="m-0 max-w-[300px] text-[23px] font-bold leading-[1.12] tracking-[-.03em] text-white">{STORY.title}</p>
+      </div>
+    </div>
+  );
+}
 
 export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login" | "signup"; onAuthenticated?: (profile: AuthProfile) => void; notice?: string }) {
   const [submitted, setSubmitted] = useState(false);
@@ -19,247 +85,184 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
   const [loading, setLoading] = useState(false);
   const isSignup = mode === "signup";
 
-  /* Layout tokens used more than once inside this component.
-     `rounded-half` (50%) would be used instead of `rounded-full` on non-square
-     boxes — Tailwind's `rounded-full` resolves to calc(infinity * 1px), which
-     draws an ellipse where the original CSS drew a circle. */
-  const fieldBox = "min-h-46 flex items-center gap-9 px-13 border border-line rounded-10 bg-surface focus-within:border-outline focus-within:shadow-focus";
-  const label = "grid gap-7 text-muted text-11 font-bold";
-  /* Replaces `.auth-input input`. `font-normal` is load-bearing: the original
-     `font: 13px Inter` shorthand reset font-weight to normal, which utility
-     classes do not do implicitly (the weight would otherwise be inherited). */
-  const fieldInput = "w-full border-0 outline-0 text-ink font-inter font-normal text-13";
-  const primaryCta = "primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none w-full";
+  /* Underlined fields keep the form quiet, matching the editorial split
+     layout: no boxes, just a label, the value, and a focus line. */
+  const fieldBox = "flex min-h-44 items-center gap-9 border-b border-line transition-colors focus-within:border-brand";
+  const label = "grid gap-2 text-muted text-11 font-semibold";
+  const fieldInput = "w-full min-w-0 border-0 bg-transparent py-10 font-inter text-13 font-normal text-ink outline-0 placeholder:text-slate-icon";
+  const primaryCta = "btn btn-primary btn-block min-h-46 rounded-9 text-13";
 
   return (
-    <main className="max-w-none min-h-screen grid grid-cols-2 max-1020:grid-cols-1 bg-surface">
-      <section className="auth-marketing py-36 px-[clamp(30px,7vw,100px)] max-1020:min-h-0 max-1020:py-30 max-1020:px-26 flex flex-col justify-between bg-pale">
-        <button className="wordmark flex items-center gap-10 font-grotesk text-18 font-bold self-start" onClick={() => go("home")}>
-          <BrandLogo />
-        </button>
-        <div>
-          <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">A calmer way to revise</p>
-          <h1 className="max-w-480 mb-20 text-[clamp(32px,4vw,48px)] leading-100">Make every PDF count.</h1>
-          <p className="max-w-430 text-muted text-15 leading-170">
-            Keep your own notes and PDFs private, or learn from the PDFs your course
-            community has already shared.
-          </p>
-          {/* Directory-style student card — the same card language as the admin
-              student directory (monogram avatars + name lines), used here as
-              social proof so the signup page feels alive, not empty. */}
-          <div className="mt-32 flex max-w-430 items-center gap-13 rounded-13 border border-line bg-white p-14 shadow-card">
-            <div className="flex shrink-0 -space-x-8">
-              {["D", "A", "E", "F"].map((letter) => (
-                <span key={letter} className="grid h-32 w-32 place-items-center rounded-half border-2 border-white bg-pale text-11 font-bold text-brand">
-                  {letter}
-                </span>
-              ))}
-            </div>
-            <p className="m-0 min-w-0 text-12 leading-150 text-muted">
-              <strong className="font-semibold text-ink">Students are already on board.</strong>{" "}
-              Share study PDFs, earn XP, and keep every revision in one place.
-            </p>
-          </div>
-          <div className="grid gap-14 mt-22 text-brand-deep text-12 font-semibold">
-            <span className="flex gap-8 items-center">
-              <Check size={15} /> AI-generated flashcards and quizzes
-            </span>
-            <span className="flex gap-8 items-center">
-              <Check size={15} /> Your private study workspace
-            </span>
-            <span className="flex gap-8 items-center">
-              <Check size={15} /> Course repositories that grow with you
-            </span>
-          </div>
-          {isSignup && (
-            <div className="mt-20 grid gap-10">
-              <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Students already revising here</p>
-              <div className="grid gap-8">
-                {SIGNUP_STUDENTS.map((student) => (
-                  <div key={student.name} className="flex items-center gap-12 rounded-13 border border-line bg-surface px-14 py-11 shadow-card">
-                    <span className="grid h-35 w-35 shrink-0 place-items-center rounded-half bg-pale text-12 font-bold text-brand">{student.initials}</span>
-                    <span className="min-w-0 flex-1">
-                      <strong className="block truncate text-13 font-semibold text-ink">{student.name}</strong>
-                      <small className="block truncate text-11 text-muted">{student.meta}</small>
-                    </span>
-                    <span className="shrink-0 rounded-99 bg-pale px-10 py-5 text-11 font-bold text-brand">{student.stat}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-      {/* The form sits in a white card on the pale canvas — same card language
-          as the admin panels, so signup reads as part of the same product. */}
-      <section className="auth-form-panel grid place-items-center bg-pale p-30 max-1020:py-28 max-1020:px-26">
-        <div className="w-[min(100%,450px)] rounded-16 border border-line bg-white p-[clamp(24px,3.4vw,38px)] shadow-card">
-          <div className="auth-mobile-brand">
-            <BrandLogo className="h-32" />
-          </div>
-          <button className="mb-30 inline-flex items-center gap-7 text-12 font-semibold text-muted transition-colors hover:text-brand" onClick={() => go("home")}>
-            Back to home
-          </button>
-          <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">
-            {isSignup ? "Create your workspace" : "Welcome back"}
-          </p>
-          {notice && (
-            <p className="mb-18 flex items-start gap-8 rounded-10 border border-warning-surface bg-warning-surface px-12 py-10 text-11 leading-145 text-warning" role="status">
-              {notice}
-            </p>
-          )}
-          <h2 className="mb-10 text-[31px] leading-[1.1]">
-            {isSignup
-              ? "Start practising with purpose."
-              : "Pick up where you left off."}
-          </h2>
-          <p className="mb-28 text-muted text-13 leading-155">
-            {isSignup
-              ? "One account for your notes, PDFs, and every course library."
-              : "Sign in to continue to your study desk."}
-          </p>
-          {submitted ? (
-            <div className="grid gap-10 p-22 border border-success-border rounded-13 text-success-text bg-success-surface text-12">
-              <Check size={20} />
-              <strong>
-                {isSignup ? "Your workspace is ready." : "You are signed in."}
-              </strong>
-              <span className="text-success-alt leading-150">
-                Taking you to your study desk…
-              </span>
-              <button
-                className={`${primaryCta} mt-8`}
-                onClick={() => go("dashboard")}
-              >
-                Go to study desk <ArrowRight size={16} />
+    <main className="min-h-screen bg-surface">
+      <StoryBanner isSignup={isSignup} />
+      <div className="grid min-[1020px]:min-h-screen min-[1020px]:grid-cols-2">
+        <section className="flex flex-col bg-surface px-[clamp(20px,5vw,72px)] py-24 max-1020:pt-22 min-[1020px]:justify-center min-[1020px]:py-44">
+          <div className="mx-auto w-full max-w-[430px]">
+            <div className="mb-38 flex items-center justify-between gap-14">
+              <button className="wordmark flex items-center" onClick={() => go("home")} aria-label="RecappEdu home">
+                <BrandLogo className="h-32" />
+              </button>
+              <button className="inline-flex min-h-24 items-center text-11 font-semibold text-muted transition-colors hover:text-brand" onClick={() => go("home")}>
+                Back to home
               </button>
             </div>
-          ) : (
-            <form
-              className="grid gap-17"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                setError("");
-                const form = new FormData(event.currentTarget);
-                const password = String(form.get("password"));
-                const confirmPassword = String(form.get("confirmPassword"));
-                if (isSignup && password !== confirmPassword) {
-                  setError("Passwords do not match.");
-                  return;
-                }
-                setLoading(true);
-                try {
-                  /* The auth response already carries the full profile, so the app
-                     can move on immediately instead of calling /api/auth/me again
-                     (which used to be a second round trip before the dashboard). */
-                  const result = await (isSignup
-                    ? signup({
-                        email: String(form.get("email")),
-                      password,
-                        displayName: String(form.get("displayName")),
-                      })
-                    : login({
-                        email: String(form.get("email")),
-                      password,
-                      }));
-                  setSubmitted(true);
-                  onAuthenticated?.(result.profile);
-                  go(isSignup ? "onboarding" : "dashboard");
-                } catch (requestError) {
-                  setError(errorMessage(requestError, "We could not sign you in. Please try again."));
-                } finally {
-                  setLoading(false);
-                }
-              }}
-            >
-              <label className={label}>
-                Email address
-                <div className={fieldBox}>
-                  <Mail size={16} className="text-slate-icon" />
-                  <input
-                    className={fieldInput}
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="you@university.edu"
-                  />
-                </div>
-              </label>
-              {isSignup && (
+
+            <p className="eyebrow mb-15 text-10 font-bold uppercase tracking-[.13em] text-brand">
+              {isSignup ? "Create your workspace" : "Welcome back"}
+            </p>
+            {notice && (
+              <p className="mb-18 flex items-start gap-8 rounded-10 border border-warning-surface bg-warning-surface px-12 py-10 text-11 leading-145 text-warning" role="status">
+                {notice}
+              </p>
+            )}
+            <h1 className="m-0 text-[clamp(28px,3vw,40px)] leading-[1.08] font-bold tracking-[-.035em] text-ink">
+              {isSignup ? "Create your study space." : "Welcome back, learner."}
+            </h1>
+            <p className="mb-28 mt-12 text-13 leading-155 text-muted">
+              {isSignup
+                ? "One account for your notes, PDFs, and every course library."
+                : "Sign in to continue to your study desk."}
+            </p>
+
+            {submitted ? (
+              <div className="grid gap-10 rounded-13 border border-success-border bg-success-surface p-22 text-12 text-success-text">
+                <Check size={20} />
+                <strong>{isSignup ? "Your workspace is ready." : "You are signed in."}</strong>
+                <span className="leading-150 text-success-alt">Taking you to your study desk…</span>
+                <button className={`${primaryCta} mt-8`} onClick={() => go("dashboard")}>
+                  Go to study desk <ArrowRight size={16} />
+                </button>
+              </div>
+            ) : (
+              <form
+                className="grid gap-21"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  setError("");
+                  const form = new FormData(event.currentTarget);
+                  const password = String(form.get("password"));
+                  const confirmPassword = String(form.get("confirmPassword"));
+                  if (isSignup && password !== confirmPassword) {
+                    setError("Passwords do not match.");
+                    return;
+                  }
+                  setLoading(true);
+                  try {
+                    /* The auth response already carries the full profile, so the app
+                       can move on immediately instead of calling /api/auth/me again
+                       (which used to be a second round trip before the dashboard). */
+                    const result = await (isSignup
+                      ? signup({
+                          email: String(form.get("email")),
+                        password,
+                          displayName: String(form.get("displayName")),
+                        })
+                      : login({
+                          email: String(form.get("email")),
+                        password,
+                        }));
+                    setSubmitted(true);
+                    onAuthenticated?.(result.profile);
+                    go(isSignup ? "onboarding" : "dashboard");
+                  } catch (requestError) {
+                    setError(errorMessage(requestError, "We could not sign you in. Please try again."));
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
                 <label className={label}>
-                  Full name
-                  <div className={fieldBox}>
+                  Email address
+                  <span className={fieldBox}>
+                    <Mail size={15} className="shrink-0 text-slate-icon" />
                     <input
                       className={fieldInput}
-                      name="displayName"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
                       required
-                      placeholder="Your name"
+                      placeholder="you@university.edu"
                     />
-                  </div>
-                </label>
-              )}
-              <label className={label}>
-                Password
-                <div className={fieldBox}>
-                  <LockKeyhole size={16} className="text-slate-icon" />
-                  <input
-                    className={fieldInput}
-                    name="password"
-                    type="password"
-                    required
-                    minLength={8}
-                    placeholder="At least 8 characters"
-                  />
-                </div>
-              </label>
-              {!isSignup && (
-                <div className="-mt-5 flex justify-end">
-                  <button type="button" className="text-11 font-semibold text-brand hover:underline" onClick={() => go("forgot")}>
-                    Forgot password?
-                  </button>
-                </div>
-              )}
-              {isSignup && (
-                <label className={label}>
-                  Confirm password
-                  <div className={fieldBox}>
-                    <LockKeyhole size={16} className="text-slate-icon" />
-                    <input
-                      className={fieldInput}
-                      name="confirmPassword"
-                      type="password"
-                      required
-                      minLength={8}
-                      autoComplete="new-password"
-                      placeholder="Re-enter your password"
-                    />
-                  </div>
-                </label>
-              )}
-              {isSignup && (
-                <label className="flex items-start gap-8 text-muted text-11 font-normal leading-140">
-                  <input className="mt-2 accent-brand" type="checkbox" required />{" "}
-                  <span>
-                    I agree to keep shared course material respectful and
-                    academic.
                   </span>
                 </label>
-              )}
-              <button className={primaryCta} type="submit">
-                {loading ? "Working..." : isSignup ? "Create account" : "Sign in"}{" "}
-                <ArrowRight size={16} />
+                {isSignup && (
+                  <label className={label}>
+                    Full name
+                    <span className={fieldBox}>
+                      <UserRound size={15} className="shrink-0 text-slate-icon" />
+                      <input
+                        className={fieldInput}
+                        name="displayName"
+                        autoComplete="name"
+                        required
+                        placeholder="Your name"
+                      />
+                    </span>
+                  </label>
+                )}
+                <label className={label}>
+                  Password
+                  <span className={fieldBox}>
+                    <LockKeyhole size={15} className="shrink-0 text-slate-icon" />
+                    <input
+                      className={fieldInput}
+                      name="password"
+                      type="password"
+                      autoComplete={isSignup ? "new-password" : "current-password"}
+                      required
+                      minLength={8}
+                      placeholder="At least 8 characters"
+                    />
+                  </span>
+                </label>
+                {!isSignup && (
+                  <div className="-mt-6 flex justify-end">
+                    <button type="button" className="-mx-5 -my-4 px-5 py-4 text-11 font-semibold text-brand hover:underline" onClick={() => go("forgot")}>
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+                {isSignup && (
+                  <label className={label}>
+                    Confirm password
+                    <span className={fieldBox}>
+                      <LockKeyhole size={15} className="shrink-0 text-slate-icon" />
+                      <input
+                        className={fieldInput}
+                        name="confirmPassword"
+                        type="password"
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
+                        placeholder="Re-enter your password"
+                      />
+                    </span>
+                  </label>
+                )}
+                {isSignup && (
+                  <label className="flex items-start gap-8 text-11 font-normal leading-140 text-muted">
+                    <input className="mt-1 size-16 shrink-0 accent-brand" type="checkbox" required />{" "}
+                    <span>I agree to keep shared course material respectful and academic.</span>
+                  </label>
+                )}
+                <button className={`${primaryCta} mt-2`} type="submit">
+                  {loading ? "Working..." : isSignup ? "Create account" : "Sign in"} <ArrowRight size={16} />
+                </button>
+                {error && <p className="m-0 text-11 leading-145 text-danger" role="alert">{error}</p>}
+              </form>
+            )}
+
+            <p className="mt-27 text-center text-11 text-muted">
+              {isSignup ? "Already have an account?" : "New to RecappEdu?"}{" "}
+              <button className="inline-flex min-h-24 items-center font-bold text-brand" onClick={() => go(isSignup ? "login" : "signup")}>
+                {isSignup ? "Sign in" : "Create an account"}
               </button>
-              {error && <p className="m-0 text-danger text-11 leading-145" role="alert">{error}</p>}
-            </form>
-          )}
-          <p className="mt-27 text-muted text-11 text-center">
-            {isSignup ? "Already have an account?" : "New to RecappEdu?"}{" "}
-            <button className="text-brand font-bold" onClick={() => go(isSignup ? "login" : "signup")}>
-              {isSignup ? "Sign in" : "Create an account"}
-            </button>
-          </p>
-        </div>
-      </section>
+            </p>
+          </div>
+        </section>
+
+        <StoryPanel isSignup={isSignup} />
+      </div>
     </main>
   );
 }

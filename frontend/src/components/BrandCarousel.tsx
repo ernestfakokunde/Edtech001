@@ -110,15 +110,17 @@ export function BrandCarousel() {
         <button className="absolute right-[clamp(14px,2vw,26px)] top-1/2 grid size-42 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-[#0f172a99] text-white transition hover:border-white/40 hover:bg-brand" aria-label="Next slide" onClick={() => show(index + 1)}>
           <ChevronRight size={18} />
         </button>
-        <div className="absolute right-[clamp(14px,2vw,26px)] top-[clamp(14px,2vw,26px)] flex items-center gap-7 rounded-full bg-[#0f172acc] px-11 py-7 [&>button]:size-8 [&>button]:rounded-full [&>button]:bg-white/50 [&>button]:transition [&>.active]:w-22 [&>.active]:rounded-full [&>.active]:bg-white">
+        <div className="absolute right-[clamp(14px,2vw,26px)] top-[clamp(14px,2vw,26px)] flex items-center rounded-full bg-[#0f172acc] px-8 py-4">
           {SLIDES.map((slide, dotIndex) => (
             <button
               key={slide.title}
-              className={dotIndex === index ? "active" : ""}
+              className="grid size-24 place-items-center rounded-full"
               aria-label={`Show slide ${dotIndex + 1}: ${slide.title}`}
               aria-current={dotIndex === index}
               onClick={() => show(dotIndex)}
-            />
+            >
+              <span className={`block h-8 rounded-full transition-all ${dotIndex === index ? "w-22 bg-white" : "w-8 bg-white/50"}`} />
+            </button>
           ))}
         </div>
       </div>
