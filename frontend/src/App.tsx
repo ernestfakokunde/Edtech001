@@ -16,7 +16,7 @@ import {
 import { GenerateFlow } from "./pages/Generate";
 import { getRepositoryPaper, recordQuizAttempt, type RepositoryPaper, type GeneratedSet } from "./lib/api";
 import type { Route } from "./types";
-import { errorMessage, getCurrentProfile, hasProfileCache, invalidateProfileCache, logout, prefetchCsrfToken, type AuthProfile } from "./lib/api";
+import { getCurrentProfile, hasProfileCache, invalidateProfileCache, logout, prefetchCsrfToken, type AuthProfile } from "./lib/api";
 import { saveQuizResult } from "./lib/results";
 import { ProfilePage } from "./pages/Profile";
 import { AdminPage } from "./pages/Admin";
@@ -27,7 +27,6 @@ import { PrivacyPage, TermsPage } from "./pages/Legal";
 import { LearnWithAI } from "./pages/Learn";
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from "./pages/AccountAccess";
 import { AnimatePresence, motion } from "motion/react";
-import { Sparkles } from "lucide-react";
 
 const protectedRoutes: Route[] = [
   "dashboard",
@@ -174,15 +173,12 @@ function App() {
         setProfile(result.profile);
         if (hashRoute() === "home") go("dashboard");
       })
-      .catch((reason) => {
+      .catch(() => {
         setAuthStatus("anonymous");
         setProfile(null);
-        // Only explain the failure when the visitor was trying to open a
-        // signed-in page and got bounced here. A direct visit to the sign-in
-        // screen needs no warning about a session that was never started.
-        if (protectedRoutes.includes(hashRoute())) {
-          setAuthNotice(errorMessage(reason, "Your session has expired. Please sign in again."));
-        }
+        // A missing session is normal for a new/anonymous visitor. Only show a
+        // notice when a previously cached sign-in could not be restored.
+        if (hadCachedProfile) setAuthNotice("We couldn’t restore your previous session. Please sign in again.");
       });
   }, []);
 
@@ -240,10 +236,10 @@ function App() {
     setSelectedMaterial(paper);
     go(`material/${encodeURIComponent(paper.id)}`);
   };
-  const studentRoutes: Route[] = ["dashboard", "personal", "hierarchy", "material", "history", "rewards", "generate", "learn", "flashcards", "quiz", "results", "profile"];
+  const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "paper", "learn", "flashcards", "quiz", "results", "profile"];
   const showHeader = !["login", "signup", "forgot", "reset", "verify-email", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   if (authStatus === "checking" && protectedRoutes.includes(route)) {
-    return <PageLoader title="Checking your session" body="Getting your study desk ready…" />;
+    return <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted"><div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted"><motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" /><strong>Checking your session</strong><span>Getting your study desk ready…</span></div></div>;
   }
 
   // Every signed-in destination except the admin board and the study players
@@ -262,7 +258,7 @@ function App() {
       {route === "personal" && <PersonalPractice />}
       {route === "learn" && <LearnWithAI />}
       {route === "hierarchy" && <Hierarchy onMaterial={chooseMaterial} />}
-      {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <PageLoader title="Loading material" body="Opening the paper details…" />)}
+      {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted"><div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted"><motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" /><strong>Loading material</strong><span>Opening the paper details…</span></div></div>)}
       {route === "generate" && (
         <GenerateFlow
           courseId={routeParts()[1]}
@@ -342,8 +338,8 @@ function App() {
   );
 
   return (
-    <div className="app-canvas">
-      <AnimatePresence>{routeLoading && <motion.div key="route-loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-x-0 top-0 z-[100] h-3 overflow-hidden bg-[color-mix(in_srgb,var(--theme-brand)_22%,transparent)]" role="status" aria-label="Loading page"><motion.span className="block h-full w-[40%] bg-gradient-to-r from-violet-400 via-fuchsia-200 to-pink-200 shadow-[0_0_14px_#9b83f5]" initial={{ x: "-100%" }} animate={{ x: "250%" }} transition={{ duration: .8, repeat: Infinity, ease: "easeInOut" }} /></motion.div>}</AnimatePresence>
+    <div className="app-glass-root min-h-screen text-ink">
+      <AnimatePresence>{routeLoading && <motion.div key="route-loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-x-0 top-0 z-[100] h-3 overflow-hidden bg-[#393759]" role="status" aria-label="Loading page"><motion.span className="block h-full w-[40%] bg-gradient-to-r from-violet-400 via-fuchsia-200 to-pink-200 shadow-[0_0_14px_#9b83f5]" initial={{ x: "-100%" }} animate={{ x: "250%" }} transition={{ duration: .8, repeat: Infinity, ease: "easeInOut" }} /></motion.div>}</AnimatePresence>
       {showHeader && <Header route={route} isAdmin={isAdmin} profile={profile} />}
       {!adminRoutes.includes(route) && <AnimatePresence mode="wait" initial={false}><motion.div key={route} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: .2, ease: "easeOut" }} className="min-h-screen">
         {studentRoutes.includes(route)
@@ -355,29 +351,15 @@ function App() {
   );
 }
 
-function PageLoader({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="app-canvas grid place-items-center px-18">
-      <div className="loading-card" role="status">
-        <span className="spinner mx-auto mb-4" aria-hidden="true" />
-        <strong>{title}</strong>
-        <span>{body}</span>
-      </div>
-    </div>
-  );
-}
-
 function MissingSet({ back }: { back: Route }) {
   return (
-    <div className="grid min-h-[calc(100vh-64px)] place-items-center px-18 py-48">
-      <div className="grid justify-items-center gap-14 text-center text-13 text-muted">
-        <div className="empty-state min-w-[min(340px,calc(100vw-36px))]">
-          <span className="grid size-34 place-items-center rounded-10 bg-pale text-brand" aria-hidden="true"><Sparkles size={17} /></span>
-          <strong>This study set is not loaded on this device.</strong>
-          <span>Generate a fresh practice set to continue.</span>
-        </div>
-        <button className="btn btn-primary" onClick={() => go(back)}>Generate a set</button>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted">
+      <div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted">
+        <motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" />
+        <strong>This study set is not loaded on this device.</strong>
+        <span>Generate a fresh practice set to continue.</span>
       </div>
+      <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go(back)}>Generate a set</button>
     </div>
   );
 }

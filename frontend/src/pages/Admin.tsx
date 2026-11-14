@@ -45,15 +45,15 @@ const QUICK_LINKS: { route: Route; icon: ReactNode; title: string; text: string 
 /* Shared control styling for every admin form. Without these the mission and
    promo inputs fell back to bare element styling (no padding, no focus ring) and
    the fixed-width grids squeezed them on narrow screens. */
-const adminField = "field-input min-h-42 text-13";
-const adminLabel = "field-label gap-5";
+const adminField = "min-h-42 w-full rounded-10 border border-line bg-white px-12 text-13 text-ink outline-none transition-colors placeholder:text-slate-icon focus:border-outline focus:shadow-focus";
+const adminLabel = "grid gap-5 text-11 font-semibold text-muted";
 /* Native select arrows are removed (appearance-none) and replaced by a shared
    ChevronDown rendered inside `adminSelectShell`, so every filter on the board
    looks identical. Sizing classes live on the shell, not the <select> itself. */
 const adminSelectShell = "relative flex min-h-40 items-center text-slate-icon";
-const adminSelect = "h-full w-full cursor-pointer appearance-none truncate rounded-10 border border-line bg-surface py-0 pl-12 pr-31 text-13 text-ink outline-none transition-colors focus:border-outline focus:shadow-focus disabled:cursor-not-allowed disabled:bg-pale disabled:opacity-60";
+const adminSelect = "h-full w-full cursor-pointer appearance-none truncate rounded-10 border border-line bg-white py-0 pl-12 pr-31 text-13 text-ink outline-none transition-colors focus:border-outline focus:shadow-focus disabled:cursor-not-allowed disabled:bg-pale disabled:opacity-60";
 const adminSelectChevron = <ChevronDown size={15} className="pointer-events-none absolute right-10" aria-hidden="true" />;
-const adminSearchBox = "flex min-h-40 items-center gap-8 rounded-10 border border-line bg-surface px-12 text-slate-icon transition-colors focus-within:border-outline focus-within:shadow-focus max-1020:min-w-0";
+const adminSearchBox = "flex min-h-40 items-center gap-8 rounded-10 border border-line bg-white px-12 text-slate-icon transition-colors focus-within:border-outline focus-within:shadow-focus max-1020:min-w-0";
 const adminSearchInput = "w-full min-w-0 border-0 bg-transparent text-13 text-ink outline-none placeholder:text-slate-icon";
 const adminFormGrid = "mb-16 grid gap-10 max-1020:grid-cols-2 max-760:grid-cols-1";
 /* Student-directory filter row: a wrapping flex line. The previous fixed-width
@@ -276,53 +276,47 @@ export function AdminPage({ section }: { section: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section, submissionsPage, submissionStatus, submissionSearch]);
 
-  // The board drawer behaves like the student rail: Escape closes it and the
-  // page behind it stops scrolling while it is open.
-  useEffect(() => {
-    if (!navOpen) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setNavOpen(false); };
-    document.addEventListener("keydown", onKey);
-    document.body.classList.add("scroll-lock");
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.classList.remove("scroll-lock");
-    };
-  }, [navOpen]);
-
   return (
-    <div className="min-h-screen bg-wash text-ink">
+    <div className="min-h-screen bg-[#f6f8fc] text-ink">
       <AdminSidebar section={section} open={navOpen} onClose={() => setNavOpen(false)} />
-      {navOpen && <div className="fixed inset-0 z-30 hidden bg-backdrop backdrop-blur-[1px] max-1020:block" onClick={() => setNavOpen(false)} />}
+      {navOpen && <div className="fixed inset-0 z-30 bg-backdrop max-1020:block hidden" onClick={() => setNavOpen(false)} />}
       <div className="pl-240 max-1020:pl-0">
-        <header className="sticky top-0 z-20 flex h-[72px] items-center gap-12 border-b border-line bg-surface px-20 max-680:px-14">
-          <button className="hidden h-36 w-36 shrink-0 place-items-center rounded-10 border border-line bg-surface text-ink transition-colors hover:bg-pale max-1020:grid" aria-label="Open admin menu" aria-expanded={navOpen} aria-controls="admin-navigation" onClick={() => setNavOpen(true)}>
+        <header className="sticky top-0 z-20 flex h-[74px] items-center gap-12 border-b border-[#e6ebf2] bg-[#f6f8fc] px-20 max-680:px-14">
+          <button className="hidden max-1020:grid h-36 w-36 shrink-0 place-items-center rounded-10 border border-line bg-white text-ink" aria-label="Open admin menu" onClick={() => setNavOpen(true)}>
             <Menu size={18} />
           </button>
           <div className="min-w-0">
             <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Admin board</p>
             <h1 className="m-0 truncate font-inter text-15 font-bold text-ink">{ADMIN_TITLES[section] ?? "Admin"}</h1>
           </div>
-          <button className="btn btn-secondary ml-auto shrink-0" onClick={() => go("dashboard")}>
+          <button className="ml-auto inline-flex shrink-0 items-center gap-6 rounded-999 border border-line bg-white px-14 py-8 text-12 font-semibold text-brand transition-colors hover:bg-pale" onClick={() => go("dashboard")}>
             <ArrowLeft size={14} /> Back to main app
           </button>
         </header>
         <main className="mx-auto w-full max-w-1240 px-36 pt-30 pb-64 max-680:px-14 max-680:py-22 max-680:pb-48">
-          {notice && <div className="notice notice-success mb-16"><Check size={14} /> {notice}</div>}
-          {error && <div className="notice notice-error mb-16"><Ban size={14} /> {error}</div>}
+          {notice && <div className="mb-16 flex items-center gap-8 rounded-10 bg-success-soft px-14 py-11 text-11 text-success-deep"><Check size={14} /> {notice}</div>}
+          {error && <div className="mb-16 flex items-center gap-8 rounded-10 border border-red-200 bg-red-50 px-14 py-11 text-11 text-danger"><Ban size={14} /> {error}</div>}
 
           {section === "overview" && (
             <div className="flex flex-col gap-18">
-              <div className="mb-4 flex items-end justify-between gap-24 max-1020:flex-col max-1020:items-start">
+              <div className="mb-4 flex items-end justify-between gap-24 max-1020:items-start max-1020:flex-col">
                 <div>
-                  <p className="mb-7 text-12 font-semibold uppercase tracking-[.1em] text-muted">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p>
-                  <h2 className="m-0 text-[clamp(26px,3vw,32px)] font-bold tracking-[-.05em] text-ink">Welcome back, Admin</h2>
-                  <p className="mt-7 text-13 text-muted">Here&apos;s what&apos;s happening across your learning community.</p>
+                  <p className="mb-7 text-13 text-slate-icon">Monday, November 9</p>
+                  <h2 className="m-0 text-[clamp(26px,3vw,32px)] font-bold tracking-[-.05em] text-ink">Good day, Admin <span className="text-[.8em]" aria-hidden="true">👋</span></h2>
+                  <p className="mt-7 text-13 text-slate-icon">Here&apos;s what&apos;s happening across your learning community.</p>
                 </div>
-                <button className="btn btn-primary shrink-0" onClick={() => go("admin-submissions")}>
-                  <Plus size={16} /> Review submissions
-                </button>
+                <div className="flex shrink-0 items-center gap-10">
+                  <div className="flex rounded-10 border border-[#dfe6f0] bg-white p-4 [&>button]:min-h-[31px] [&>button]:min-w-[45px] [&>button]:rounded-7 [&>button]:text-12 [&>button]:font-semibold [&>button]:text-[#60728f] [&>button.active]:bg-[#e7efff] [&>button.active]:text-[#2864e8]" aria-label="Dashboard date range">
+                    <button className="rounded-7 bg-[#e7efff] px-10 text-12 font-semibold text-[#2864e8]">7D</button>
+                    <button className="rounded-7 px-10 text-12 font-semibold text-[#60728f]">30D</button>
+                    <button className="rounded-7 px-10 text-12 font-semibold text-[#60728f]">90D</button>
+                  </div>
+                  <button className="inline-flex min-h-40 items-center gap-7 rounded-9 bg-[#2864e8] px-15 text-12 font-bold text-white shadow-[0_7px_16px_rgba(40,100,232,.18)] hover:bg-[#1f55ca]" onClick={() => go("admin-submissions")}>
+                    <Plus size={16} /> Review submissions
+                  </button>
+                </div>
               </div>
-              <div className="stat-grid">
+              <div className="grid grid-cols-4 gap-16 max-1020:grid-cols-2 max-680:grid-cols-1">
                 <Metric icon={<Users size={16} />} value={summary?.users ?? null} label="Students on the platform" tone="blue" />
                 <Metric icon={<Clock3 size={16} />} value={summary?.pending ?? null} label="Submissions awaiting review" tone="amber" />
                 <Metric icon={<Check size={16} />} value={summary?.approved ?? null} label="Approved PDFs" tone="green" />
@@ -333,7 +327,7 @@ export function AdminPage({ section }: { section: string }) {
                 <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Jump to</p>
                 <div className="mt-8 grid grid-cols-2 gap-12 max-680:grid-cols-1">
                   {QUICK_LINKS.map((item) => (
-                    <button key={item.route} className="flex items-start gap-12 rounded-13 border border-line bg-surface p-16 text-left shadow-card transition-shadow hover:shadow-brand-xl" onClick={() => go(item.route)}>
+                    <button key={item.route} className="flex items-start gap-12 rounded-13 border border-line bg-white p-16 text-left shadow-card transition-shadow hover:shadow-brand-xl" onClick={() => go(item.route)}>
                       <span className="grid h-38 w-38 shrink-0 place-items-center rounded-10 bg-pale text-brand">{item.icon}</span>
                       <span className="min-w-0">
                         <strong className="block text-13 font-bold text-ink">{item.title}</strong>
@@ -343,10 +337,10 @@ export function AdminPage({ section }: { section: string }) {
                   ))}
                 </div>
               </div>
-              <section className="panel">
+              <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
                 <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
                   <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Signals</p><h2>Latest activity</h2></div>
-                  <button className="btn btn-secondary btn-sm" onClick={() => go("admin-activity")}>View all</button>
+                  <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" onClick={() => go("admin-activity")}>View all</button>
                 </div>
                 <div className="grid border-t border-line">
                   {activity.length === 0 ? (
@@ -360,7 +354,7 @@ export function AdminPage({ section }: { section: string }) {
           )}
 
           {section === "admins" && (
-            <div className="panel max-680:p-16">
+            <div className="rounded-13 border border-line bg-white p-20 shadow-card max-680:p-16">
               <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Grant access</p>
               <h2 className="mb-0 mt-4 text-[17px] font-bold text-ink">Make another person an admin</h2>
               <p className="mb-0 mt-6 text-13 leading-160 text-muted">They must have signed up already — all you need is the email they registered with. Their account gets full board access immediately.</p>
@@ -370,9 +364,9 @@ export function AdminPage({ section }: { section: string }) {
                   onChange={(event) => setPromoteEmail(event.target.value)}
                   onKeyDown={(event) => { if (event.key === "Enter" && promoteEmail.includes("@") && !promoting) void promote(); }}
                   placeholder="Email they registered with e.g. ada@unilag.edu.ng"
-                  className="field-input min-w-0 flex-1"
+                  className="min-w-0 flex-1 rounded-10 border border-line bg-white px-14 py-10 text-13 text-ink outline-none placeholder:text-slate-icon focus:border-outline focus:shadow-focus"
                 />
-                <button className="btn btn-primary shrink-0" disabled={!promoteEmail.includes("@") || promoting} onClick={() => void promote()}>
+                <button className="inline-flex shrink-0 items-center justify-center gap-8 rounded-10 bg-brand px-18 py-10 text-13 font-semibold text-white shadow-brand-md transition-shadow hover:shadow-brand-lg disabled:opacity-50" disabled={!promoteEmail.includes("@") || promoting} onClick={() => void promote()}>
                   <ShieldCheck size={15} /> Grant admin
                 </button>
               </div>
@@ -394,7 +388,7 @@ export function AdminPage({ section }: { section: string }) {
           )}
 
           {section === "users" && (
-            <section className="panel">
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
               <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
                 <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Students</p><h2>Student directory</h2></div>
                 <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Users size={14} /> {usersPagination.total} students</span>
@@ -442,7 +436,7 @@ export function AdminPage({ section }: { section: string }) {
                   </select>
                   {adminSelectChevron}
                 </div>
-                <button className="btn btn-primary ml-auto shrink-0 max-760:ml-0" onClick={() => setUsersSearch(usersSearchInput.trim())}>Search</button>
+                <button className="ml-auto inline-flex min-h-40 flex-none items-center gap-7 rounded-10 bg-brand px-16 text-13 font-semibold text-white shadow-brand-sm transition-colors hover:bg-brand-deep max-760:ml-0" onClick={() => setUsersSearch(usersSearchInput.trim())}>Search</button>
               </div>
               <div className="grid border-t border-line">
                 {users.length === 0 ? (
@@ -456,16 +450,16 @@ export function AdminPage({ section }: { section: string }) {
               </div>
               {usersPagination.pages > 1 && (
                 <div className="mt-15 inline-flex items-center gap-11 border-t border-line py-10 text-11 text-muted">
-                  <button className="btn btn-secondary" disabled={usersPage <= 1} onClick={() => setUsersPage(usersPage - 1)}><ChevronLeft size={15} /></button>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={usersPage <= 1} onClick={() => setUsersPage(usersPage - 1)}><ChevronLeft size={15} /></button>
                   <span className="inline-flex items-center gap-4">Page {usersPagination.page} of {usersPagination.pages} <span className="text-10 text-slate-icon">({usersPagination.total} total)</span></span>
-                  <button className="btn btn-secondary" disabled={usersPage >= usersPagination.pages} onClick={() => setUsersPage(usersPage + 1)}><ChevronRight size={15} /></button>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={usersPage >= usersPagination.pages} onClick={() => setUsersPage(usersPage + 1)}><ChevronRight size={15} /></button>
                 </div>
               )}
             </section>
           )}
 
           {section === "activity" && (
-            <section className="panel">
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
               <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
                 <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Signals</p><h2>Recent activity</h2></div>
                 <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Activity size={14} /> {activityPagination.total} events</span>
@@ -494,7 +488,7 @@ export function AdminPage({ section }: { section: string }) {
                     placeholder="Search who did it — name or email"
                   />
                 </label>
-                <button className="btn btn-secondary w-full" onClick={() => { setActivitySearch(activitySearchInput.trim()); setActivityPage(1); }}>Search</button>
+                <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 w-full" onClick={() => { setActivitySearch(activitySearchInput.trim()); setActivityPage(1); }}>Search</button>
               </div>
               <div className="grid border-t border-line">
                 {activity.length === 0 ? (
@@ -505,16 +499,16 @@ export function AdminPage({ section }: { section: string }) {
               </div>
               {activityPagination.pages > 1 && (
                 <div className="mt-15 inline-flex items-center gap-11 border-t border-line py-10 text-11 text-muted">
-                  <button className="btn btn-secondary" disabled={activityPage <= 1} onClick={() => setActivityPage(activityPage - 1)}><ChevronLeft size={15} /></button>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={activityPage <= 1} onClick={() => setActivityPage(activityPage - 1)}><ChevronLeft size={15} /></button>
                   <span className="inline-flex items-center gap-4">Page {activityPagination.page} of {activityPagination.pages} <span className="text-10 text-muted">({activityPagination.total} total)</span></span>
-                  <button className="btn btn-secondary" disabled={activityPage >= activityPagination.pages} onClick={() => setActivityPage(activityPage + 1)}><ChevronRight size={15} /></button>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={activityPage >= activityPagination.pages} onClick={() => setActivityPage(activityPage + 1)}><ChevronRight size={15} /></button>
                 </div>
               )}
             </section>
           )}
 
           {section === "missions" && (
-            <section className="panel">
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
               <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
                 <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Missions</p><h2>XP challenges</h2></div>
                 <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Flag size={14} /> {missions.length} missions</span>
@@ -533,7 +527,7 @@ export function AdminPage({ section }: { section: string }) {
                   XP reward
                   <input className={adminField} type="number" min={1} value={missionForm.xpReward} onChange={(event) => setMissionForm({ ...missionForm, xpReward: Number(event.target.value) })} />
                 </label>
-                <button className="btn btn-primary h-42 w-full max-760:w-full" disabled={!missionForm.title.trim() || creatingMission} onClick={() => void createMission()}><Plus size={15} /> Add mission</button>
+                <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none h-42 w-full max-760:w-full" disabled={!missionForm.title.trim() || creatingMission} onClick={() => void createMission()}><Plus size={15} /> Add mission</button>
               </div>
               <div className="grid gap-10">
                 {missions.length === 0 ? (
@@ -548,7 +542,7 @@ export function AdminPage({ section }: { section: string }) {
           )}
 
           {section === "promo" && (
-            <section className="panel">
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
               <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
                 <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Promo codes</p><h2>Give out free Pro</h2></div>
                 <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Ticket size={14} /> {promoCodes.length} codes</span>
@@ -563,7 +557,7 @@ export function AdminPage({ section }: { section: string }) {
                   Description <span className="font-normal text-slate-icon">(optional)</span>
                   <input className={adminField} value={promoForm.description} onChange={(event) => setPromoForm({ ...promoForm, description: event.target.value })} placeholder="What it says to students" />
                 </label>
-                <button className="btn btn-primary h-42 w-full" disabled={!promoForm.code.trim() || creatingPromo} onClick={() => void createPromo()}><Plus size={15} /> Create code</button>
+                <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none h-42 w-full" disabled={!promoForm.code.trim() || creatingPromo} onClick={() => void createPromo()}><Plus size={15} /> Create code</button>
                 <div className="col-span-full grid grid-cols-4 gap-10 max-760:grid-cols-2">
                   <label className={adminLabel}>
                     Student Plus days
@@ -596,7 +590,7 @@ export function AdminPage({ section }: { section: string }) {
           )}
 
           {section === "submissions" && (
-            <section className="panel">
+            <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
               <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
                 <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Submissions</p><h2>Repository review</h2></div>
                 <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><FileText size={14} /> {submissionsPagination.total} submissions</span>
@@ -620,7 +614,7 @@ export function AdminPage({ section }: { section: string }) {
                     placeholder="Search course or owner"
                   />
                 </label>
-                <button className="btn btn-secondary w-full" onClick={() => { setSubmissionSearch(submissionSearchInput.trim()); setSubmissionsPage(1); }}>Search</button>
+                <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 w-full" onClick={() => { setSubmissionSearch(submissionSearchInput.trim()); setSubmissionsPage(1); }}>Search</button>
               </div>
               <div className="grid gap-10">
                 {submissions.length === 0 ? (
@@ -633,9 +627,9 @@ export function AdminPage({ section }: { section: string }) {
               </div>
               {submissionsPagination.pages > 1 && (
                 <div className="mt-15 inline-flex items-center gap-11 border-t border-line py-10 text-11 text-muted">
-                  <button className="btn btn-secondary" disabled={submissionsPage <= 1} onClick={() => setSubmissionsPage(submissionsPage - 1)}><ChevronLeft size={15} /></button>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={submissionsPage <= 1} onClick={() => setSubmissionsPage(submissionsPage - 1)}><ChevronLeft size={15} /></button>
                   <span className="inline-flex items-center gap-4">Page {submissionsPagination.page} of {submissionsPagination.pages} <span className="text-10 text-muted">({submissionsPagination.total} total)</span></span>
-                  <button className="btn btn-secondary" disabled={submissionsPage >= submissionsPagination.pages} onClick={() => setSubmissionsPage(submissionsPage + 1)}><ChevronRight size={15} /></button>
+                  <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={submissionsPage >= submissionsPagination.pages} onClick={() => setSubmissionsPage(submissionsPage + 1)}><ChevronRight size={15} /></button>
                 </div>
               )}
             </section>
@@ -655,13 +649,13 @@ export function AdminPage({ section }: { section: string }) {
 function Metric({ icon, value, label, tone }: { icon: ReactNode; value: number | null; label: string; tone: "blue" | "amber" | "green" | "red" }) {
   const tones: Record<string, string> = {
     blue: "bg-pale text-brand",
-    amber: "bg-warning-surface text-warning",
+    amber: "bg-warning-surface text-warning-icon",
     green: "bg-success-soft text-success-icon",
-    red: "bg-danger-surface text-danger",
+    red: "bg-[#fee2e2] text-[#dc2626]",
   };
   return (
-    <div className="metric-card">
-      <span className={`metric-icon ${tones[tone]}`}>{icon}</span>
+    <div className="flex items-center gap-12 rounded-13 border border-line bg-white p-16 shadow-card">
+      <span className={`grid h-36 w-36 shrink-0 place-items-center rounded-10 ${tones[tone]}`}>{icon}</span>
       <div className="min-w-0">
         {value === null ? (
           <motion.span
@@ -693,17 +687,10 @@ function Metric({ icon, value, label, tone }: { icon: ReactNode; value: number |
 
 function AdminSidebar({ section, open, onClose }: { section: string; open: boolean; onClose: () => void }) {
   return (
-    <aside
-      id="admin-navigation"
-      aria-label="Admin navigation"
-      className={`fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-line bg-surface font-inter antialiased transition-transform duration-200 ${open ? "translate-x-0 shadow-[0_20px_60px_#00000055]" : "max-1020:-translate-x-full"}`}
-    >
+    <aside className={`fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-[#e6ebf2] bg-white font-inter antialiased transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
       <div className="flex h-60 items-center gap-11 border-b border-line px-16">
-        <span className="grid h-34 w-34 shrink-0 place-items-center rounded-11 bg-brand text-[var(--theme-on-brand)] shadow-brand-sm"><ShieldCheck size={17} /></span>
+        <span className="grid h-34 w-34 shrink-0 place-items-center rounded-11 bg-brand text-white shadow-brand-sm"><ShieldCheck size={17} /></span>
         <p className="m-0 min-w-0 truncate text-[15px] font-semibold text-ink">Admin board</p>
-        <button className="ml-auto hidden size-32 place-items-center rounded-9 text-muted transition-colors hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close admin menu" onClick={onClose}>
-          <X size={17} />
-        </button>
       </div>
       <button className="flex items-center gap-8 border-b border-line px-16 py-13 text-12 font-semibold text-brand transition-colors hover:bg-pale" onClick={() => { go("dashboard"); onClose(); }}>
         <ArrowLeft size={14} /> Back to main app
@@ -712,8 +699,7 @@ function AdminSidebar({ section, open, onClose }: { section: string; open: boole
         {ADMIN_NAV.map((item) => (
           <button
             key={item.key}
-            aria-current={section === item.key ? "page" : undefined}
-            className={`flex w-full shrink-0 items-center gap-12 rounded-10 px-13 py-11 text-left text-13 font-medium transition-colors ${section === item.key ? "bg-brand font-semibold text-[var(--theme-on-brand)] shadow-brand-sm" : "text-muted hover:bg-pale hover:text-ink"}`}
+            className={`flex w-full shrink-0 items-center gap-12 rounded-10 px-13 py-11 text-left text-13 font-medium transition-colors ${section === item.key ? "bg-brand font-semibold text-white shadow-brand-sm" : "text-muted hover:bg-pale hover:text-ink"}`}
             onClick={() => { go(item.route); onClose(); }}
           >
             <span className="shrink-0">{item.icon}</span>
@@ -739,7 +725,7 @@ function UserRow({ user, onToggle }: { user: AdminUser; onToggle: () => void }) 
         <span>{user._count.papers} study PDFs</span>
         <span>{user.xp} XP</span>
       </div>
-      <span className={`justify-self-end whitespace-nowrap rounded-full px-8 py-5 text-10 font-bold ${user.isAdmin ? "bg-pale text-brand" : "bg-pale text-muted"}`}>{user.isAdmin ? "Admin" : user.tier === "PREMIUM" ? "Premium" : "Free"}</span>
+      <span className={`justify-self-end rounded-full px-8 py-5 text-10 font-bold ${user.isAdmin ? "bg-[#dbeafe] text-brand" : "bg-slate-100 text-slate-600"}`}>{user.isAdmin ? "Admin" : user.tier === "PREMIUM" ? "Premium" : "Free"}</span>
       <button className={`col-[2/-1] justify-self-start whitespace-nowrap border-0 bg-transparent p-0 text-10 font-bold ${suspended ? "text-success-deep" : "text-danger"}`} onClick={onToggle}>{suspended ? "Restore" : "Suspend"}</button>
     </div>
   );
@@ -749,7 +735,7 @@ function SubmissionRow({ submission, busy, onReview }: { submission: RepositoryS
   const [note, setNote] = useState("");
   const pending = submission.status === "PENDING";
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-13 rounded-12 border border-line bg-surface p-15 max-760:grid-cols-[auto_minmax(0,1fr)]">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-13 rounded-12 border border-line bg-white p-15 max-760:grid-cols-[auto_minmax(0,1fr)]">
       <span className="grid size-34 place-items-center rounded-9 bg-pale text-brand"><FileText size={16} /></span>
       <div className="min-w-0 [&>strong]:text-13 [&>strong]:font-bold [&>p]:my-5 [&>p]:text-11 [&>p]:leading-[1.45] [&>p]:text-muted [&>small]:text-10 [&>small]:text-slate-icon [&>textarea]:mt-10 [&>textarea]:block [&>textarea]:min-h-42 [&>textarea]:w-full [&>textarea]:resize-y [&>textarea]:rounded-8 [&>textarea]:border [&>textarea]:border-line [&>textarea]:p-8 [&>textarea]:text-11">
         <strong>{submission.course.code} — {submission.course.title}</strong>
@@ -759,8 +745,8 @@ function SubmissionRow({ submission, busy, onReview }: { submission: RepositoryS
       </div>
       {pending ? (
         <div className="flex flex-col gap-7 max-760:col-[2] max-760:flex-row">
-          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => onReview(submission.id, "APPROVED", note.trim() || undefined)}><Check size={14} /> Approve</button>
-          <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => onReview(submission.id, "REJECTED", note.trim() || undefined)}><Ban size={14} /> Reject</button>
+          <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={busy} onClick={() => onReview(submission.id, "APPROVED", note.trim() || undefined)}><Check size={14} /> Approve</button>
+          <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-8 border border-red-200 bg-white px-11 text-11 font-bold text-danger" disabled={busy} onClick={() => onReview(submission.id, "REJECTED", note.trim() || undefined)}><Ban size={14} /> Reject</button>
         </div>
       ) : (
         <span className="text-10 text-muted">{submission.status.toLowerCase()}</span>
@@ -774,7 +760,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
   const action = entry.action.replace(/_/g, " ").toLowerCase();
   const target = entry.metadata?.title ? ` "${entry.metadata.title}"` : "";
   return (
-    <div className="flex min-w-0 items-center gap-10 border-b border-line py-12 text-11 [&>span]:grid [&>span]:size-30 [&>span]:shrink-0 [&>span]:place-items-center [&>span]:rounded-full [&>span]:bg-pale [&>span]:text-brand [&>p]:m-0 [&>p]:min-w-0 [&>p]:flex-1 [&>p]:truncate [&>time]:whitespace-nowrap [&>time]:text-10 [&>time]:text-slate-icon">
+    <div className="flex items-center gap-10 border-b border-line py-12 text-11 [&>span]:grid [&>span]:size-30 [&>span]:shrink-0 [&>span]:place-items-center [&>span]:rounded-full [&>span]:bg-pale [&>span]:text-brand [&>p]:m-0 [&>p]:min-w-0 [&>p]:flex-1 [&>p]:truncate [&>time]:whitespace-nowrap [&>time]:text-10 [&>time]:text-slate-icon">
       <span><Activity size={14} /></span>
       <p><strong>{actor}</strong> {action}{target}</p>
       <time>{timeAgo(entry.createdAt)}</time>
@@ -785,39 +771,28 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
 function SuspendDialog({ user, onClose, onConfirm }: { user: AdminUser; onClose: () => void; onConfirm: (until: string, reason: string) => void }) {
   const [days, setDays] = useState("7");
   const [reason, setReason] = useState("Suspended by administrator");
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    document.body.classList.add("scroll-lock");
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.classList.remove("scroll-lock");
-    };
-  }, [onClose]);
-
   return (
-    <div className="dialog-backdrop" onClick={onClose}>
-      <div className="dialog-card" role="dialog" aria-modal="true" aria-labelledby="suspend-dialog-title" onClick={(event) => event.stopPropagation()}>
-        <button className="absolute right-17 top-17 text-muted transition-colors hover:text-ink" aria-label="Close dialog" onClick={onClose}><X size={17} /></button>
+    <div className="fixed inset-0 z-10 grid place-items-center bg-[#0f172a66] p-20" onClick={onClose}>
+      <div className="relative w-full max-w-[430px] rounded-17 bg-white p-27 shadow-[0_25px_60px_rgba(15,23,42,.2)] [&>h2]:mb-9 [&>h2]:mt-6 [&>h2]:text-[23px] [&>h2]:font-bold [&>p:not(.eyebrow)]:mb-20 [&>p:not(.eyebrow)]:text-12 [&>p:not(.eyebrow)]:leading-[1.55] [&>p:not(.eyebrow)]:text-muted" onClick={(event) => event.stopPropagation()}>
+        <button className="absolute right-17 top-17 text-muted" onClick={onClose}><X size={17} /></button>
         <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Suspension</p>
-        <h2 id="suspend-dialog-title">Suspend {user.displayName || user.email}</h2>
+        <h2>Suspend {user.displayName || user.email}</h2>
         <p>They will not be able to sign in until the suspension lifts.</p>
-        <label className="field-label mb-16">
+        <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block">
           Duration
-          <select className="field-select" value={days} onChange={(event) => setDays(event.target.value)}>
+          <select value={days} onChange={(event) => setDays(event.target.value)}>
             <option value="1">1 day</option>
             <option value="7">7 days</option>
             <option value="30">30 days</option>
           </select>
         </label>
-        <label className="field-label mb-20">
+        <label className="field mb-21 grid gap-7 text-12 font-semibold text-muted [&>span]:mb-8 [&>span]:block">
           Reason
-          <textarea className="field-textarea" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why is this account being suspended?" />
+          <textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why is this account being suspended?" />
         </label>
-        <div className="flex flex-wrap justify-end gap-9">
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-danger" onClick={() => onConfirm(new Date(Date.now() + Number(days) * 86400000).toISOString(), reason.trim() || "Suspended by administrator")}>Suspend account</button>
+        <div className="mt-20 flex justify-end gap-9">
+          <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onClose}>Cancel</button>
+          <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-8 border border-red-200 bg-white px-11 text-11 font-bold text-danger" onClick={() => onConfirm(new Date(Date.now() + Number(days) * 86400000).toISOString(), reason.trim() || "Suspended by administrator")}>Suspend account</button>
         </div>
       </div>
     </div>
@@ -836,7 +811,7 @@ function timeAgo(iso: string) {
 
 function MissionRow({ mission, onToggle, onDelete }: { mission: AdminMission; onToggle: () => void; onDelete: () => void }) {
   return (
-    <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-surface px-14 py-12 max-760:flex-col max-760:items-start ${mission.isActive ? "" : "opacity-55"}`}>
+    <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-white px-14 py-12 max-760:flex-col max-760:items-start ${mission.isActive ? "" : "opacity-55"}`}>
       <div className="mission-icon"><Flag size={15} /></div>
       <div className="mission-main">
         <strong>{mission.title}</strong>
@@ -844,8 +819,8 @@ function MissionRow({ mission, onToggle, onDelete }: { mission: AdminMission; on
         <small>+{mission.xpReward} XP · {mission.claimCount} claimed{mission.isActive ? "" : " · paused"}</small>
       </div>
       <div className="flex shrink-0 gap-8 max-760:justify-start">
-        <button className="btn btn-secondary" onClick={onToggle}><Power size={14} /> {mission.isActive ? "Pause" : "Resume"}</button>
-        <button className="btn btn-ghost btn-sm btn-icon text-danger" aria-label={`Delete ${mission.title}`} onClick={onDelete}><Trash2 size={14} /></button>
+        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onToggle}><Power size={14} /> {mission.isActive ? "Pause" : "Resume"}</button>
+        <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50 danger" aria-label={`Delete ${mission.title}`} onClick={onDelete}><Trash2 size={14} /></button>
       </div>
     </div>
   );
@@ -859,7 +834,7 @@ function PromoRow({ promo, copied, onCopy, onToggle, onDelete }: { promo: AdminP
   grants.push("300 AI credits/month");
   if (promo.xpBonus > 0) grants.push(`${promo.xpBonus} bonus XP`);
   return (
-    <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-surface px-14 py-12 max-760:flex-col max-760:items-start ${!promo.isActive || usedUp || expired ? "opacity-55" : ""}`}>
+    <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-white px-14 py-12 max-760:flex-col max-760:items-start ${!promo.isActive || usedUp || expired ? "opacity-55" : ""}`}>
       <div className="grid min-w-0 gap-2 [&>code]:font-mono [&>code]:text-13 [&>code]:font-bold [&>code]:tracking-[.08em] [&>span]:text-12 [&>small]:text-11 [&>small]:text-muted">
         <code>{promo.code}</code>
         <span>{grants.join(" + ") || "No reward set"}</span>
@@ -871,9 +846,9 @@ function PromoRow({ promo, copied, onCopy, onToggle, onDelete }: { promo: AdminP
         </small>
       </div>
       <div className="admin-row-actions">
-        <button className="btn btn-secondary" onClick={onCopy}>{copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}</button>
-        <button className="btn btn-secondary" onClick={onToggle}><Power size={14} /> {promo.isActive ? "Pause" : "Resume"}</button>
-        <button className="btn btn-ghost btn-sm btn-icon text-danger" aria-label={`Delete ${promo.code}`} onClick={onDelete}><Trash2 size={14} /></button>
+        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onCopy}>{copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}</button>
+        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onToggle}><Power size={14} /> {promo.isActive ? "Pause" : "Resume"}</button>
+        <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50 danger" aria-label={`Delete ${promo.code}`} onClick={onDelete}><Trash2 size={14} /></button>
       </div>
     </div>
   );

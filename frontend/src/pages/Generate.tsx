@@ -26,7 +26,6 @@ import {
 import type { Mode } from "../types";
 
 const LENGTH_OPTIONS = [5, 10, 15, 20];
-const MAX_CUSTOM_LENGTH = 60;
 const TIME_OPTIONS = [30, 60] as const;
 
 type CourseOption = { id: string; code: string; title: string };
@@ -61,7 +60,6 @@ export function GenerateFlow({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [mode, setMode] = useState<Mode>("flashcards");
   const [length, setLength] = useState(LENGTH_OPTIONS[0]);
-  const [customLength, setCustomLength] = useState(25);
   const [timePerQuestion, setTimePerQuestion] = useState<30 | 60>(30);
   const [busy, setBusy] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -70,27 +68,23 @@ export function GenerateFlow({
 
   useEffect(() => {
     let alive = true;
-    // Upload is available immediately; load saved courses in the background
-    // only to populate the optional grouping control. The quota request is
-    // independent, so a slow quota response must not keep the course control
-    // stuck on "Loading saved courses".
-    getMyCourses()
-      .catch(() => null)
-      .then((saved) => {
-        if (!alive) return;
-        if (saved) {
-          setSchool(saved.school);
-          setCourseOptions(saved.courses);
-          const match = courseId ? saved.courses.find((item) => item.id === courseId) ?? null : null;
-          setCourse(match);
-        }
-        setCourseLoading(false);
-      });
-    getGenerationQuota()
-      .catch(() => null)
-      .then((quotaValue) => {
-        if (alive && quotaValue) setQuota(quotaValue);
-      });
+    (async () => {
+      // Upload is available immediately; load saved courses in the background
+      // only to populate the optional grouping control.
+      const [saved, quotaValue] = await Promise.all([
+        getMyCourses().catch(() => null),
+        getGenerationQuota().catch(() => null),
+      ]);
+      if (!alive) return;
+      if (quotaValue) setQuota(quotaValue);
+      if (saved) {
+        setSchool(saved.school);
+        setCourseOptions(saved.courses);
+        const match = courseId ? saved.courses.find((item) => item.id === courseId) ?? null : null;
+        setCourse(match);
+      }
+      setCourseLoading(false);
+    })();
     return () => {
       alive = false;
     };
@@ -171,20 +165,14 @@ export function GenerateFlow({
 
   if (busy) {
     return (
-      <main className="mx-auto flex min-h-[60vh] w-full max-w-[1180px] items-center justify-center px-[clamp(20px,4vw,40px)] py-40 max-680:px-18">
-        <div className="panel grid w-full max-w-[460px] justify-items-center gap-10 px-28 py-34 text-center text-muted">
+      <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere] flex min-h-[60vh] items-center justify-center">
+        <div className="grid w-full max-w-[440px] justify-items-center gap-10 rounded-18 border border-line bg-white px-28 py-34 text-center text-muted shadow-[0_22px_40px_#0f172a12]">
           <span className="mb-4 grid size-54 place-items-center rounded-14 bg-pale text-brand"><Loader2 size={28} className="animate-spin" /></span>
           <strong className="font-grotesk text-18 font-bold text-ink">Generating your {mode === "quiz" ? "quiz" : "flashcard"} set</strong>
-          <span className="max-w-[320px] text-12 leading-160">{mode === "quiz"
+          <span className="max-w-[300px] text-12 leading-160">{mode === "quiz"
             ? "Quiz generation usually takes less than a minute. We’re reading your material, writing exam-style questions, and checking the answer choices. Larger files may take a little longer, so please keep this page open."
             : `We’re reading your material and creating ${length} concise study cards. Smaller sets finish faster.`}</span>
-          <div className="mt-12 flex flex-wrap justify-center gap-8">
-            {/* Static progress language: the API call is one request, so these
-                are stage labels rather than a fake animated percentage. */}
-            <span className="rounded-full bg-brand px-10 py-5 text-10 font-bold text-[var(--theme-on-brand)]">Reading material</span>
-            <span className="rounded-full bg-pale px-10 py-5 text-10 font-bold text-muted">{mode === "quiz" ? "Writing questions" : "Writing cards"}</span>
-            <span className="rounded-full bg-pale px-10 py-5 text-10 font-bold text-muted">Finishing up</span>
-          </div>
+          <div className="mt-12 flex flex-wrap justify-center gap-8 [&>span]:rounded-full [&>span]:bg-[#f1f5fb] [&>span]:px-10 [&>span]:py-4 [&>span]:text-10 [&>span]:font-bold [&>span]:text-muted [&>.active]:bg-brand [&>.active]:text-white"><span className="active">Upload material</span><span>Review key topics</span><span className="max-w-[300px] text-12 leading-160">{mode === "quiz" ? "Build quiz and answers" : "Create study cards"}</span></div>
         </div>
       </main>
     );
@@ -202,43 +190,37 @@ export function GenerateFlow({
       subtitle="Upload a PDF or Word document and AI will turn it into a private practice set."
       back="dashboard"
     >
-      <div className="mb-18">
-        <label className="field-label" htmlFor="generation-course">Course (optional)</label>
-        <select id="generation-course" className="field-select mt-6 max-w-[460px]" value={course?.id ?? ""} onChange={(event) => setCourse(courseOptions.find((item) => item.id === event.target.value) ?? null)}>
+      <div className="generation-course-control mb-18 [&>label]:mb-7 [&>label]:block [&>label]:text-12 [&>label]:font-bold [&>small]:mt-6 [&>small]:block [&>small]:text-11 [&>small]:text-muted">
+        <label htmlFor="generation-course">Course (optional)</label>
+        <select className="generation-course-select" id="generation-course" value={course?.id ?? ""} onChange={(event) => setCourse(courseOptions.find((item) => item.id === event.target.value) ?? null)}>
           <option value="">No course · quick practice</option>
           {courseOptions.map((item) => <option value={item.id} key={item.id}>{item.code} · {item.title}</option>)}
         </select>
-        {courseLoading && <small className="mt-6 block text-11 text-muted">Loading saved courses… you can upload now.</small>}
-        {!courseLoading && <small className="mt-6 block text-11 text-muted">Want to group this set? <button type="button" className="inline-flex min-h-24 items-center font-bold text-brand hover:underline" onClick={openAddForm}>Add a course</button></small>}
+        {courseLoading && <small>Loading saved courses… you can upload now.</small>}
+        {!courseLoading && <small>Want to group this set? <button type="button" className="text-button" onClick={openAddForm}>Add a course</button></small>}
       </div>
       {addingCourse && (
-        <div className="mb-18 rounded-14 border border-line bg-pale/50 p-15">
-          {!school && <p className="notice notice-warning mb-12">Add your university and faculty on your profile to save a course. You can still continue without one.</p>}
-          <div className="mb-12 grid grid-cols-[.9fr_1.6fr] gap-8 max-760:grid-cols-1">
-            <input className="field-input" value={newCourse.code} onChange={(event) => setNewCourse({ ...newCourse, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" disabled={!school} aria-label="New course code" />
-            <input className="field-input" value={newCourse.title} onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })} placeholder="Course title e.g. Data Structures" disabled={!school} aria-label="New course title" />
+        <div className="border-t border-line py-15">
+          {!school && <p className="course-warning mb-10 text-11 font-bold">Add your university and faculty on your profile to save a course. You can still continue without one.</p>}
+          <div className="mb-12 grid grid-cols-[.9fr_1.6fr] gap-8 max-760:grid-cols-1 [&>input]:min-h-44 [&>input]:w-full [&>input]:rounded-10 [&>input]:border [&>input]:border-line [&>input]:bg-white [&>input]:px-12 [&>input]:text-12 [&>input]:text-ink [&>input]:outline-none [&>input:focus]:border-outline [&>input:focus]:shadow-[0_0_0_3px_#ede9fe] [&>input:disabled]:bg-[#f8fafc] [&>input:disabled]:text-slate-icon">
+            <input value={newCourse.code} onChange={(event) => setNewCourse({ ...newCourse, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" disabled={!school} />
+            <input value={newCourse.title} onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })} placeholder="Course title e.g. Data Structures" disabled={!school} />
           </div>
-          {addCourseError && <small className="block text-11 font-semibold text-danger">{addCourseError}</small>}
-          <div className="mt-12 flex justify-end gap-9 max-680:flex-col">
-            <button className="btn btn-secondary btn-sm" onClick={closeAddForm}><X size={14} /> Cancel</button>
-            {school
-              ? <button className="btn btn-primary btn-sm" disabled={addingCourseBusy} onClick={() => void addCourseHandler()}>{addingCourseBusy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Save course</button>
-              : <button className="btn btn-primary btn-sm" onClick={() => go("profile")}>Go to profile</button>}
+          {addCourseError && <small className="upload-form-error">{addCourseError}</small>}
+          <div className="mt-12 flex justify-end gap-9">
+            <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={closeAddForm}><X size={14} /> Cancel</button>
+            {school ? <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" disabled={addingCourseBusy} onClick={() => void addCourseHandler()}>{addingCourseBusy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Save course</button> : <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("profile")}>Go to profile</button>}
           </div>
         </div>
       )}
 
-      <label className={`upload-zone relative mb-20 flex min-h-[168px] cursor-pointer flex-col items-center justify-center gap-9 px-18 py-24 text-center transition ${fileProblem ? "has-error" : ""}`}>
-        <span className="grid size-44 shrink-0 place-items-center rounded-full bg-pale text-brand">
-          <Upload size={19} />
-        </span>
-        <span className="block w-full max-w-[520px] text-13 font-bold text-ink [overflow-wrap:anywhere]">{selectedFile ? selectedFile.name : "Choose a PDF or DOCX file"}</span>
-        <small className="block w-full max-w-[420px] text-11 font-medium leading-150 text-muted">{fileProblem ?? (selectedFile ? "Ready to process" : `The file is used only to generate your private practice set — PDF or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
+      <label className={`upload-zone relative mb-20 flex min-h-[138px] cursor-pointer flex-col items-center justify-center gap-7 px-18 py-24 text-center transition ${fileProblem ? "has-error" : ""} [&>span]:block [&>span]:w-full [&>span]:text-13 [&>span]:font-bold [&>span]:text-ink [&>span]:[overflow-wrap:anywhere] [&>small]:block [&>small]:w-full [&>small]:max-w-[420px] [&>small]:font-medium [&>small]:leading-150 [&>input]:pointer-events-none [&>input]:absolute [&>input]:opacity-0`}>
+        <Upload size={17} />
+        <span>{selectedFile ? selectedFile.name : "Choose a PDF or DOCX file"}</span>
+        <small>{fileProblem ?? (selectedFile ? "Ready to process" : `The file is used only to generate your private practice set — PDF or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
         <input
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           type="file"
           accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          aria-label="Choose a PDF or DOCX file"
           onChange={(event) => { const file = event.target.files?.[0] || null; setSelectedFile(file); setError(""); }}
         />
       </label>
@@ -255,7 +237,7 @@ export function GenerateFlow({
             key={value}
             onClick={() => setMode(value)}
           >
-            <span className={`grid size-38 place-items-center rounded-10 ${mode === value ? "bg-brand text-[var(--theme-on-brand)]" : "bg-pale text-brand"}`}><Icon size={19} /></span>
+            <span className={`grid size-38 place-items-center rounded-10 ${mode === value ? "bg-brand text-white" : "bg-pale text-brand"}`}><Icon size={19} /></span>
             <strong>{title}</strong>
             <small>{description}</small>
           </button>
@@ -272,29 +254,7 @@ export function GenerateFlow({
               <strong>{option}</strong><small>{mode === "quiz" ? "questions" : "cards"}</small>
             </button>
           ))}
-          <button type="button" aria-pressed={!LENGTH_OPTIONS.includes(length)} className="option-pill inline-flex items-center gap-6" onClick={() => setLength(customLength)}>
-            Custom <Plus size={13} />
-          </button>
         </div>
-        {!LENGTH_OPTIONS.includes(length) && (
-          <div className="mt-10 flex items-center gap-8 text-11 text-muted">
-            <label htmlFor="custom-set-length" className="m-0">Questions</label>
-            <input
-              id="custom-set-length"
-              type="number"
-              min="1"
-              max={MAX_CUSTOM_LENGTH}
-              value={customLength}
-              onChange={(event) => {
-                const next = Math.min(MAX_CUSTOM_LENGTH, Math.max(1, Number(event.target.value) || 1));
-                setCustomLength(next);
-                setLength(next);
-              }}
-              className="h-36 w-64 rounded-8 border border-line bg-white px-8 text-center text-11 text-ink"
-            />
-            <span>Up to {MAX_CUSTOM_LENGTH}</span>
-          </div>
-        )}
       </div>
 
       {mode === "quiz" && (
@@ -311,18 +271,18 @@ export function GenerateFlow({
       )}
 
       {quota.limit > 0 && (
-        <div className={`notice ${quota.remaining === 0 ? "notice-warning" : "notice-info"} mb-14 items-center gap-8`}>
-          <Clock3 size={14} className="mt-1 shrink-0" />
-          <span className="min-w-0 flex-1">{quota.remaining} of {quota.limit} monthly AI credits remaining{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}.</span>
-          <button type="button" className="btn btn-secondary btn-sm shrink-0" onClick={() => go("profile")}>Go Pro</button>
+        <div className={`mb-14 flex flex-wrap items-center gap-8 rounded-11 border border-[#dbeafe] bg-[#f8fbff] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
+          <Clock3 size={14} />
+          <span>{quota.remaining} of {quota.limit} monthly AI credits remaining{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}.</span>
+          <button type="button" className="bg-brand" onClick={() => go("profile")}>Go Pro</button>
         </div>
       )}
 
-      {error && <p className="notice notice-error mb-14">{error}</p>}
+      {error && <small className="upload-form-error">{error}</small>}
 
       <div className="grid gap-9">
         <button
-          className="btn btn-primary w-full"
+          className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none w-full"
           disabled={!selectedFile || fileProblem !== null || quota.remaining === 0 || pdfBusy}
           onClick={() => void submit()}
         >
@@ -330,8 +290,8 @@ export function GenerateFlow({
         </button>
         <button
           type="button"
-          className="btn btn-secondary w-fit justify-self-center"
-          disabled={!selectedFile || fileProblem !== null || quota.remaining === 0 || busy}
+          className="inline-flex min-h-40 w-fit items-center justify-center justify-self-center gap-7 rounded-9 border border-line bg-transparent px-14 text-12 font-bold text-brand transition-colors hover:border-brand hover:bg-pale disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={!selectedFile || fileProblem !== null || quota.remaining === 0 || busy || pdfBusy}
           onClick={() => void downloadQuestionPaper()}
         >
           <Download size={16} /> {pdfBusy ? "Preparing question paper…" : `View questions & save as PDF (${length})`}

@@ -10,7 +10,7 @@ const MAX_SAVED_COURSES = 10;
 type ProfileTab = "personal" | "school" | "plans" | "account";
 
 const inputClass = "min-h-44 w-full rounded-10 border border-line bg-surface px-12 text-12 text-ink outline-none transition focus:border-outline focus:shadow-focus disabled:bg-pale disabled:text-slate-icon";
-const buttonClass = "btn btn-primary";
+const buttonClass = "inline-flex min-h-40 items-center justify-center gap-7 rounded-9 bg-brand px-14 text-12 font-bold text-white transition hover:-translate-y-1 disabled:cursor-not-allowed disabled:opacity-50";
 
 function SectionCard({ icon, eyebrow, title, description, children, className = "" }: { icon: ReactNode; eyebrow?: string; title: string; description?: string; children: ReactNode; className?: string }) {
   return (
@@ -129,7 +129,7 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
 
   return (
     <PageFrame eyebrow="Account" title="Your profile" subtitle="Keep your account, study context, and plan in one place." back="dashboard">
-      <div className="profile-page w-full">
+      <div className="profile-page w-full max-w-[1020px]">
         <section className="profile-identity">
           <div className="profile-monogram">{initialsOf(profile)}</div>
           <div className="min-w-0 flex-1">

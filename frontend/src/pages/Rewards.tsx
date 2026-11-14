@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Award, Check, Copy, PartyPopper, Sparkles, Ticket } from "lucide-react";
+import { ArrowRight, Award, Check, Copy, Gift, PartyPopper, Sparkles, Ticket, Trophy, Zap } from "lucide-react";
 import { PageFrame } from "../components/Layout";
 import { claimMission, errorMessage, getMyMissions, getReferralInfo, redeemPromoCode, type ProfileMission, type ReferralInfo } from "../lib/api";
 
@@ -48,102 +48,59 @@ export function RewardsPage() {
     catch { setError("Could not copy the code. Select it and copy manually."); }
   }
 
+  const progress = xp % 200;
+  const remaining = 200 - progress;
+  const unclaimed = missions.filter((mission) => !mission.claimedAt).length;
+
   return (
-    <PageFrame eyebrow="Your rewards" title="Rewards" subtitle="Earn XP, invite friends, and redeem codes in one place." back="dashboard">
-      <section className="panel-muted mb-18 flex flex-wrap items-center gap-14">
-        <span className="grid size-44 shrink-0 place-items-center rounded-13 bg-surface text-brand shadow-card"><Award size={22} /></span>
-        <div className="min-w-0">
-          <small className="block text-10 font-semibold uppercase tracking-[.08em] text-muted">Level {level}</small>
-          <strong className="mt-2 block font-grotesk text-[22px] font-extrabold leading-none text-ink">{xp} XP</strong>
-        </div>
-        <span className="ml-auto text-11 text-muted max-760:hidden">{200 - (xp % 200)} XP to level {level + 1}</span>
-      </section>
-      {message && <p className="notice notice-success mb-14" role="status"><Check size={15} /> {message}</p>}
-      {error && <p className="notice notice-error mb-14" role="alert">{error}</p>}
+    <PageFrame eyebrow="Your rewards" title="Rewards" subtitle="Small wins add up. Build a streak, complete challenges, and celebrate your progress." back="dashboard">
+      <div className="rewards-page">
+        <section className="rewards-hero">
+          <div className="rewards-hero-copy">
+            <span className="rewards-hero-icon"><Trophy size={22} /></span>
+            <div><p className="rewards-eyebrow">Your learning journey</p><h2>Keep your momentum going</h2><p>Every study session brings your next milestone closer.</p></div>
+          </div>
+          <div className="rewards-level-card">
+            <div className="rewards-level-top"><span className="rewards-level-mark"><Award size={17} /></span><span>LEVEL {level}</span><strong>{xp.toLocaleString()} <small>XP</small></strong></div>
+            <div className="rewards-progress-track" role="progressbar" aria-label="Progress to next level" aria-valuemin={0} aria-valuemax={200} aria-valuenow={progress}><span style={{ width: `${(progress / 200) * 100}%` }} /></div>
+            <div className="rewards-progress-caption"><span>{progress} / 200 XP</span><strong>{remaining} XP to Level {level + 1}</strong></div>
+          </div>
+          <span className="rewards-hero-sparkle rewards-hero-sparkle-one"><Sparkles size={18} /></span>
+          <span className="rewards-hero-sparkle rewards-hero-sparkle-two"><Zap size={15} /></span>
+        </section>
 
-      <div className="grid grid-cols-[1.05fr_.95fr] items-start gap-20 max-860:grid-cols-1">
-        <div className="grid gap-20">
-          <section className="panel">
-            <div className="mb-14 flex items-start gap-12">
-              <span className="panel-icon bg-success-soft text-success-icon"><Check size={20} /></span>
-              <div className="min-w-0">
-                <p className="eyebrow mb-4">Daily reward</p>
-                <h2 className="m-0 font-grotesk text-19 tracking-[-.02em]">Sign in and earn XP</h2>
-              </div>
-              <strong className="ml-auto shrink-0 whitespace-nowrap font-grotesk text-17 font-bold text-success-deep">+{dailyLogin?.xpReward ?? 100} XP</strong>
-            </div>
-            <p className="m-0 mb-14 text-12 leading-155 text-muted">Your daily reward is added automatically the first time you sign in each day. There’s nothing to claim.</p>
-            <div className={`flex items-center gap-7 text-12 ${dailyLogin?.claimedToday ? "font-bold text-success-deep" : "text-muted"}`}>
-              {dailyLogin?.claimedToday ? <><Check size={14} /> Added to your balance today</> : "Earned automatically at your next sign-in"}
-            </div>
+        {(message || error) && <div className={`rewards-notice ${error ? "error" : "success"}`} role="status">{error ? <Ticket size={16} /> : <Check size={16} />}{error || message}</div>}
+
+        <section className="rewards-daily-card">
+          <span className="rewards-feature-icon"><Zap size={19} /></span>
+          <div className="rewards-feature-copy"><p className="rewards-eyebrow">Your daily boost</p><h2>Show up and earn</h2><p>Your daily XP reward is added automatically the first time you sign in each day.</p><small className={dailyLogin?.claimedToday ? "is-earned" : ""}>{dailyLogin?.claimedToday ? <><Check size={13} /> Added to your balance today</> : "Ready for you at your next sign-in"}</small></div>
+          <strong className="rewards-xp-pill">+{dailyLogin?.xpReward ?? 100}<span>XP</span></strong>
+        </section>
+
+        <div className="rewards-content-grid">
+          <section className="rewards-panel rewards-missions">
+            <header className="rewards-panel-heading"><span className="rewards-panel-icon"><Sparkles size={18} /></span><div><p className="rewards-eyebrow">Challenges</p><h2>Extra ways to earn</h2><p>Finish a challenge and claim your XP.</p></div><span className="rewards-count-badge">{unclaimed} left</span></header>
+            {missions.length ? <ul className="rewards-mission-list">{missions.map((mission) => <li className={`rewards-mission ${mission.claimedAt ? "claimed" : ""}`} key={mission.id}>
+              <span className="rewards-mission-icon">{mission.claimedAt ? <Check size={16} /> : <Gift size={16} />}</span>
+              <div className="rewards-mission-copy"><strong>{mission.title}</strong><span>{mission.description || "Complete this challenge to earn XP."}</span><small>+{mission.xpReward} XP</small></div>
+              {mission.claimedAt ? <span className="rewards-claimed"><Check size={13} /> Claimed</span> : <button className="rewards-claim-button" disabled={working === mission.id} onClick={() => void claim(mission.id)}>{working === mission.id ? "Claiming…" : "Claim"}<ArrowRight size={14} /></button>}
+            </li>)}</ul> : <div className="rewards-empty"><span><PartyPopper size={19} /></span><strong>You’re all caught up</strong><p>New challenges will show up here as they become available.</p></div>}
           </section>
 
-          <section className="panel">
-            <div className="mb-14 flex items-start gap-12">
-              <span className="panel-icon"><Sparkles size={20} /></span>
-              <div className="min-w-0">
-                <p className="eyebrow mb-4">Challenges</p>
-                <h2 className="m-0 font-grotesk text-19 tracking-[-.02em]">Extra ways to earn</h2>
-              </div>
-            </div>
-            <p className="m-0 mb-14 text-12 leading-155 text-muted">These optional challenges are separate from your automatic daily sign-in reward.</p>
-            {missions.length ? (
-              <ul className="m-0 grid list-none gap-10 p-0">
-                {missions.map((mission) => (
-                  <li className={`flex items-center gap-12 rounded-12 border p-13 ${mission.claimedAt ? "border-success-border bg-success-soft" : "border-line bg-surface"}`} key={mission.id}>
-                    <span className="grid size-34 shrink-0 place-items-center rounded-10 bg-pale text-brand"><Sparkles size={16} /></span>
-                    <div className="grid min-w-0 flex-1 gap-2">
-                      <strong className="text-13 text-ink">{mission.title}</strong>
-                      <span className="text-11 leading-145 text-muted">{mission.description || "Complete this challenge to earn XP."}</span>
-                      <small className="text-10 font-bold text-brand">+{mission.xpReward} XP</small>
-                    </div>
-                    {mission.claimedAt
-                      ? <span className="inline-flex shrink-0 items-center gap-5 whitespace-nowrap rounded-full bg-success-surface px-10 py-6 text-11 font-bold text-success-text"><Check size={13} /> Claimed</span>
-                      : <button className="btn btn-primary btn-sm shrink-0" disabled={working === mission.id} onClick={() => void claim(mission.id)}>{working === mission.id ? "Claiming…" : "Claim"}</button>}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="rounded-12 border border-dashed border-line px-12 py-18 text-12 text-muted">No challenges are available right now. Check back later.</div>
-            )}
-          </section>
-        </div>
+          <div className="rewards-side-stack">
+            <section className="rewards-panel">
+              <header className="rewards-panel-heading"><span className="rewards-panel-icon invite"><PartyPopper size={18} /></span><div><p className="rewards-eyebrow">Pass it on</p><h2>Invite a study buddy</h2></div></header>
+              <p className="rewards-panel-description">Share your code. You both earn bonus XP when they join.</p>
+              {referral?.referralCode ? <div className="rewards-invite-row"><code>{referral.referralCode}</code><button className="rewards-copy-button" onClick={() => void copyInvite()} aria-label="Copy invite code">{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy"}</button></div> : <p className="rewards-code-pending">Your invite code will appear here shortly.</p>}
+              <div className="rewards-invite-count"><span className="rewards-friend-avatars"><i>✦</i><i>✦</i><i>✦</i></span><strong>{referral?.invites ?? 0} friends joined</strong></div>
+            </section>
 
-        <div className="grid gap-20">
-          <section className="panel">
-            <div className="mb-14 flex items-start gap-12">
-              <span className="panel-icon bg-success-soft text-success-icon"><PartyPopper size={20} /></span>
-              <div className="min-w-0">
-                <p className="eyebrow mb-4">Invite friends</p>
-                <h2 className="m-0 font-grotesk text-19 tracking-[-.02em]">Share RecappEdu</h2>
-              </div>
-            </div>
-            <p className="m-0 mb-14 text-12 leading-155 text-muted">Invite a friend. You both earn bonus XP when they join with your code.</p>
-            {referral?.referralCode ? (
-              <div className="flex flex-wrap items-center gap-9">
-                <code className="min-w-0 flex-[1_1_180px] rounded-10 border border-dashed border-outline bg-pale px-13 py-11 text-center font-mono text-14 font-bold tracking-[.1em] text-brand">{referral.referralCode}</code>
-                <button className="btn btn-secondary btn-sm" onClick={() => void copyInvite()}>{copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}</button>
-              </div>
-            ) : (
-              <small className="mt-2 flex items-center gap-6 text-10 font-bold text-warning">Your invite code will appear here shortly.</small>
-            )}
-            <small className="mt-10 flex items-center gap-6 text-10 font-bold text-success-deep"><PartyPopper size={13} /> {referral?.invites ?? 0} friends joined</small>
-          </section>
-
-          <section className="panel">
-            <div className="mb-14 flex items-start gap-12">
-              <span className="panel-icon"><Ticket size={20} /></span>
-              <div className="min-w-0">
-                <p className="eyebrow mb-4">Have a code?</p>
-                <h2 className="m-0 font-grotesk text-19 tracking-[-.02em]">Redeem a reward</h2>
-              </div>
-            </div>
-            <p className="m-0 mb-14 text-12 leading-155 text-muted">Enter a promo code for Pro time or bonus XP.</p>
-            <div className="flex flex-wrap items-center gap-9 max-480:flex-col max-480:items-stretch">
-              <input className="field-input min-w-0 flex-[1_1_180px] font-mono font-semibold uppercase tracking-[.08em]" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="Enter promo code" maxLength={24} aria-label="Promo code" />
-              <button className="btn btn-primary btn-sm shrink-0 max-480:w-full" disabled={!code.trim() || working === "promo"} onClick={() => void redeem()}>{working === "promo" ? "Redeeming…" : "Redeem"}</button>
-            </div>
-          </section>
+            <section className="rewards-panel rewards-redeem-panel">
+              <header className="rewards-panel-heading"><span className="rewards-panel-icon ticket"><Ticket size={18} /></span><div><p className="rewards-eyebrow">A little extra</p><h2>Redeem a code</h2></div></header>
+              <p className="rewards-panel-description">Unlock plan access or bonus XP with a promo code.</p>
+              <form className="rewards-redeem-form" onSubmit={(event) => void redeem(event)}><label className="sr-only" htmlFor="rewards-promo-code">Promo code</label><input id="rewards-promo-code" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="ENTER YOUR CODE" maxLength={24} autoComplete="off" /><button className="rewards-claim-button" disabled={!code.trim() || working === "promo"}>{working === "promo" ? "Checking…" : "Redeem"}<ArrowRight size={14} /></button></form>
+            </section>
+          </div>
         </div>
       </div>
     </PageFrame>

@@ -5,10 +5,10 @@ import { go } from "../components/Layout";
 import { errorMessage, requestPasswordReset, resetPassword, verifyEmailAddress } from "../lib/api";
 
 const fieldBox = "min-h-46 flex items-center gap-9 px-13 border border-line rounded-10 bg-surface focus-within:border-outline focus-within:shadow-focus";
-const fieldInput = "w-full min-w-0 border-0 outline-0 text-ink font-inter font-normal text-13";
+const fieldInput = "w-full border-0 outline-0 text-ink font-inter font-normal text-13";
 const label = "grid gap-7 text-muted text-11 font-bold";
-const primaryCta = "btn btn-primary btn-block";
-const secondaryLink = "inline-flex min-h-24 items-center text-11 font-semibold text-brand hover:underline";
+const primaryCta = "primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none w-full";
+const secondaryLink = "text-11 font-semibold text-brand hover:underline";
 
 function AccessShell({ eyebrow, title, subtitle, children }: { eyebrow: string; title: string; subtitle: ReactNode; children: ReactNode }) {
   return (
@@ -17,7 +17,7 @@ function AccessShell({ eyebrow, title, subtitle, children }: { eyebrow: string; 
         <button className="wordmark mb-24 flex items-center gap-10 font-grotesk text-18 font-bold" onClick={() => go("home")} aria-label="RecappEdu home">
           <BrandLogo />
         </button>
-        <div className="rounded-16 border border-line bg-surface p-[clamp(24px,3.4vw,38px)] shadow-card">
+        <div className="rounded-16 border border-line bg-white p-[clamp(24px,3.4vw,38px)] shadow-card">
           <p className="eyebrow mb-12 text-10 font-bold uppercase tracking-[.13em] text-brand">{eyebrow}</p>
           <h1 className="mb-10 text-[28px] leading-[1.15] text-ink">{title}</h1>
           <p className="mb-24 text-muted text-13 leading-155">{subtitle}</p>
