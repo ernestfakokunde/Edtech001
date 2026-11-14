@@ -11,11 +11,12 @@ import {
   Flashcards,
   Quiz,
   Results,
+  QuestionPaper,
 } from "./pages/Study";
 import { GenerateFlow } from "./pages/Generate";
 import { getRepositoryPaper, recordQuizAttempt, type RepositoryPaper, type GeneratedSet } from "./lib/api";
 import type { Route } from "./types";
-import { errorMessage, getCurrentProfile, hasProfileCache, invalidateProfileCache, logout, prefetchCsrfToken, type AuthProfile } from "./lib/api";
+import { getCurrentProfile, hasProfileCache, invalidateProfileCache, logout, prefetchCsrfToken, type AuthProfile } from "./lib/api";
 import { saveQuizResult } from "./lib/results";
 import { ProfilePage } from "./pages/Profile";
 import { AdminPage } from "./pages/Admin";
@@ -29,6 +30,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 const protectedRoutes: Route[] = [
   "dashboard",
+  "paper",
   "personal",
   "learn",
   "hierarchy",
@@ -79,6 +81,7 @@ const ROUTE_TITLES: Record<Route, string> = {
   courses: "Courses",
   course: "Course",
   generate: "Generate a study set",
+  paper: "Question paper",
   flashcards: "Flashcards",
   quiz: "Quiz",
   results: "Quiz results",
@@ -124,12 +127,13 @@ function App() {
     hashRoute(),
   );
   const [sub, setSub] = useState(hashSub());
+  const hadCachedProfile = useRef(hasProfileCache()).current;
   const [selectedMaterial, setSelectedMaterial] = useState<RepositoryPaper | null>(null);
   const [generatedSet, setGeneratedSet] = useState<GeneratedSet | null>(null);
   const [quizResult, setQuizResult] = useState<{ score: number; total: number } | null>(null);
   // A warm identity cache means we already know who this is, so the app never
   // shows the "Checking your session..." flash on every reload.
-  const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">(hasProfileCache() ? "authenticated" : "checking");
+  const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">(hadCachedProfile ? "authenticated" : "checking");
   const [isAdmin, setIsAdmin] = useState(false);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [authNotice, setAuthNotice] = useState("");
@@ -169,12 +173,12 @@ function App() {
         setProfile(result.profile);
         if (hashRoute() === "home") go("dashboard");
       })
-      .catch((reason: unknown) => {
+      .catch(() => {
         setAuthStatus("anonymous");
         setProfile(null);
-        // The session check is a background concern, so the message is only shown
-        // on the sign-in screen — never as an uncaught error in the console.
-        setAuthNotice(errorMessage(reason, "Your session has expired. Please sign in again."));
+        // A missing session is normal for a new/anonymous visitor. Only show a
+        // notice when a previously cached sign-in could not be restored.
+        if (hadCachedProfile) setAuthNotice("We couldn’t restore your previous session. Please sign in again.");
       });
   }, []);
 
@@ -232,7 +236,7 @@ function App() {
     setSelectedMaterial(paper);
     go(`material/${encodeURIComponent(paper.id)}`);
   };
-  const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "learn", "flashcards", "quiz", "results", "profile"];
+  const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "paper", "learn", "flashcards", "quiz", "results", "profile"];
   const showHeader = !["login", "signup", "forgot", "reset", "verify-email", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   if (authStatus === "checking" && protectedRoutes.includes(route)) {
     return <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted"><div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted"><motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" /><strong>Checking your session</strong><span>Getting your study desk ready…</span></div></div>;
@@ -263,8 +267,18 @@ function App() {
             setQuizResult(null);
             go(set.type === "QUIZ" ? `quiz/${set.id}` : `flashcards/${set.id}`);
           }}
+          onQuestionPaper={(set) => {
+            setGeneratedSet(set);
+            setQuizResult(null);
+            go(`paper/${set.id}`);
+          }}
         />
       )}
+      {route === "paper" && (generatedSet?.type === "QUIZ" ? (
+        <QuestionPaper set={generatedSet} onBack={() => go("generate")} />
+      ) : (
+        <MissingSet back="generate" />
+      ))}
       {route === "flashcards" && (generatedSet && generatedSet.type === "FLASHCARD" ? (
         <Flashcards set={generatedSet} onExit={() => { setGeneratedSet(null); go("dashboard"); }} />
       ) : (
@@ -324,7 +338,7 @@ function App() {
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_32%),var(--color-wash)] text-ink">
+    <div className="app-glass-root min-h-screen text-ink">
       <AnimatePresence>{routeLoading && <motion.div key="route-loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-x-0 top-0 z-[100] h-3 overflow-hidden bg-[#393759]" role="status" aria-label="Loading page"><motion.span className="block h-full w-[40%] bg-gradient-to-r from-violet-400 via-fuchsia-200 to-pink-200 shadow-[0_0_14px_#9b83f5]" initial={{ x: "-100%" }} animate={{ x: "250%" }} transition={{ duration: .8, repeat: Infinity, ease: "easeInOut" }} /></motion.div>}</AnimatePresence>
       {showHeader && <Header route={route} isAdmin={isAdmin} profile={profile} />}
       {!adminRoutes.includes(route) && <AnimatePresence mode="wait" initial={false}><motion.div key={route} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: .2, ease: "easeOut" }} className="min-h-screen">

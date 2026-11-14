@@ -6,6 +6,7 @@ import {
   Check,
   ChevronRight,
   Clock3,
+  Download,
   FileText,
   FlipHorizontal2,
   Pencil,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import { courses, papers } from "../data";
 import { go, PageFrame } from "../components/Layout";
+import { downloadQuestionPaperPdf } from "../lib/questionPdf";
 import {
   errorMessage,
   getPaperDownloadUrl,
@@ -64,14 +66,15 @@ export function Hierarchy({
   const [paperRefresh, setPaperRefresh] = useState(0);
   return (
     <PageFrame
-      title="Find study material"
-      subtitle="Search the shared course library by PDF name, course, level, or description."
+      eyebrow="Your learning library"
+      title="Course repository"
+      subtitle="Find course notes and past questions, or manage the PDFs you’ve shared."
       back="dashboard"
     >
-      <div className="grid gap-22">
+      <div className="repository-page-flow">
         <RepositoryBrowser onMaterial={onMaterial} />
-        <RepositoryUpload onUploaded={() => setPaperRefresh((value) => value + 1)} />
         <MyPapers refreshKey={paperRefresh} />
+        <RepositoryUpload onUploaded={() => setPaperRefresh((value) => value + 1)} />
       </div>
     </PageFrame>
   );
@@ -95,7 +98,52 @@ function RepositoryBrowser({ onMaterial }: { onMaterial: (paper: RepositoryPaper
   useEffect(() => { setDepartments([]); setDepartmentId(""); if (facultyId) getDepartments(facultyId).then((result) => setDepartments(result.departments)).catch(() => setDepartments([])); }, [facultyId]);
   useEffect(() => { setLoading(true); getRepositoryPapers({ search, level, universityId, facultyId, departmentId, page: pages.page }).then((result) => { setRepositoryPapers(result.papers); setPages(result.pagination); }).catch(() => { setRepositoryPapers([]); setPages((current) => ({ ...current, total: 0, pages: 1 })); }).finally(() => setLoading(false)); }, [search, level, universityId, facultyId, departmentId, pages.page]);
   function resetPage() { setPages((current) => ({ ...current, page: 1 })); }
-  return <div className="grid gap-14"><div className="flex max-w-860 flex-wrap items-center gap-8 [&>.search-field]:min-h-40 [&>.search-field]:max-w-340 [&>select]:min-h-40 [&>select]:min-w-130 [&>select]:max-w-170 [&>select]:flex-[0_1_150px] [&>select]:rounded-10 [&>select]:border [&>select]:border-line [&>select]:bg-white [&>select]:px-10 [&>select]:text-11 [&>select]:text-muted max-860:[&>.search-field]:max-w-none max-860:[&>select]:max-w-none"><div className="mb-14 flex min-h-44 max-w-460 items-center gap-8 rounded-10 border border-line bg-white px-12 text-muted"><Search size={16} /><input value={search} onChange={(event) => { setSearch(event.target.value); resetPage(); }} placeholder="Search PDF, course, or description" /></div><select value={level} onChange={(event) => { setLevel(event.target.value); resetPage(); }}><option value="">All levels</option><option>100 level</option><option>200 level</option><option>300 level</option><option>400 level</option><option>500 level</option></select><select value={universityId} onChange={(event) => { setUniversityId(event.target.value); resetPage(); }}><option value="">All universities</option>{universities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={facultyId} disabled={!universityId} onChange={(event) => { setFacultyId(event.target.value); resetPage(); }}><option value="">All faculties</option>{faculties.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select value={departmentId} disabled={!facultyId} onChange={(event) => { setDepartmentId(event.target.value); resetPage(); }}><option value="">All departments</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>{loading ? <div className="grid min-h-140 max-w-860 place-items-center gap-6 rounded-12 border border-dashed border-ghost-border bg-ghost-surface p-18 text-center text-12 text-muted [&>strong]:text-15 [&>strong]:font-bold [&>strong]:text-ink">Loading repository...</div> : repositoryPapers.length ? <><div className="grid max-w-860 grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-12">{repositoryPapers.map((paper) => <article className="min-w-0 cursor-pointer rounded-13 border border-line bg-white p-16 shadow-[0_12px_25px_rgba(29,78,216,.04)] focus-visible:outline-3 focus-visible:outline-[#bfdbfe] focus-visible:outline-offset-2 [&>h3]:mb-6 [&>h3]:mt-0 [&>h3]:text-15 [&>h3]:font-bold [&>strong]:text-11 [&>strong]:text-brand [&>p]:my-10 [&>p]:mb-12 [&>p]:line-clamp-2 [&>p]:text-11 [&>p]:leading-[1.55] [&>p]:text-muted" key={paper.id} tabIndex={0} role="button" onClick={() => onMaterial(paper)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onMaterial(paper); }}><div className="mb-10 flex items-center justify-between"><span className="grid size-34 shrink-0 place-items-center rounded-10 bg-pale text-brand"><FileText size={17} /></span><span className="badge active">{paper.level}</span></div><h3>{paper.course.code} · {paper.course.title}</h3><strong>{paper.year}/{paper.session} · {paper.semester === "FIRST" ? "First" : "Second"} semester</strong><p>{paper.description}</p><div className="flex items-center justify-between gap-8 text-10 text-slate-icon"><span>View material details</span><ChevronRight size={14} /></div></article>)}</div><div className="mt-12 flex max-w-860 items-center justify-between gap-12 text-11 text-muted max-760:flex-col max-760:items-stretch [&>div]:flex [&>div]:items-center [&>div]:gap-9 max-760:[&>div]:justify-between"><span>{pages.total} approved materials</span><div><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" disabled={pages.page <= 1} onClick={() => setPages((current) => ({ ...current, page: current.page - 1 }))}>Previous</button><span>Page {pages.page} of {pages.pages}</span><button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" disabled={pages.page >= pages.pages} onClick={() => setPages((current) => ({ ...current, page: current.page + 1 }))}>Next</button></div></div></> : <div className="repository-empty"><FileText size={20} /><strong>No approved PDFs found</strong><span>Try another course, level, or search phrase.</span></div>}</div>;
+  return (
+    <section className="repository-browser-panel" aria-label="Shared course library">
+      <div className="repository-section-heading">
+        <div>
+          <span className="repository-eyebrow">Explore</span>
+          <h2>Shared course library</h2>
+          <p>Search by course, paper title, university, or level.</p>
+        </div>
+        <div className="repository-total"><strong>{pages.total}</strong><span>approved materials</span></div>
+      </div>
+      <div className="repository-searchbar">
+        <Search size={18} aria-hidden="true" />
+        <input aria-label="Search the course library" value={search} onChange={(event) => { setSearch(event.target.value); resetPage(); }} placeholder="Search by course code, PDF, or keyword" />
+        {search && <button type="button" aria-label="Clear search" onClick={() => { setSearch(""); resetPage(); }}>Clear</button>}
+      </div>
+      <div className="repository-filter-heading"><strong>Refine results</strong><span>Filters work together</span></div>
+      <div className="repository-filters">
+        <label><span>Level</span><select value={level} onChange={(event) => { setLevel(event.target.value); resetPage(); }}><option value="">All levels</option><option>100 level</option><option>200 level</option><option>300 level</option><option>400 level</option><option>500 level</option></select></label>
+        <label><span>University</span><select value={universityId} onChange={(event) => { setUniversityId(event.target.value); resetPage(); }}><option value="">All universities</option>{universities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>Faculty</span><select value={facultyId} disabled={!universityId} onChange={(event) => { setFacultyId(event.target.value); resetPage(); }}><option value="">All faculties</option>{faculties.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>Department</span><select value={departmentId} disabled={!facultyId} onChange={(event) => { setDepartmentId(event.target.value); resetPage(); }}><option value="">All departments</option>{departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      </div>
+      <div className="repository-results-heading"><h3>Available materials</h3><span>{loading ? "Updating results…" : `${pages.total} ${pages.total === 1 ? "file" : "files"}`}</span></div>
+      {loading ? (
+        <div className="repository-loading"><span className="repository-spinner" /><strong>Finding course materials</strong><small>Applying your search and filters</small></div>
+      ) : repositoryPapers.length ? (
+        <>
+          <div className="repository-material-grid">
+            {repositoryPapers.map((paper) => (
+              <article className="repository-paper-card" key={paper.id} tabIndex={0} role="button" onClick={() => onMaterial(paper)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onMaterial(paper); } }}>
+                <div className="repository-paper-top"><span className="repository-paper-icon"><FileText size={17} /></span><span className="repository-level-badge">{paper.level}</span></div>
+                <h3>{paper.course.code}</h3>
+                <p className="repository-course-title">{paper.course.title}</p>
+                <p className="repository-paper-description">{paper.description}</p>
+                <div className="repository-paper-meta"><span>{paper.year}/{paper.session}</span><span>{paper.semester === "FIRST" ? "First" : "Second"} semester</span></div>
+                <div className="repository-paper-open">View material details <ChevronRight size={15} /></div>
+              </article>
+            ))}
+          </div>
+          <div className="repository-pagination"><span>Page {pages.page} of {pages.pages}</span><div><button type="button" disabled={pages.page <= 1} onClick={() => setPages((current) => ({ ...current, page: current.page - 1 }))}><ArrowLeft size={14} /> Previous</button><button type="button" disabled={pages.page >= pages.pages} onClick={() => setPages((current) => ({ ...current, page: current.page + 1 }))}>Next <ArrowRight size={14} /></button></div></div>
+        </>
+      ) : (
+        <div className="repository-empty"><FileText size={20} /><strong>No approved PDFs found</strong><span>Try broadening your search or clearing one of the filters.</span></div>
+      )}
+    </section>
+  );
 }
 
 function MyPapers({ refreshKey }: { refreshKey: number }) {
@@ -387,17 +435,15 @@ export function Generate({
       subtitle="AI will generate a set from this study material's questions."
       back="course"
     >
-      <div className="flex items-center gap-12">
-        <div className="grid size-34 shrink-0 place-items-center rounded-10 bg-pale text-brand">
-          <FileText size={16} />
+      <section className="practice-material-card" aria-label="Selected course material">
+        <div className="practice-material-icon"><FileText size={18} /></div>
+        <div className="practice-material-copy">
+          <span className="practice-material-eyebrow">PRACTICE MATERIAL</span>
+          <strong className="practice-material-title">{paper.title}</strong>
+          <span className="practice-material-course"><b>{course.code}</b><span aria-hidden="true">·</span>{course.title}</span>
         </div>
-        <div>
-          <strong>{paper.title}</strong>
-          <span>
-            {course.code} · {course.title}
-          </span>
-        </div>
-      </div>
+        <span className="practice-material-badge">Selected</span>
+      </section>
       <div className="choice-grid">
         {(
           [
@@ -428,16 +474,18 @@ export function Generate({
           </button>
         ))}
       </div>
-      <div className="length-control">
-        <label>Set length</label>
+      <div className="length-control" role="group" aria-label="Choose set length">
+        <div className="length-heading"><label>Set length</label><span>Choose how many cards to practise</span></div>
         <div className="lengths">
           {["15", "30", "60", "All"].map((option) => (
             <button
-              className={length === option ? "selected" : ""}
+              className={`length-option ${length === option ? "selected" : ""}`}
               key={option}
+              type="button"
+              aria-pressed={length === option}
               onClick={() => onLength(option)}
             >
-              {option}
+              <strong>{option}</strong><small>{option === "All" ? "Available" : "cards"}</small>
             </button>
           ))}
         </div>
@@ -478,6 +526,35 @@ function PlayerFrame({
     </main>
   );
 }
+export function QuestionPaper({ set, onBack }: { set: GeneratedSet; onBack: () => void }) {
+  return (
+    <PageFrame eyebrow="Generated question paper" title={set.title} subtitle="Review every question and answer choice at your own pace. This page does not start a quiz or record answers.">
+      <div className="question-paper-actions mb-18 flex flex-wrap items-center justify-between gap-10 rounded-13 border border-line bg-white/55 p-14">
+        <span className="text-11 font-semibold text-muted">{set.items.length} questions · ready to save or print</span>
+        <div className="flex flex-wrap gap-8">
+          <button type="button" className="secondary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 border border-line bg-white px-14 text-12 font-bold text-brand" onClick={onBack}><ArrowLeft size={14} /> Back</button>
+          <button type="button" className="primary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 px-14 text-12 font-bold text-white" onClick={() => downloadQuestionPaperPdf(set.title, set)}><Download size={15} /> Save as PDF</button>
+        </div>
+      </div>
+      <ol className="question-paper-list">
+        {set.items.map((item, index) => {
+          const question = item.question;
+          const options = Array.isArray(question.metadata?.options) ? question.metadata.options : [];
+          return (
+            <li className="question-paper-item" key={`${index}-${question.prompt}`}>
+              <span className="question-paper-number">{String(index + 1).padStart(2, "0")}</span>
+              <div className="min-w-0">
+                <h2>{question.prompt}</h2>
+                {options.length > 0 && <ol className="question-paper-options">{options.map((option, optionIndex) => <li key={`${optionIndex}-${option}`}><span>{String.fromCharCode(65 + optionIndex)}</span>{option}</li>)}</ol>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </PageFrame>
+  );
+}
+
 export function Flashcards({
   set,
   onExit,

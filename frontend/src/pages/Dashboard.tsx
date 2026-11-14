@@ -57,7 +57,12 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
+    <main className="dashboard-workspace mx-auto w-full max-w-[1200px] px-[clamp(20px,4vw,48px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
+      <section className="mb-23 [&>.eyebrow]:mb-12 [&>h1]:mb-5 [&>h1]:mt-0 [&>h1]:text-[clamp(24px,3vw,32px)] [&>p:last-child]:m-0 [&>p:last-child]:text-13 [&>p:last-child]:text-muted">
+        <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Your study desk</p>
+        <h1>Welcome back, {displayNameOf(profile)}</h1>
+        <p>{school ? `${school.facultyName} · ${school.universityName}` : "Add your school on your profile to organize PDFs by course."}</p>
+      </section>
       {firstPractice && (
         <section className="dashboard-first-practice mb-8 grid grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] items-center gap-28 overflow-hidden rounded-20 border border-[#e5dcf4] bg-[linear-gradient(135deg,#f8f5fcaa,#eee8fa66)] px-[clamp(22px,3vw,38px)] py-30 shadow-[0_18px_38px_#6d4cc214] max-760:grid-cols-1 max-760:rounded-20 max-760:px-20 max-760:py-24">
           <div className="max-w-[560px] text-ink [&_.eyebrow]:mb-10 [&_.eyebrow]:text-brand [&_h2]:mb-10 [&_h2]:text-[clamp(24px,3vw,32px)] [&>p:not(.eyebrow)]:m-0 [&>p:not(.eyebrow)]:text-13 [&>p:not(.eyebrow)]:leading-170 [&>p:not(.eyebrow)]:text-muted">
@@ -84,11 +89,6 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
         </section>
       )}
 
-      <section className="mt-47 mb-23 [&>.eyebrow]:mb-12 [&>h1]:mb-5 [&>h1]:mt-0 [&>h1]:text-[clamp(24px,3vw,32px)] [&>p:last-child]:m-0 [&>p:last-child]:text-13 [&>p:last-child]:text-muted">
-        <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Your study desk</p>
-        <h1>Welcome back, {displayNameOf(profile)}</h1>
-        <p>{school ? `${school.facultyName} · ${school.universityName}` : "Add your school on your profile to organize PDFs by course."}</p>
-      </section>
 
       {!activePro && <section className="mb-22 flex items-center gap-17 rounded-18 border border-[#cddcff] bg-[linear-gradient(110deg,#eef4ff,#fafbff_70%)] px-22 py-20 shadow-[0_10px_28px_#1d4ed80c] max-[640px]:flex-wrap max-[640px]:items-start [&>.primary-button]:shrink-0 max-[640px]:[&>.primary-button]:w-full">
         <div className="grid size-44 shrink-0 place-items-center rounded-14 bg-[#2858dc] text-white"><Crown size={20} /></div>
@@ -101,11 +101,11 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
         <button type="button" className="bg-brand" onClick={() => go(quota.remaining === 0 ? "profile" : "generate")}>{quota.remaining === 0 ? "View plans" : "Practice now"}</button>
       </section>}
 
-      <section className="mb-31 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-10 max-760:gap-14">
+      <section className="dashboard-progress mb-26" aria-label="Your progress"><div className="mb-12 flex items-center justify-between"><h2 className="m-0 font-grotesk text-15 font-bold text-ink">Your progress</h2><span className="text-10 font-semibold text-muted">Your activity at a glance</span></div><div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-10 max-760:gap-14">
         <Metric icon={<Flame size={15} />} value={String(stats.streak)} label="Day streak" tone="amber" />
         <Metric icon={<Layers3 size={15} />} value={String(stats.attempts)} label="Quizzes taken" tone="blue" />
         <Metric icon={<Check size={15} />} value={stats.attempts ? `${stats.average}%` : "—"} label="Avg. quiz score" tone="green" />
-      </section>
+      </div></section>
 
       <DashboardSection title="Your courses" action="Manage" onAction={() => go("profile")}>
         <div className="grid grid-cols-2 gap-18 max-760:gap-14 max-680:grid-cols-1">
@@ -135,12 +135,12 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
         {courseError && !courseFormOpen && <p className="upload-form-error">{courseError}</p>}
       </DashboardSection>
 
-      <section className="mt-34 grid gap-9 [&_button]:flex [&_button]:w-full [&_button]:items-center [&_button]:gap-12 [&_button]:rounded-13 [&_button]:border [&_button]:border-[#bfdbfe] [&_button]:bg-[#f8fbff] [&_button]:px-16 [&_button]:py-14 [&_button]:text-left [&_button]:text-brand [&_button_span]:flex-1 [&_button_strong]:block [&_button_strong]:text-12 [&_button_strong]:text-ink [&_button_small]:mt-3 [&_button_small]:block [&_button_small]:text-10 [&_button_small]:text-muted">
+      <details className="dashboard-fold mt-30"><summary>More ways to study</summary><section className="mt-14 grid gap-9 [&_button]:flex [&_button]:w-full [&_button]:items-center [&_button]:gap-12 [&_button]:rounded-13 [&_button]:border [&_button]:border-[#bfdbfe] [&_button]:bg-[#f8fbff] [&_button]:px-16 [&_button]:py-14 [&_button]:text-left [&_button]:text-brand [&_button_span]:flex-1 [&_button_strong]:block [&_button_strong]:text-12 [&_button_strong]:text-ink [&_button_small]:mt-3 [&_button_small]:block [&_button_small]:text-10 [&_button_small]:text-muted">
         <button onClick={() => go("generate")}><Sparkles size={16} /><span><strong>Create from my PDF</strong><small>Private AI practice set</small></span><ArrowRight size={16} /></button>
         <button onClick={() => go("hierarchy")}><FileText size={16} /><span><strong>Browse course library</strong><small>Find PDFs by course</small></span><ArrowRight size={16} /></button>
         <button onClick={() => go("history")}><History size={16} /><span><strong>My quizzes</strong><small>Saved quizzes and answer keys</small></span><ArrowRight size={16} /></button>
         <button onClick={() => go("rewards")}><Sparkles size={16} /><span><strong>Rewards</strong><small>XP, invites and promo codes</small></span><ArrowRight size={16} /></button>
-      </section>
+      </section></details>
     </main>
   );
 }

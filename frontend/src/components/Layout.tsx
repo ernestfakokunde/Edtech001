@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Mail, Menu, MessageCircle, Moon, ShieldCheck, Sparkles, Sun, UserRound, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Mail, Menu, MessageCircle, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { Route } from "../types";
 import { resendVerificationEmail, type AuthProfile } from "../lib/api";
@@ -27,23 +27,6 @@ export function initialsOf(profile: ProfileIdentity) {
 /** The name a student should see about themselves — never a hard-coded placeholder. */
 export function displayNameOf(profile: ProfileIdentity) {
   return (profile?.displayName || profile?.username || profile?.email?.split("@")[0] || "Student").trim();
-}
-
-export function ThemeToggle() {
-  const [dark, setDark] = useState(() => document.documentElement.dataset.theme !== "light");
-  useEffect(() => {
-    const syncTheme = () => setDark(document.documentElement.dataset.theme === "dark");
-    window.addEventListener("recappedu-theme-change", syncTheme);
-    return () => window.removeEventListener("recappedu-theme-change", syncTheme);
-  }, []);
-
-  const toggle = () => {
-    const next = document.documentElement.dataset.theme !== "dark";
-    document.documentElement.dataset.theme = next ? "dark" : "light";
-    window.localStorage.setItem("recappedu-theme", next ? "dark" : "light");
-    window.dispatchEvent(new Event("recappedu-theme-change"));
-  };
-  return <button className="grid size-36 place-items-center rounded-9 border border-line bg-surface text-muted transition hover:bg-pale hover:text-ink" onClick={toggle} aria-label={`Switch to ${dark ? "light" : "dark"} mode`} title={`Switch to ${dark ? "light" : "dark"} mode`}>{dark ? <Sun size={16} /> : <Moon size={16} />}</button>;
 }
 
 function planLabel(profile: ProfileIdentity) {
@@ -99,7 +82,6 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
             <button onClick={() => scrollToHomeSection("pricing")}>Pricing</button>
           </nav>
           <div className="flex items-center justify-self-end gap-14 max-680:gap-9">
-            <ThemeToggle />
             <button className="text-12 font-semibold text-[#c2bdce] transition-colors hover:text-white max-[480px]:hidden" onClick={() => go("login")}>Sign in</button>
             <button className="primary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 bg-[#a855f7] px-16 text-12 font-bold text-white shadow-[0_8px_24px_#a855f733] transition hover:-translate-y-1 max-[380px]:px-11" onClick={() => go("signup")}><span className="max-[380px]:hidden">Get started</span><span className="hidden max-[380px]:inline">Start</span><ArrowUpRight size={15} /></button>
           </div>
@@ -139,13 +121,12 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
               </button>
             )}
           </nav>
-      <div className="flex items-center gap-10"><ThemeToggle /><button className="avatar size-35 rounded-full bg-pale text-12 font-bold text-brand" aria-label="Open profile" onClick={() => go("profile")}>
+      <div className="flex items-center gap-10"><button className="avatar size-35 rounded-full bg-pale text-12 font-bold text-brand" aria-label="Open profile" onClick={() => go("profile")}>
             {initialsOf(profile)}
       </button></div>
         </>
       ) : (
         <nav className="ml-auto flex items-center gap-12">
-          <ThemeToggle />
           <button className={navButton} onClick={() => go("login")}>Log in</button>
           <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none py-10 px-16 text-12" onClick={() => go("signup")}>Sign up</button>
         </nav>
@@ -233,33 +214,24 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
   onClose: () => void;
   onLogout: () => void;
 }) {
-  const items = USER_NAV.filter((item) => !item.adminOnly || isAdmin);
+  const items = USER_NAV.filter((item) => item.key !== "profile" && (!item.adminOnly || isAdmin));
   return (
     <aside
       aria-label="Student navigation"
-      className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-[240px] flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
+      className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-[216px] flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
     >
-      <div className="flex h-64 items-center gap-11 border-b border-line px-18">
-        <BrandLogo className="h-30" />
+      <div className="flex h-56 items-center gap-11 border-b border-line px-15">
+        <BrandLogo className="h-27" />
         <span className="flex-1" />
         <button className="hidden h-32 w-32 shrink-0 place-items-center rounded-10 text-muted hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close navigation" onClick={onClose}>
           <X size={16} />
         </button>
       </div>
 
-      <button className="mx-14 mt-14 flex items-center gap-10 rounded-10 border border-transparent px-8 py-9 text-left transition hover:border-line hover:bg-pale" onClick={() => { go("profile"); onClose(); }}>
-        <span className="grid size-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand">{initialsOf(profile)}</span>
-        <span className="min-w-0 flex-1">
-          <strong className="block truncate text-11 font-semibold text-ink">{displayNameOf(profile)}</strong>
-          <small className="block truncate text-10 text-muted">{planLabel(profile)}</small>
-        </span>
-        <UserRound size={14} className="shrink-0 text-muted" />
-      </button>
-
-      <nav className="flex flex-1 flex-col gap-22 overflow-y-auto p-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="flex flex-1 flex-col gap-15 overflow-y-auto px-11 py-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(["Study", "Account"] as const).map((group) => (
-          <div key={group} className="grid gap-5">
-            <p className="px-12 text-[10px] font-extrabold uppercase tracking-[.13em] text-muted">{group}</p>
+          <div key={group} className="grid gap-3">
+            <p className="px-10 pb-2 text-[9px] font-extrabold uppercase tracking-[.14em] text-muted">{group}</p>
             {items.filter((item) => item.group === group).map((item) => {
               const active = navActive(item, route, sub);
               return (
@@ -278,18 +250,14 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
         ))}
       </nav>
 
-      <div className="grid gap-3 border-t border-line p-14">
-        <div className="flex items-center justify-between px-8 py-5">
-          <span className="text-10 font-semibold text-muted">Appearance</span>
-          <ThemeToggle />
-        </div>
-        <button className={`${userNavBase} ${userNavIdle}`} onClick={() => { go("profile"); onClose(); }}>
-          <span className="grid size-30 shrink-0 place-items-center rounded-8 bg-pale"><UserRound size={15} /></span>
-          <span>Settings</span>
+      <div className="user-sidebar-footer grid gap-5 border-t border-line p-10">
+        <button className="user-sidebar-profile" onClick={() => { go("profile"); onClose(); }}>
+          <span className="user-sidebar-avatar">{initialsOf(profile)}</span>
+          <span className="min-w-0 flex-1"><strong>{displayNameOf(profile)}</strong><small>{planLabel(profile)}</small></span>
+          <UserRound size={14} />
         </button>
-        <button className={`${userNavBase} signout-button`} onClick={onLogout}>
-          <span className="grid size-30 shrink-0 place-items-center rounded-8 bg-red-50"><LogOut size={15} /></span>
-          <span>Sign out</span>
+        <button className="user-sidebar-signout" onClick={onLogout}>
+          <LogOut size={15} /><span>Sign out</span>
         </button>
       </div>
     </aside>
@@ -365,7 +333,7 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="user-app-shell min-h-screen">
       {open && <button className="fixed inset-0 z-30 hidden bg-backdrop max-1020:block" aria-label="Close navigation" onClick={() => setOpen(false)} />}
       <UserSidebar
         route={route}
@@ -376,8 +344,8 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
         onClose={() => setOpen(false)}
         onLogout={onLogout}
       />
-      <div className="user-shell-content ml-[240px] min-h-screen max-1020:ml-0">
-        <header className="sticky top-0 z-20 flex h-64 items-center gap-10 border-b border-line bg-white px-18">
+      <div className="user-shell-content ml-[216px] min-h-screen max-1020:ml-0">
+        <header className="user-topbar sticky top-0 z-20 flex h-64 items-center gap-10 border-b border-line bg-white px-18">
           <button className="hidden h-36 w-36 shrink-0 place-items-center rounded-9 border border-line bg-white text-muted max-1020:grid" aria-label="Open navigation" onClick={() => setOpen(true)}>
             <Menu size={18} />
           </button>

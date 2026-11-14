@@ -1,18 +1,13 @@
 ﻿import { useState } from "react";
 import { ArrowRight, Check, LockKeyhole, Mail } from "lucide-react";
 import { BrandLogo } from "../components/BrandLogo";
+import authStudyImage from "../assets/brand2.png";
 import { go } from "../components/Layout";
 import { errorMessage, login, signup, type AuthProfile } from "../lib/api";
 
 /* Community snapshot for the signup panel — same card language as the admin
    directory rows (monogram avatar, name, meta, stat chip). Sample profiles;
    swap for a real members feed when the backend exposes a public endpoint. */
-const SIGNUP_STUDENTS = [
-  { initials: "NA", name: "Ngozi A.", meta: "300 level · Medicine", stat: "14 study PDFs" },
-  { initials: "TO", name: "Tunde O.", meta: "Final year · Law", stat: "520 XP" },
-  { initials: "AK", name: "Amara K.", meta: "200 level · Computer science", stat: "92% avg" },
-];
-
 export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login" | "signup"; onAuthenticated?: (profile: AuthProfile) => void; notice?: string }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -23,83 +18,22 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
      `rounded-half` (50%) would be used instead of `rounded-full` on non-square
      boxes — Tailwind's `rounded-full` resolves to calc(infinity * 1px), which
      draws an ellipse where the original CSS drew a circle. */
-  const fieldBox = "min-h-46 flex items-center gap-9 px-13 border border-line rounded-10 bg-surface focus-within:border-outline focus-within:shadow-focus";
+  const fieldBox = "auth-field min-h-46 flex items-center gap-9 px-13 border border-line rounded-10 bg-surface focus-within:border-outline focus-within:shadow-focus";
   const label = "grid gap-7 text-muted text-11 font-bold";
   /* Replaces `.auth-input input`. `font-normal` is load-bearing: the original
      `font: 13px Inter` shorthand reset font-weight to normal, which utility
      classes do not do implicitly (the weight would otherwise be inherited). */
   const fieldInput = "w-full border-0 outline-0 text-ink font-inter font-normal text-13";
-  const primaryCta = "primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none w-full";
+  const primaryCta = "auth-submit primary-button inline-flex min-h-46 max-w-full items-center justify-center gap-8 whitespace-normal rounded-10 bg-brand px-16 text-12 font-bold leading-[1.25] text-white shadow-card transition-[transform,background,box-shadow] duration-200 hover:-translate-y-1 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 w-full";
 
   return (
-    <main className="max-w-none min-h-screen grid grid-cols-2 max-1020:grid-cols-1 bg-surface">
-      <section className="auth-marketing py-36 px-[clamp(30px,7vw,100px)] max-1020:min-h-0 max-1020:py-30 max-1020:px-26 flex flex-col justify-between bg-pale">
-        <button className="wordmark flex items-center gap-10 font-grotesk text-18 font-bold self-start" onClick={() => go("home")}>
-          <BrandLogo />
-        </button>
-        <div>
-          <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">A calmer way to revise</p>
-          <h1 className="max-w-480 mb-20 text-[clamp(32px,4vw,48px)] leading-100">Make every PDF count.</h1>
-          <p className="max-w-430 text-muted text-15 leading-170">
-            Keep your own notes and PDFs private, or learn from the PDFs your course
-            community has already shared.
-          </p>
-          {/* Directory-style student card — the same card language as the admin
-              student directory (monogram avatars + name lines), used here as
-              social proof so the signup page feels alive, not empty. */}
-          <div className="mt-32 flex max-w-430 items-center gap-13 rounded-13 border border-line bg-white p-14 shadow-card">
-            <div className="flex shrink-0 -space-x-8">
-              {["D", "A", "E", "F"].map((letter) => (
-                <span key={letter} className="grid h-32 w-32 place-items-center rounded-half border-2 border-white bg-pale text-11 font-bold text-brand">
-                  {letter}
-                </span>
-              ))}
-            </div>
-            <p className="m-0 min-w-0 text-12 leading-150 text-muted">
-              <strong className="font-semibold text-ink">Students are already on board.</strong>{" "}
-              Share study PDFs, earn XP, and keep every revision in one place.
-            </p>
+    <main className="auth-page max-w-none min-h-screen grid grid-cols-2 max-1020:grid-cols-1 bg-surface">
+      <section className="auth-form-panel grid place-items-center p-[clamp(24px,5vw,72px)] max-1020:py-28 max-1020:px-22">
+        <div className="auth-form-content">
+          <div className="auth-brand-row">
+            <div className="auth-mobile-brand"><BrandLogo className="h-32" /></div>
+            <button className="auth-back-link" onClick={() => go("home")}>Back to home</button>
           </div>
-          <div className="grid gap-14 mt-22 text-brand-deep text-12 font-semibold">
-            <span className="flex gap-8 items-center">
-              <Check size={15} /> AI-generated flashcards and quizzes
-            </span>
-            <span className="flex gap-8 items-center">
-              <Check size={15} /> Your private study workspace
-            </span>
-            <span className="flex gap-8 items-center">
-              <Check size={15} /> Course repositories that grow with you
-            </span>
-          </div>
-          {isSignup && (
-            <div className="mt-20 grid gap-10">
-              <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Students already revising here</p>
-              <div className="grid gap-8">
-                {SIGNUP_STUDENTS.map((student) => (
-                  <div key={student.name} className="flex items-center gap-12 rounded-13 border border-line bg-surface px-14 py-11 shadow-card">
-                    <span className="grid h-35 w-35 shrink-0 place-items-center rounded-half bg-pale text-12 font-bold text-brand">{student.initials}</span>
-                    <span className="min-w-0 flex-1">
-                      <strong className="block truncate text-13 font-semibold text-ink">{student.name}</strong>
-                      <small className="block truncate text-11 text-muted">{student.meta}</small>
-                    </span>
-                    <span className="shrink-0 rounded-99 bg-pale px-10 py-5 text-11 font-bold text-brand">{student.stat}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-      {/* The form sits in a white card on the pale canvas — same card language
-          as the admin panels, so signup reads as part of the same product. */}
-      <section className="auth-form-panel grid place-items-center bg-pale p-30 max-1020:py-28 max-1020:px-26">
-        <div className="w-[min(100%,450px)] rounded-16 border border-line bg-white p-[clamp(24px,3.4vw,38px)] shadow-card">
-          <div className="auth-mobile-brand">
-            <BrandLogo className="h-32" />
-          </div>
-          <button className="mb-30 inline-flex items-center gap-7 text-12 font-semibold text-muted transition-colors hover:text-brand" onClick={() => go("home")}>
-            Back to home
-          </button>
           <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">
             {isSignup ? "Create your workspace" : "Welcome back"}
           </p>
@@ -110,8 +44,8 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
           )}
           <h2 className="mb-10 text-[31px] leading-[1.1]">
             {isSignup
-              ? "Start practising with purpose."
-              : "Pick up where you left off."}
+              ? "Make space for better study."
+              : "Welcome back, learner."}
           </h2>
           <p className="mb-28 text-muted text-13 leading-155">
             {isSignup
@@ -260,6 +194,26 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
           </p>
         </div>
       </section>
+      <aside className="auth-visual-panel relative flex min-h-screen flex-col justify-between overflow-hidden p-[clamp(28px,5vw,72px)] max-1020:min-h-0 max-1020:gap-42 max-1020:p-26" style={{ backgroundImage: `linear-gradient(180deg, rgba(23,16,37,.12) 0%, rgba(23,16,37,.12) 35%, rgba(23,16,37,.86) 100%), linear-gradient(135deg, rgba(79,45,119,.18), rgba(32,24,50,.22)), url(${authStudyImage})` }}>
+        <button className="wordmark flex items-center gap-10 self-start font-grotesk text-18 font-bold" onClick={() => go("home")}>
+          <BrandLogo />
+        </button>
+        <div className="auth-visual-copy relative z-1 max-w-520">
+          <p className="mb-14 flex items-center gap-8 text-10 font-bold uppercase tracking-[.16em]">{isSignup ? "Your study space, ready when you are" : "Welcome back to your study space"}</p>
+          <h1 className="mb-18 font-grotesk text-[clamp(34px,4.6vw,58px)] font-semibold leading-[1.02] tracking-[-.055em]">Make every study session count.</h1>
+          <p className="max-w-430 text-14 leading-160">Bring your course materials together, then turn them into a clear plan for what to learn next.</p>
+        </div>
+        <div className="auth-visual-showcase relative z-1 ml-auto w-full max-w-460">
+          <div className="auth-quote-card">
+            <span className="auth-quote-mark">“</span>
+            <p>Bring your notes. Leave with a clearer next step.</p>
+            <div className="auth-quote-rule"><span /><span /><span /></div>
+            <small>YOUR STUDY SPACE, READY WHEN YOU ARE</small>
+          </div>
+          <div className="auth-feature-float"><span><Check size={14} /></span><strong>Made for focused learning</strong><small>Flashcards · Quizzes · Course notes</small></div>
+        </div>
+        <p className="auth-visual-footer relative z-1 m-0 text-10">A calmer way to turn study material into progress.</p>
+      </aside>
     </main>
   );
 }

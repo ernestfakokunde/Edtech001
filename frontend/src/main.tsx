@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 
-const savedTheme = window.localStorage.getItem("recappedu-theme");
-document.documentElement.dataset.theme = savedTheme === "dark" ? "dark" : "light";
+window.localStorage.setItem("recappedu-theme", "light");
+document.documentElement.dataset.theme = "light";
 
 /**
  * Last line of defence: a render/lifecycle crash anywhere in the tree shows a
