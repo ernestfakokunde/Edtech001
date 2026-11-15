@@ -34,7 +34,7 @@ export function ResultsHistory({ onPractice }: { onPractice: (set: GeneratedSet)
           </div>
         </div>
         <section className="rounded-18 border border-line bg-white px-28 py-24" id="quiz-print-document">
-          <header className="mb-24 border-b border-line pb-18 [&>span]:text-10 [&>span]:font-extrabold [&>span]:tracking-[.13em] [&>span]:text-brand [&>h1]:my-8 [&>h1]:text-26 [&>p]:m-0 [&>p]:text-12 [&>p]:text-muted">
+          <header className="mb-24 border-b border-line pb-18 [&>span]:text-10 [&>span]:font-extrabold [&>span]:tracking-[.13em] [&>span]:text-brand [&>h1]:my-8 [&>h1]:text-26 [&>h1]:[overflow-wrap:anywhere] [&>p]:m-0 [&>p]:text-12 [&>p]:text-muted">
             <span>RECAPPEDU · QUIZ ANSWER KEY</span>
             <h1>{selected.course.code}: {selected.course.title}</h1>
             <p>{selected.title} · {formatDate(selected.createdAt)}</p>
@@ -57,7 +57,7 @@ export function ResultsHistory({ onPractice }: { onPractice: (set: GeneratedSet)
 
   return (
     <PageFrame eyebrow="Your library" title="My quizzes" subtitle="Every quiz you create is saved here with its questions and answers." back="dashboard">
-      {error && <p className="rounded-11 bg-red-50 px-14 py-12 text-13 text-red-800" role="alert">{error}</p>}
+      {error && <p className="rounded-11 border border-danger-border bg-danger-surface px-14 py-12 text-13 text-danger" role="alert">{error}</p>}
       {loading ? (
         <div className="grid min-h-[220px] place-content-center justify-items-center gap-10 rounded-18 border border-dashed border-[#c7c9ed] bg-white p-26 text-center text-13 text-muted [&>svg]:text-brand [&>strong]:text-17 [&>strong]:font-bold [&>strong]:text-ink [&>span]:max-w-[430px] [&>span]:leading-160"><Loader2 size={20} className="animate-spin" /> Loading your quizzes…</div>
       ) : quizzes.length === 0 ? (

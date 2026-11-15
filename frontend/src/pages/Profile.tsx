@@ -34,6 +34,7 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
     username: initialProfile?.username ?? "",
     email: initialProfile?.email ?? "",
     tier: (initialProfile?.tier ?? "FREE") as "FREE" | "PREMIUM",
+    subscriptionPlan: (initialProfile?.subscriptionPlan ?? "FREE") as PlanName,
     premiumUntil: initialProfile?.premiumUntil ?? null,
   }));
   const [school, setSchool] = useState<MySchool>(null);
@@ -54,6 +55,7 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
       username: result.profile.username ?? "",
       email: result.profile.email ?? "",
       tier: result.profile.tier ?? "FREE",
+      subscriptionPlan: result.profile.subscriptionPlan ?? "FREE",
       premiumUntil: result.profile.premiumUntil ?? null,
     })).catch(() => setError("Could not load your profile."));
     getMyCourses().then((result) => {
@@ -65,7 +67,7 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
     if (match) {
       getPaymentStatus(decodeURIComponent(match[1])).then((result) => {
         if (result.status === "SUCCESS") {
-          setProfile((current) => ({ ...current, tier: result.tier ?? "FREE", premiumUntil: result.premiumUntil ?? null }));
+          setProfile((current) => ({ ...current, tier: result.tier ?? "FREE", subscriptionPlan: selectedPlan, premiumUntil: result.premiumUntil ?? null }));
           setMessage("Your monthly plan is active.");
         } else if (result.status === "PENDING") setMessage("Payment received. Your plan access will appear as soon as confirmation completes.");
         else setError("That payment was not completed. You can try again.");
@@ -124,7 +126,7 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
     catch (reason) { setError(errorMessage(reason, "Could not delete your account.")); setDeleting(false); }
   }
 
-  const activePlan = isProActive(profile.tier, profile.premiumUntil);
+  const activePlan = isPaidActive(profile.subscriptionPlan, profile.tier, profile.premiumUntil);
   const name = displayNameOf(profile);
 
   return (
@@ -135,7 +137,7 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-9">
               <h2 className="truncate">{name}</h2>
-              <span className={`profile-tier-chip ${activePlan ? "pro" : ""}`}>{tierLabel(profile.tier, profile.premiumUntil)}</span>
+              <span className={`profile-tier-chip ${activePlan ? "pro" : ""}`}>{planLabel(profile.subscriptionPlan, profile.tier, profile.premiumUntil)}</span>
             </div>
             <p>{profile.email}</p>
             <small>{profile.username ? `@${profile.username}` : "Add a username to make your profile easier to find."}</small>
@@ -191,7 +193,7 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
 
         {tab === "plans" && (
           <SectionCard icon={<Crown size={18} />} eyebrow="Monthly access" title="Plans & AI credits" description="One shared monthly allowance covers Learn with AI, quizzes, and flashcards.">
-            <div className="profile-plan-summary"><strong>{activePlan ? tierLabel(profile.tier, profile.premiumUntil) : "Free plan"}</strong><span>{activePlan ? "Your paid access is active." : "You currently have 20 monthly AI credits."}</span></div>
+            <div className="profile-plan-summary"><strong>{activePlan ? planLabel(profile.subscriptionPlan, profile.tier, profile.premiumUntil) : "Free plan"}</strong><span>{activePlan ? "Your paid access is active." : "You currently have 20 monthly AI credits."}</span></div>
             <div className="profile-plan-list">
               <div><strong>Basic</strong><span>100 credits · ₦499 launch / ₦999 monthly</span></div>
               <div><strong>Student Plus</strong><span>300 credits · ₦999 launch / ₦1,999 monthly</span></div>
@@ -216,12 +218,20 @@ export function ProfilePage({ profile: initialProfile = null }: { profile?: Auth
   );
 }
 
-function tierLabel(tier: "FREE" | "PREMIUM", premiumUntil: string | null) {
+type PlanName = "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM";
+
+const PLAN_NAMES: Record<PlanName, string> = { FREE: "Free", BASIC: "Basic", STUDENT_PLUS: "Student Plus", PREMIUM: "Pro" };
+
+/** Label a subscription by the plan the student actually bought, not just tier PREMIUM. */
+function planLabel(plan: PlanName, tier: "FREE" | "PREMIUM", premiumUntil: string | null) {
   const until = premiumUntil ? new Date(premiumUntil) : null;
-  if (until && until > new Date()) return `Pro until ${until.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
-  return tier === "PREMIUM" && !premiumUntil ? "Pro" : "Free";
+  if (!isPaidActive(plan, tier, premiumUntil)) return "Free";
+  const name = plan === "FREE" ? "Pro" : PLAN_NAMES[plan];
+  return until ? `${name} until ${until.toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : name;
 }
 
-function isProActive(tier: "FREE" | "PREMIUM", premiumUntil: string | null) {
-  return tier === "PREMIUM" && (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
+function isPaidActive(plan: PlanName, tier: "FREE" | "PREMIUM", premiumUntil: string | null) {
+  const until = premiumUntil ? new Date(premiumUntil).getTime() : null;
+  if (plan !== "FREE" && until && until > Date.now()) return true;
+  return tier === "PREMIUM" && (!until || until > Date.now());
 }

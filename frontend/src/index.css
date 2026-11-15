@@ -58,7 +58,9 @@
   --text-19: 19px;   /*  5 */
   --text-21: 21px;   /*  4 */
   --text-23: 23px;   /*  3 */
-  /* one-off sizes (22, 24, 25, 27, 28, 31, 34, 35, 37, 38px, 4 clamps) stay literals */
+  --text-24: 24px;   /* result stat numerals */
+  --text-26: 26px;   /* quiz detail heading */
+  /* one-off sizes (22, 25, 27, 28, 31, 34, 35, 37, 38px, 4 clamps) stay literals */
 
   /* â”€â”€ Line heights (unitless ratios; name = ratio x 100) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   /* leading-145 === line-height: 1.45 */
@@ -215,6 +217,19 @@
 }
 @custom-variant max-680 {
   @media (max-width: 680px) {
+    @slot;
+  }
+}
+@custom-variant max-560 {
+  @media (max-width: 560px) {
+    @slot;
+  }
+}
+/* Landing pricing and auth panels move to two columns before the phone
+   breakpoint; these two variants were referenced in markup but missing, so the
+   rules silently never applied. */
+@custom-variant max-900 {
+  @media (max-width: 900px) {
     @slot;
   }
 }
@@ -868,39 +883,39 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 .legal-page {
   max-width: none !important;
   min-height: 100vh;
-  background: #08090f;
-  color: #fff;
+  background: #0d0a14;
+  color: #faf8ff;
 }
 .legal-page > * { max-width: 880px; margin-inline: auto; }
 .legal-page > button {
   display: inline-flex;
-  color: #e5e7eb !important;
+  color: #d8d2e8 !important;
 }
 .legal-page > button:hover { color: #fff !important; }
 .legal-page > header {
-  border-color: #30394b !important;
-  background: linear-gradient(145deg, #111827, #172033) !important;
+  border-color: #3b3052 !important;
+  background: linear-gradient(145deg, #171121, #201829) !important;
 }
 .legal-page > header span {
-  background: #263852 !important;
-  color: #fff !important;
+  background: #2b2240 !important;
+  color: #ece5ff !important;
   box-shadow: none !important;
 }
 .legal-page .eyebrow,
-.legal-page > header .text-brand { color: #dbeafe !important; }
-.legal-page > header h1 { color: #fff !important; }
-.legal-page > header p { color: #f8fafc !important; }
-.legal-page > header small { color: #cbd5e1 !important; }
-.legal-page article h2 { color: #fff !important; }
-.legal-page article p { color: #e5e7eb !important; }
-.legal-page article > section { border-color: #30394b !important; }
+.legal-page > header .text-brand { color: #c9b8ff !important; }
+.legal-page > header h1 { color: #faf8ff !important; }
+.legal-page > header p { color: #e4def2 !important; }
+.legal-page > header small { color: #a79dc4 !important; }
+.legal-page article h2 { color: #faf8ff !important; }
+.legal-page article p { color: #d6cfe6 !important; }
+.legal-page article > section { border-color: #2e2640 !important; }
 .legal-page > aside {
-  border-color: #30394b !important;
-  background: #111827 !important;
+  border-color: #3b3052 !important;
+  background: #171121 !important;
 }
 .legal-page > aside strong,
-.legal-page > aside span { color: #f8fafc !important; }
-.legal-page > aside a { color: #bfdbfe !important; }
+.legal-page > aside span { color: #ede8f9 !important; }
+.legal-page > aside a { color: #c9b8ff !important; }
 .legal-page > aside a:hover { color: #fff !important; }
 
 @media (max-width: 680px) {
@@ -924,6 +939,24 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   border-color: #27243a !important;
   background: #08090fe8 !important;
   backdrop-filter: blur(18px);
+}
+/* The mobile menu toggle is the only navigation left below 680px, so it has to
+   stay visible on the light header as well as the dark one. */
+.home-header .home-menu-button {
+  border-color: #d9d3e8;
+  background: #fff;
+  color: #2a2440;
+}
+.home-header .home-menu-button:hover {
+  background: #f1ecff;
+}
+:root[data-theme="dark"] .home-header .home-menu-button {
+  border-color: #ffffff2e;
+  background: transparent;
+  color: #fff;
+}
+:root[data-theme="dark"] .home-header .home-menu-button:hover {
+  background: #ffffff14;
 }
 :root[data-theme="dark"] .home-header nav {
   gap: 4px !important;
@@ -1066,6 +1099,8 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 .choice-card { background: color-mix(in srgb, var(--theme-surface) 58%, transparent); border-color: var(--theme-line); }
 .choice-card[aria-pressed="true"] { border-color: var(--theme-brand); background: color-mix(in srgb, var(--theme-pale) 68%, transparent); }
 .upload-zone { border: 1.5px dashed color-mix(in srgb, var(--theme-brand) 42%, var(--theme-line)); border-radius: 18px; background: color-mix(in srgb, var(--theme-surface) 42%, transparent); color: var(--theme-brand); }
+.upload-zone > small { color: var(--theme-muted); }
+.upload-zone.has-error > small { color: inherit; }
 .upload-zone:hover, .upload-zone:focus-within { border-color: var(--theme-brand); background: color-mix(in srgb, var(--theme-pale) 46%, transparent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-brand) 12%, transparent); }
 .upload-zone.has-error { border-color: #dc2626; background: color-mix(in srgb, #fef2f2 54%, transparent); color: #b91c1c; }
 :root[data-theme="dark"] .upload-zone.has-error { background: #3a242b; color: #ff9ca7; }
@@ -1147,8 +1182,25 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 :root[data-theme="dark"] .profile-notice.success { background: #18302c; color: #8de0cb; }
 :root[data-theme="dark"] .profile-notice.error { background: #3a242b; color: #ff9ca7; }
 :root[data-theme="dark"] .profile-danger-button { border-color: #633943; background: #261b20; color: #ff9ca7; }
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .profile-content-grid { grid-template-columns: 1fr; }
+}
+
+/* Profile controls stack on phones so no field is squeezed below a usable width. */
+@media (max-width: 560px) {
+  .profile-identity { flex-wrap: wrap; }
+  .profile-identity h2 { font-size: 18px; }
+  .profile-form-grid { grid-template-columns: 1fr; }
+  .profile-add-course { grid-template-columns: 1fr auto; }
+  .profile-add-course input:first-child { grid-column: 1 / -1; }
+  .profile-plan-controls { flex-direction: column; align-items: stretch; }
+  .profile-plan-controls label, .profile-plan-controls button { width: 100%; }
+  .profile-plan-summary { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .profile-plan-summary span { text-align: left; }
+  .profile-plan-list div { flex-wrap: wrap; }
+  .profile-plan-list span { text-align: left; }
+  .profile-delete-row { flex-direction: column; }
+  .profile-delete-row button { width: 100%; }
 }
 
 /* Compact student rail: study destinations stay together, account actions sit
@@ -1308,6 +1360,21 @@ body,
 .primary-button:hover,
 .bg-brand:hover {
   background: var(--theme-brand-deep) !important;
+}
+
+/* Secondary actions are brand-quiet everywhere. Several legacy call sites still
+   carry the old indigo utilities inline; this rule keeps them consistent without
+   touching their handlers or layout classes. Scoped variants (the landing hero,
+   dashboard first-practice) set their own colours and still win. */
+.secondary-button {
+  border-color: var(--theme-line) !important;
+  background: var(--theme-surface) !important;
+  color: var(--theme-brand) !important;
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: var(--theme-brand) !important;
+  background: var(--theme-pale) !important;
 }
 
 :root[data-theme="dark"] .dark-home,
@@ -1828,15 +1895,15 @@ body,
 }
 
 /* The PDF-to-practice flow uses GenerateFlow (not the older Study prototype). */
-.generation-course-control { display: grid; grid-template-columns: auto minmax(220px, 360px); align-items: center; gap: 8px 14px; }
+.generation-course-control { display: grid; max-width: 420px; gap: 7px; }
 .generation-course-control > label { margin: 0 !important; color: var(--theme-ink); font-size: 12px; font-weight: 750; }
-.generation-course-control > small { grid-column: 2; margin: 0 !important; color: var(--theme-muted); font-size: 10px; }
+.generation-course-control > small { margin: 0 !important; color: var(--theme-muted); font-size: 10px; }
 .generation-course-select { width: 100%; min-height: 42px; border: 1px solid color-mix(in srgb, var(--theme-brand) 20%, var(--theme-line)); border-radius: 11px; padding: 0 12px; color: var(--theme-ink); font-size: 12px; box-shadow: inset 0 1px 0 #ffffff80, 0 6px 16px #42276b0a; }
 .generation-length-control { display: grid; gap: 11px; }
 .generation-length-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 12px; }
 .generation-length-heading label { color: var(--theme-ink); font-size: 12px; font-weight: 750; }
 .generation-length-heading span { color: var(--theme-muted); font-size: 10px; }
-.generation-length-options { display: grid; grid-template-columns: repeat(4, minmax(76px, 112px)); gap: 9px; }
+.generation-length-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
 .option-pill { display: flex; min-height: 54px; align-items: center; justify-content: center; gap: 6px; border: 1px solid color-mix(in srgb, var(--theme-brand) 16%, var(--theme-line)); border-radius: 12px; padding: 7px 12px; background: color-mix(in srgb, var(--theme-surface) 52%, transparent); color: var(--theme-ink); cursor: pointer; box-shadow: inset 0 1px 0 #ffffff85, 0 5px 14px #42276b08; transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, background 180ms ease, box-shadow 180ms ease; -webkit-backdrop-filter: blur(18px) saturate(155%); backdrop-filter: blur(18px) saturate(155%); }
 .option-pill:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--theme-brand) 52%, var(--theme-line)); box-shadow: 0 9px 20px #42276b12, inset 0 1px 0 #ffffffa0; }
 .option-pill:active { transform: scale(.97); }
@@ -1868,9 +1935,8 @@ body,
 :root[data-theme="dark"] .option-pill.selected { background: #7c3aed32; border-color: #a78bfa; color: #ddd0ff; }
 :root[data-theme="dark"] .choice-card { background: #211b3280; }
 @media (max-width: 600px) {
-  .generation-course-control { grid-template-columns: minmax(0, 1fr); gap: 7px; }
-  .generation-course-control > small { grid-column: 1; }
-  .generation-length-options { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .generation-course-control { gap: 7px; }
+  .generation-length-options { gap: 6px; }
   .option-pill { min-height: 48px; flex-direction: column; gap: 1px; padding: 5px; }
 }
 
@@ -2089,3 +2155,184 @@ body,
 @media (max-width: 1020px) {
   .app-glass-root main.auth-page .auth-form-panel > .auth-form-content { width: min(100%, 470px) !important; }
 }
+
+/* ===========================================================================
+   Shared UI primitives
+   ---------------------------------------------------------------------------
+   These classes are referenced by page markup (admin rows, repository cards,
+   upload forms, quiz notes) but were never defined after the CSS refactor, so
+   those elements rendered as unstyled text. They are intentionally small and
+   role-based; page-level utilities still win when a screen needs a variation.
+   =========================================================================== */
+@layer components {
+  .icon-button {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border: 1px solid var(--theme-line);
+    border-radius: 10px;
+    background: var(--theme-surface);
+    color: var(--theme-ink);
+    transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+  }
+  .icon-button:hover:not(:disabled) {
+    border-color: var(--color-outline);
+    color: var(--color-brand);
+  }
+  .icon-button:disabled {
+    cursor: default;
+    opacity: .45;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--theme-line);
+    background: var(--theme-pale);
+    color: var(--theme-link);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .badge.active {
+    border-color: var(--color-success-border);
+    background: var(--color-success-surface);
+    color: var(--color-success-text);
+  }
+  .badge.empty {
+    border-color: #fde68a;
+    background: var(--color-warning-surface);
+    color: var(--color-warning);
+  }
+
+  .mission-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    background: var(--theme-pale);
+    color: var(--color-brand);
+  }
+  .mission-main {
+    display: grid;
+    flex: 1 1 auto;
+    gap: 3px;
+    min-width: 0;
+  }
+  .mission-main strong { font-size: 12px; color: var(--theme-ink); }
+  .mission-main span { font-size: 11px; line-height: 1.5; color: var(--theme-muted); overflow-wrap: anywhere; }
+  .mission-main small { font-size: 10px; color: var(--theme-muted); }
+
+  .admin-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--theme-line);
+    background: var(--theme-pale);
+    color: var(--theme-link);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  .admin-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  .text-button {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: var(--theme-link);
+    font-size: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .text-button:hover { color: var(--theme-brand-deep); }
+
+  .upload-form-error {
+    display: block;
+    margin-top: 7px;
+    color: var(--color-danger);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+  .course-warning { color: var(--color-warning); }
+  .profile-feedback {
+    margin-top: 10px;
+    border-radius: 9px;
+    padding: 9px 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    border: 1px solid var(--theme-line);
+    background: var(--theme-pale);
+    color: var(--theme-ink);
+  }
+  .profile-feedback.error {
+    border-color: var(--color-danger-border);
+    background: var(--color-danger-surface);
+    color: var(--color-danger);
+  }
+  .quiz-note {
+    border-left-color: var(--color-brand);
+    background: var(--theme-pale);
+    color: var(--theme-muted);
+  }
+  .danger {
+    border-color: var(--color-danger-border) !important;
+    color: var(--color-danger) !important;
+  }
+  .danger:hover:not(:disabled) {
+    border-color: var(--color-danger-alt) !important;
+    background: var(--color-danger-surface) !important;
+    color: var(--color-danger-deep) !important;
+  }
+
+  :root[data-theme="dark"] .badge.empty { border-color: #6b5225; background: #3a2c16; color: #f3c778; }
+  :root[data-theme="dark"] .upload-form-error { color: #ff9ca7; }
+  :root[data-theme="dark"] .course-warning { color: #f3c778; }
+  :root[data-theme="dark"] .profile-feedback { background: #241f30; border-color: #453a5c; color: #e7e1f5; }
+  :root[data-theme="dark"] .profile-feedback.error { background: #38252b; border-color: #a95865; color: #ffe9ec; }
+  :root[data-theme="dark"] .quiz-note { background: #2a2438; color: #cfc6e4; }
+}
+
+/* Legal pages keep their own dark reading surface. The shared glass-card remap
+   earlier in this file matches every rounded card, so these id-scoped rules keep
+   the legal header and aside on the product's dark purple palette. */
+#root main.legal-page { background: #0d0a14 !important; }
+#root main.legal-page > header { border-color: #3b3052 !important; background: linear-gradient(145deg, #171121, #201829) !important; }
+#root main.legal-page > header span { background: #2b2240 !important; color: #ece5ff !important; box-shadow: none !important; }
+#root main.legal-page .eyebrow,
+#root main.legal-page > header .text-brand { color: #c9b8ff !important; }
+#root main.legal-page > header h1 { color: #faf8ff !important; }
+#root main.legal-page > header p { color: #e4def2 !important; }
+#root main.legal-page > header small { color: #a79dc4 !important; }
+#root main.legal-page article h2 { color: #faf8ff !important; }
+#root main.legal-page article p { color: #d6cfe6 !important; }
+#root main.legal-page article > section { border-color: #2e2640 !important; }
+#root main.legal-page > aside[class] { border-color: #3b3052 !important; background: #171121 !important; box-shadow: none !important; backdrop-filter: none !important; }
+#root main.legal-page > aside strong,
+#root main.legal-page > aside span { color: #ede8f9 !important; }
+#root main.legal-page > aside a { color: #c9b8ff !important; }
+#root main.legal-page > aside a:hover { color: #fff !important; }
