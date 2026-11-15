@@ -49,7 +49,12 @@ function pageTitle(route: Route) {
     hierarchy: "Browse courses",
     material: "Study material",
     learn: "Learn with AI",
+    personal: "Practise from my PDF",
     generate: "Practice sets",
+    paper: "Practice set",
+    flashcards: "Flashcards",
+    quiz: "Quiz",
+    results: "Results",
     history: "My quizzes",
     rewards: "Rewards",
     profile: "My profile",
@@ -70,22 +75,44 @@ const navButton = "py-30 px-0 text-muted text-13 border-b-2 border-transparent h
 const navButtonActive = "text-ink border-brand";
 
 export function Header({ route, isAdmin = false, profile }: { route: Route; isAdmin?: boolean; profile?: ProfileIdentity }) {
+  const [homeMenuOpen, setHomeMenuOpen] = useState(false);
+
   if (route === "home") {
+    const jump = (id: string) => { setHomeMenuOpen(false); scrollToHomeSection(id); };
+    const navigate = (next: Route) => { setHomeMenuOpen(false); go(next); };
     return (
-      <header className="site-header home-header sticky top-0 z-30 w-full border-b border-white/10 bg-[#08090fe8] backdrop-blur-xl">
-        <div className="mx-auto grid h-76 max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center gap-20 px-[clamp(20px,6vw,88px)] max-1160:px-[clamp(14px,3vw,28px)] max-680:grid-cols-[1fr_auto]">
-          <button className="wordmark flex w-fit items-center" onClick={() => go("home")} aria-label="RecappEdu home">
+      <header className="site-header home-header sticky top-0 z-40 w-full border-b border-white/10 bg-[#08090fe8] backdrop-blur-xl">
+        <div className="mx-auto grid h-76 max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center gap-20 px-[clamp(20px,6vw,88px)] max-1160:px-[clamp(14px,3vw,28px)] max-680:grid-cols-[1fr_auto_auto] max-680:gap-10">
+          <button className="wordmark flex w-fit items-center" onClick={() => navigate("home")} aria-label="RecappEdu home">
             <BrandLogo className="h-36 max-[480px]:h-30" />
           </button>
           <nav className="flex items-center gap-[clamp(20px,3vw,42px)] max-680:hidden [&>button]:relative [&>button]:py-12 [&>button]:text-12 [&>button]:font-medium [&>button]:text-[#b5b0c3] [&>button]:transition-colors [&>button:hover]:text-white" aria-label="Main navigation">
-            <button onClick={() => scrollToHomeSection("how-it-works")}>How it works</button>
-            <button onClick={() => scrollToHomeSection("pricing")}>Pricing</button>
+            <button onClick={() => jump("how-it-works")}>How it works</button>
+            <button onClick={() => jump("pricing")}>Pricing</button>
           </nav>
           <div className="flex items-center justify-self-end gap-14 max-680:gap-9">
-            <button className="text-12 font-semibold text-[#c2bdce] transition-colors hover:text-white max-[480px]:hidden" onClick={() => go("login")}>Sign in</button>
-            <button className="primary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 bg-[#a855f7] px-16 text-12 font-bold text-white shadow-[0_8px_24px_#a855f733] transition hover:-translate-y-1 max-[380px]:px-11" onClick={() => go("signup")}><span className="max-[380px]:hidden">Get started</span><span className="hidden max-[380px]:inline">Start</span><ArrowUpRight size={15} /></button>
+            <button className="text-12 font-semibold text-[#c2bdce] transition-colors hover:text-white max-[480px]:hidden" onClick={() => navigate("login")}>Sign in</button>
+            <button className="primary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 bg-[#a855f7] px-16 text-12 font-bold text-white shadow-[0_8px_24px_#a855f733] transition hover:-translate-y-1 max-680:hidden max-[380px]:px-11" onClick={() => navigate("signup")}><span className="max-[380px]:hidden">Get started</span><span className="hidden max-[380px]:inline">Start</span><ArrowUpRight size={15} /></button>
           </div>
+          <button
+            className="home-menu-button hidden size-38 place-items-center rounded-9 border transition-colors max-680:grid"
+            aria-label={homeMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={homeMenuOpen}
+            onClick={() => setHomeMenuOpen((value) => !value)}
+          >
+            {homeMenuOpen ? <X size={19} /> : <Menu size={19} />}
+          </button>
         </div>
+        {homeMenuOpen && (
+          <div className="border-t border-line bg-[var(--theme-surface)] px-[clamp(20px,6vw,88px)] py-14 shadow-card max-680:block">
+            <nav className="mx-auto grid max-w-[1440px] gap-4" aria-label="Mobile navigation">
+              <button className="flex min-h-44 items-center justify-between rounded-10 px-12 text-left text-13 font-semibold text-ink hover:bg-pale" onClick={() => jump("how-it-works")}>How it works <ArrowUpRight size={15} className="text-muted" /></button>
+              <button className="flex min-h-44 items-center justify-between rounded-10 px-12 text-left text-13 font-semibold text-ink hover:bg-pale" onClick={() => jump("pricing")}>Pricing <ArrowUpRight size={15} className="text-muted" /></button>
+              <button className="flex min-h-44 items-center justify-between rounded-10 px-12 text-left text-13 font-semibold text-ink hover:bg-pale" onClick={() => navigate("login")}>Sign in <ArrowUpRight size={15} className="text-muted" /></button>
+              <button className="primary-button mt-6 inline-flex min-h-44 items-center justify-center gap-7 rounded-10 px-14 text-13 font-bold text-white" onClick={() => navigate("signup")}>Get started <ArrowUpRight size={16} /></button>
+            </nav>
+          </div>
+        )}
       </header>
     );
   }
@@ -151,8 +178,10 @@ export function PageFrame({
   subtitle?: string;
   back?: Route;
 }) {
+  // Labels that are themselves upload dropzones opt out of the plain
+  // field-label styling below, which would otherwise override their flex layout.
   return (
-    <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere] [&>label]:mb-8 [&>label]:block [&>label]:text-12 [&>label]:font-semibold [&>label]:text-muted">
+    <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere] [&>label:not(.upload-target)]:mb-8 [&>label:not(.upload-target)]:block [&>label:not(.upload-target)]:text-12 [&>label:not(.upload-target)]:font-semibold [&>label:not(.upload-target)]:text-muted">
       {back && (
         <button className="mb-35 inline-flex items-center gap-7 text-12 font-semibold text-muted hover:text-brand" onClick={() => go(back)}>
           Back
@@ -198,7 +227,9 @@ const userNavIdle = "text-muted hover:bg-pale hover:text-ink";
 
 function navActive(item: UserNavItem, route: Route, sub: string) {
   const [itemRoute, itemSub] = item.hash.split("/");
-  if (itemRoute !== route) return false;
+  // Material details are a child view of the course repository.
+  const currentRoute = route === "material" ? "hierarchy" : route;
+  if (itemRoute !== currentRoute) return false;
   if (itemSub) return itemSub === sub;
   // A plain "profile" item must not look active while a profile section is open.
   if (item.key === "profile" && sub) return false;

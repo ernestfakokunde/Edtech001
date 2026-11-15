@@ -3,6 +3,7 @@ import {
   Check,
   Clock3,
   Download,
+  FileText,
   FlipHorizontal2,
   Loader2,
   Plus,
@@ -190,7 +191,7 @@ export function GenerateFlow({
       subtitle="Upload a PDF or Word document and AI will turn it into a private practice set."
       back="dashboard"
     >
-      <div className="generation-course-control mb-18 [&>label]:mb-7 [&>label]:block [&>label]:text-12 [&>label]:font-bold [&>small]:mt-6 [&>small]:block [&>small]:text-11 [&>small]:text-muted">
+      <div className="generation-course-control mb-18">
         <label htmlFor="generation-course">Course (optional)</label>
         <select className="generation-course-select" id="generation-course" value={course?.id ?? ""} onChange={(event) => setCourse(courseOptions.find((item) => item.id === event.target.value) ?? null)}>
           <option value="">No course · quick practice</option>
@@ -202,23 +203,30 @@ export function GenerateFlow({
       {addingCourse && (
         <div className="border-t border-line py-15">
           {!school && <p className="course-warning mb-10 text-11 font-bold">Add your university and faculty on your profile to save a course. You can still continue without one.</p>}
-          <div className="mb-12 grid grid-cols-[.9fr_1.6fr] gap-8 max-760:grid-cols-1 [&>input]:min-h-44 [&>input]:w-full [&>input]:rounded-10 [&>input]:border [&>input]:border-line [&>input]:bg-white [&>input]:px-12 [&>input]:text-12 [&>input]:text-ink [&>input]:outline-none [&>input:focus]:border-outline [&>input:focus]:shadow-[0_0_0_3px_#ede9fe] [&>input:disabled]:bg-[#f8fafc] [&>input:disabled]:text-slate-icon">
-            <input value={newCourse.code} onChange={(event) => setNewCourse({ ...newCourse, code: event.target.value.toUpperCase() })} placeholder="Course code e.g. CSC 201" disabled={!school} />
-            <input value={newCourse.title} onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })} placeholder="Course title e.g. Data Structures" disabled={!school} />
+          <div className="mb-12 grid max-w-[720px] grid-cols-[.9fr_1.6fr] gap-8 max-760:grid-cols-1">
+            <label className="grid min-w-0 gap-5 text-11 font-bold text-muted">
+              <span>Course code</span>
+              <input className="min-h-44 w-full rounded-10 border border-line bg-white px-12 text-12 text-ink outline-none focus:border-outline focus:shadow-[0_0_0_3px_#ede9fe] disabled:bg-[#f8fafc] disabled:text-slate-icon" value={newCourse.code} onChange={(event) => setNewCourse({ ...newCourse, code: event.target.value.toUpperCase() })} placeholder="e.g. CSC 201" disabled={!school} />
+            </label>
+            <label className="grid min-w-0 gap-5 text-11 font-bold text-muted">
+              <span>Course title</span>
+              <input className="min-h-44 w-full rounded-10 border border-line bg-white px-12 text-12 text-ink outline-none focus:border-outline focus:shadow-[0_0_0_3px_#ede9fe] disabled:bg-[#f8fafc] disabled:text-slate-icon" value={newCourse.title} onChange={(event) => setNewCourse({ ...newCourse, title: event.target.value })} placeholder="e.g. Data Structures" disabled={!school} />
+            </label>
           </div>
           {addCourseError && <small className="upload-form-error">{addCourseError}</small>}
-          <div className="mt-12 flex justify-end gap-9">
+          <div className="mt-12 flex max-w-[720px] justify-end gap-9">
             <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={closeAddForm}><X size={14} /> Cancel</button>
             {school ? <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" disabled={addingCourseBusy} onClick={() => void addCourseHandler()}>{addingCourseBusy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Save course</button> : <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("profile")}>Go to profile</button>}
           </div>
         </div>
       )}
 
-      <label className={`upload-zone relative mb-20 flex min-h-[138px] cursor-pointer flex-col items-center justify-center gap-7 px-18 py-24 text-center transition ${fileProblem ? "has-error" : ""} [&>span]:block [&>span]:w-full [&>span]:text-13 [&>span]:font-bold [&>span]:text-ink [&>span]:[overflow-wrap:anywhere] [&>small]:block [&>small]:w-full [&>small]:max-w-[420px] [&>small]:font-medium [&>small]:leading-150 [&>input]:pointer-events-none [&>input]:absolute [&>input]:opacity-0`}>
-        <Upload size={17} />
+      <label className={`upload-zone upload-target relative mb-20 flex min-h-[138px] cursor-pointer flex-col items-center justify-center gap-9 px-18 py-24 text-center transition ${fileProblem ? "has-error" : ""} [&>span]:block [&>span]:w-full [&>span]:text-13 [&>span]:font-bold [&>span]:text-ink [&>span]:[overflow-wrap:anywhere] [&>small]:block [&>small]:w-full [&>small]:max-w-[520px] [&>small]:font-medium [&>small]:leading-150 [&>input]:pointer-events-none [&>input]:absolute [&>input]:opacity-0`}>
+        {selectedFile ? <FileText size={18} aria-hidden="true" /> : <Upload size={18} aria-hidden="true" />}
         <span>{selectedFile ? selectedFile.name : "Choose a PDF or DOCX file"}</span>
-        <small>{fileProblem ?? (selectedFile ? "Ready to process" : `The file is used only to generate your private practice set — PDF or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
+        <small>{fileProblem ?? (selectedFile ? "Ready to process — click to choose a different file" : `The file is used only to generate your private practice set — PDF or DOCX up to ${MAX_UPLOAD_LABEL}.`)}</small>
         <input
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
           type="file"
           accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           onChange={(event) => { const file = event.target.files?.[0] || null; setSelectedFile(file); setError(""); }}
@@ -262,7 +270,7 @@ export function GenerateFlow({
           <label>Time per question</label>
           <div className="flex flex-wrap gap-8">
             {TIME_OPTIONS.map((option) => (
-              <button key={option} type="button" aria-pressed={timePerQuestion === option} className="option-pill" onClick={() => setTimePerQuestion(option)}>
+              <button key={option} type="button" aria-pressed={timePerQuestion === option} className={`option-pill ${timePerQuestion === option ? "selected" : ""}`} onClick={() => setTimePerQuestion(option)}>
                 {option}s <Clock3 size={12} />
               </button>
             ))}
@@ -271,10 +279,10 @@ export function GenerateFlow({
       )}
 
       {quota.limit > 0 && (
-        <div className={`mb-14 flex flex-wrap items-center gap-8 rounded-11 border border-[#dbeafe] bg-[#f8fbff] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
+        <div className={`mb-14 flex flex-wrap items-center gap-8 rounded-11 border px-13 py-11 text-11 [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : "border-line bg-pale text-brand"}`}>
           <Clock3 size={14} />
           <span>{quota.remaining} of {quota.limit} monthly AI credits remaining{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}.</span>
-          <button type="button" className="bg-brand" onClick={() => go("profile")}>Go Pro</button>
+          {quota.tier !== "PREMIUM" && <button type="button" className="bg-brand" onClick={() => go("profile")}>Go Pro</button>}
         </div>
       )}
 

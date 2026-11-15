@@ -19,7 +19,7 @@ export function Home() {
   const scrollToPricing = () => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <main className="landing-page dark-home min-h-screen bg-[#08090f] text-[#f2efff] [background-image:radial-gradient(ellipse_at_76%_50%,#542b7540,transparent_38%),linear-gradient(120deg,#090a11,#08090f_58%)] [background-size:auto,auto] [background-position:center,center]">
+    <main className="landing-page dark-home min-h-screen overflow-x-clip bg-[#08090f] text-[#f2efff] [background-image:radial-gradient(ellipse_at_76%_50%,#542b7540,transparent_38%),linear-gradient(120deg,#090a11,#08090f_58%)] [background-size:auto,auto] [background-position:center,center]">
       <section className="landing-hero mx-auto grid w-full max-w-[1260px] grid-cols-[1.04fr_.96fr] items-center gap-[clamp(36px,7vw,94px)] px-[clamp(26px,6vw,80px)] py-[95px] max-1020:grid-cols-1 max-1020:gap-38 max-1020:px-22 max-1020:py-60 max-1020:text-left max-680:px-19 max-680:py-47">
         <div className="max-w-[600px]">
           <p className="hero-eyebrow eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand mb-22 justify-start text-[#b4a6ff]">
@@ -42,7 +42,7 @@ export function Home() {
               Explore courses
             </button>
           </div>
-          <div className="mt-23 flex flex-wrap items-center gap-10 text-12 text-[#64748b] [&_button]:font-semibold [&_button]:text-[#2563eb]">
+          <div className="mt-23 flex flex-wrap items-center gap-10 text-12 text-[#64748b] [&_button]:font-semibold [&_button]:text-brand">
             <span>Already have an account?</span>
             <button onClick={() => go("login")}>Sign in</button>
             <button onClick={() => go("signup")}>Create account</button>
@@ -77,9 +77,9 @@ export function Home() {
           first-time visitor decides whether the product is for them. */}
       <BrandCarousel />
       <section className="mx-auto grid max-w-[1170px] grid-cols-3 gap-32 border-t border-[#dbeafe] px-24 pb-70 pt-12 max-760:grid-cols-1 max-760:gap-18 max-760:px-22 max-760:pb-48" aria-label="Study tools">
-        <div className="grid grid-cols-[40px_1fr] content-start gap-x-12 [&>span]:row-span-2 [&>span]:grid [&>span]:size-40 [&>span]:place-items-center [&>span]:rounded-12 [&>span]:bg-[#eff6ff] [&>span]:text-[#2563eb] [&>strong]:self-end [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>p]:mt-5 [&>p]:text-12 [&>p]:leading-155 [&>p]:text-muted"><span><Upload size={19} /></span><strong>Bring your own material</strong><p>Use your PDFs and notes to start a personal study session.</p></div>
-        <div className="grid grid-cols-[40px_1fr] content-start gap-x-12 [&>span]:row-span-2 [&>span]:grid [&>span]:size-40 [&>span]:place-items-center [&>span]:rounded-12 [&>span]:bg-[#eff6ff] [&>span]:text-[#2563eb] [&>strong]:self-end [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>p]:mt-5 [&>p]:text-12 [&>p]:leading-155 [&>p]:text-muted"><span><Brain size={19} /></span><strong>Understand as you revise</strong><p>Get clear explanations and practice questions with AI.</p></div>
-        <div className="grid grid-cols-[40px_1fr] content-start gap-x-12 [&>span]:row-span-2 [&>span]:grid [&>span]:size-40 [&>span]:place-items-center [&>span]:rounded-12 [&>span]:bg-[#eff6ff] [&>span]:text-[#2563eb] [&>strong]:self-end [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>p]:mt-5 [&>p]:text-12 [&>p]:leading-155 [&>p]:text-muted"><span><Clock3 size={19} /></span><strong>Make progress your way</strong><p>Practise with flashcards or take a focused quiz.</p></div>
+        <div className="grid grid-cols-[40px_1fr] content-start gap-x-12 [&>span]:row-span-2 [&>span]:grid [&>span]:size-40 [&>span]:place-items-center [&>span]:rounded-12 [&>span]:bg-pale [&>span]:text-brand [&>strong]:self-end [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>p]:mt-5 [&>p]:text-12 [&>p]:leading-155 [&>p]:text-muted"><span><Upload size={19} /></span><strong>Bring your own material</strong><p>Use your PDFs and notes to start a personal study session.</p></div>
+        <div className="grid grid-cols-[40px_1fr] content-start gap-x-12 [&>span]:row-span-2 [&>span]:grid [&>span]:size-40 [&>span]:place-items-center [&>span]:rounded-12 [&>span]:bg-pale [&>span]:text-brand [&>strong]:self-end [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>p]:mt-5 [&>p]:text-12 [&>p]:leading-155 [&>p]:text-muted"><span><Brain size={19} /></span><strong>Understand as you revise</strong><p>Get clear explanations and practice questions with AI.</p></div>
+        <div className="grid grid-cols-[40px_1fr] content-start gap-x-12 [&>span]:row-span-2 [&>span]:grid [&>span]:size-40 [&>span]:place-items-center [&>span]:rounded-12 [&>span]:bg-pale [&>span]:text-brand [&>strong]:self-end [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>p]:mt-5 [&>p]:text-12 [&>p]:leading-155 [&>p]:text-muted"><span><Clock3 size={19} /></span><strong>Make progress your way</strong><p>Practise with flashcards or take a focused quiz.</p></div>
       </section>
       <section className="mx-auto max-w-[1180px] rounded-[22px] bg-[#edf5ff] px-[clamp(24px,5vw,58px)] py-62">
         <div className="mb-34 text-center [&_h2]:mb-10 [&_h2]:font-grotesk [&_h2]:text-[clamp(30px,4vw,42px)] [&_h2]:font-bold [&_h2]:tracking-[-.055em] [&_p:last-child]:text-13 [&_p:last-child]:leading-160 [&_p:last-child]:text-muted">
@@ -87,7 +87,7 @@ export function Home() {
           <h2 className="mb-24 text-[clamp(30px,4vw,42px)] font-grotesk font-bold tracking-[-.055em] text-ink">Start with what you have.</h2>
         </div>
         <div className="grid grid-cols-2 gap-14 max-760:grid-cols-1">
-          <button className="relative grid min-h-205 content-start gap-12 rounded-16 border border-[#dbe7f8] bg-white p-24 text-left shadow-[0_10px_24px_#2563eb08] transition hover:border-[#93c5fd] hover:shadow-[0_14px_28px_#2563eb12] [&>strong]:font-grotesk [&>strong]:text-16 [&>strong]:font-bold [&>strong]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted [&>svg]:text-[#2563eb]">
+          <button className="relative grid min-h-205 content-start gap-12 rounded-16 border border-[#dbe7f8] bg-white p-24 text-left shadow-[0_10px_24px_#2563eb08] transition hover:border-[#93c5fd] hover:shadow-[0_14px_28px_#2563eb12] [&>strong]:font-grotesk [&>strong]:text-16 [&>strong]:font-bold [&>strong]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted [&>svg]:text-brand">
             <span className="text-12 font-extrabold text-[#2563eb]">01</span>
             <strong>Learn with AI</strong>
             <p>
@@ -96,7 +96,7 @@ export function Home() {
             </p>
             <ArrowRight size={17} />
           </button>
-          <button className="relative grid min-h-205 content-start gap-12 rounded-16 border border-[#dbe7f8] bg-white p-24 text-left shadow-[0_10px_24px_#2563eb08] transition hover:border-[#93c5fd] hover:shadow-[0_14px_28px_#2563eb12] [&>strong]:font-grotesk [&>strong]:text-16 [&>strong]:font-bold [&>strong]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted [&>svg]:text-[#2563eb]">
+          <button className="relative grid min-h-205 content-start gap-12 rounded-16 border border-[#dbe7f8] bg-white p-24 text-left shadow-[0_10px_24px_#2563eb08] transition hover:border-[#93c5fd] hover:shadow-[0_14px_28px_#2563eb12] [&>strong]:font-grotesk [&>strong]:text-16 [&>strong]:font-bold [&>strong]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted [&>svg]:text-brand">
             <span className="text-12 font-extrabold text-[#2563eb]">02</span>
             <strong>My course</strong>
             <p>
@@ -105,7 +105,7 @@ export function Home() {
             </p>
             <ArrowRight size={17} />
           </button>
-          <button className="relative grid min-h-205 content-start gap-12 rounded-16 border border-[#dbe7f8] bg-white p-24 text-left shadow-[0_10px_24px_#2563eb08] transition hover:border-[#93c5fd] hover:shadow-[0_14px_28px_#2563eb12] [&>strong]:font-grotesk [&>strong]:text-16 [&>strong]:font-bold [&>strong]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted [&>svg]:text-[#2563eb]">
+          <button className="relative grid min-h-205 content-start gap-12 rounded-16 border border-[#dbe7f8] bg-white p-24 text-left shadow-[0_10px_24px_#2563eb08] transition hover:border-[#93c5fd] hover:shadow-[0_14px_28px_#2563eb12] [&>strong]:font-grotesk [&>strong]:text-16 [&>strong]:font-bold [&>strong]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted [&>svg]:text-brand">
             <span className="text-12 font-extrabold text-[#2563eb]">03</span>
             <strong>Create a study set</strong>
             <p>
@@ -124,7 +124,7 @@ export function Home() {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-18 max-1020:grid-cols-1 max-1020:gap-22 max-760:grid-cols-1">
-          <div className="grid content-start gap-10 rounded-16 border border-[#dbe7f8] bg-white p-20 [&>span]:font-grotesk [&>span]:text-14 [&>span]:font-bold [&>span]:text-[#2563eb] [&>h3]:m-0 [&>h3]:font-grotesk [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted">
+          <div className="grid content-start gap-10 rounded-16 border border-[#dbe7f8] bg-white p-20 [&>span]:font-grotesk [&>span]:text-14 [&>span]:font-bold [&>span]:text-brand [&>h3]:m-0 [&>h3]:font-grotesk [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted">
             <span>01</span>
             <h3 className="m-0 font-grotesk text-17 font-bold text-ink">Bring notes or a PDF</h3>
             <p>
@@ -132,7 +132,7 @@ export function Home() {
               repository.
             </p>
           </div>
-          <div className="grid content-start gap-10 rounded-16 border border-[#dbe7f8] bg-white p-20 [&>span]:font-grotesk [&>span]:text-14 [&>span]:font-bold [&>span]:text-[#2563eb] [&>h3]:m-0 [&>h3]:font-grotesk [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted">
+          <div className="grid content-start gap-10 rounded-16 border border-[#dbe7f8] bg-white p-20 [&>span]:font-grotesk [&>span]:text-14 [&>span]:font-bold [&>span]:text-brand [&>h3]:m-0 [&>h3]:font-grotesk [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted">
             <span>02</span>
             <h3 className="m-0 font-grotesk text-17 font-bold text-ink">Let AI structure it</h3>
             <p>
@@ -140,7 +140,7 @@ export function Home() {
               you choose.
             </p>
           </div>
-          <div className="grid content-start gap-10 rounded-16 border border-[#dbe7f8] bg-white p-20 [&>span]:font-grotesk [&>span]:text-14 [&>span]:font-bold [&>span]:text-[#2563eb] [&>h3]:m-0 [&>h3]:font-grotesk [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted">
+          <div className="grid content-start gap-10 rounded-16 border border-[#dbe7f8] bg-white p-20 [&>span]:font-grotesk [&>span]:text-14 [&>span]:font-bold [&>span]:text-brand [&>h3]:m-0 [&>h3]:font-grotesk [&>h3]:text-17 [&>h3]:font-bold [&>h3]:text-ink [&>p]:m-0 [&>p]:text-12 [&>p]:leading-160 [&>p]:text-muted">
             <span>03</span>
             <h3 className="m-0 font-grotesk text-17 font-bold text-ink">Practise with purpose</h3>
             <p>Flip through flashcards or test yourself with a timed quiz.</p>
