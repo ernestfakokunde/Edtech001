@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRight, Award, Check, Copy, Gift, PartyPopper, Sparkles, Ticket, Trophy, Zap } from "lucide-react";
+import { ArrowRight, Award, Check, Copy, Gift, PartyPopper, Sparkles, Ticket, Trophy, UserRound, Zap } from "lucide-react";
 import { PageFrame } from "../components/Layout";
 import { claimMission, errorMessage, getMyMissions, getReferralInfo, redeemPromoCode, type ProfileMission, type ReferralInfo } from "../lib/api";
 
@@ -92,7 +92,7 @@ export function RewardsPage() {
               <header className="rewards-panel-heading"><span className="rewards-panel-icon invite"><PartyPopper size={18} /></span><div><p className="rewards-eyebrow">Pass it on</p><h2>Invite a study buddy</h2></div></header>
               <p className="rewards-panel-description">Share your code. You both earn bonus XP when they join.</p>
               {referral?.referralCode ? <div className="rewards-invite-row"><code>{referral.referralCode}</code><button className="rewards-copy-button" onClick={() => void copyInvite()} aria-label="Copy invite code">{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Copy"}</button></div> : <p className="rewards-code-pending">Your invite code will appear here shortly.</p>}
-              <div className="rewards-invite-count"><span className="rewards-friend-avatars"><i>✦</i><i>✦</i><i>✦</i></span><strong>{referral?.invites ?? 0} friends joined</strong></div>
+              <div className="rewards-invite-count"><span className="rewards-friend-avatars" aria-hidden="true"><i><UserRound size={11} /></i><i><UserRound size={11} /></i><i><UserRound size={11} /></i></span><strong>{referral?.invites ?? 0} friends joined</strong></div>
             </section>
 
             <section className="rewards-panel rewards-redeem-panel">

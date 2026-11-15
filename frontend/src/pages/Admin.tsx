@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Activity, ArrowLeft, Ban, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, FileText, Flag, LayoutDashboard, Menu, Plus, Power, Search, ShieldCheck, Sparkles, Ticket, Trash2, UserRound, Users, X } from "lucide-react";
 import { go } from "../components/Layout";
 import { motion } from "motion/react";
@@ -301,22 +302,20 @@ export function AdminPage({ section }: { section: string }) {
             <div className="flex flex-col gap-18">
               <div className="mb-4 flex items-end justify-between gap-24 max-1020:items-start max-1020:flex-col">
                 <div>
-                  <p className="mb-7 text-13 text-slate-icon">Monday, November 9</p>
-                  <h2 className="m-0 text-[clamp(26px,3vw,32px)] font-bold tracking-[-.05em] text-ink">Good day, Admin <span className="text-[.8em]" aria-hidden="true">👋</span></h2>
+                  <p className="mb-7 text-12 font-semibold text-brand">{todayLabel()}</p>
+                  <h2 className="m-0 flex flex-wrap items-center gap-9 text-[clamp(26px,3vw,32px)] font-bold tracking-[-.05em] text-ink">Good day, Admin <Sparkles size={20} className="shrink-0 text-brand" aria-hidden="true" /></h2>
                   <p className="mt-7 text-13 text-slate-icon">Here&apos;s what&apos;s happening across your learning community.</p>
                 </div>
-                <div className="flex shrink-0 items-center gap-10">
-                  <div className="flex rounded-10 border border-[#dfe6f0] bg-white p-4 [&>button]:min-h-[31px] [&>button]:min-w-[45px] [&>button]:rounded-7 [&>button]:text-12 [&>button]:font-semibold [&>button]:text-[#60728f] [&>button.active]:bg-[#e7efff] [&>button.active]:text-[#2864e8]" aria-label="Dashboard date range">
-                    <button className="rounded-7 bg-[#e7efff] px-10 text-12 font-semibold text-[#2864e8]">7D</button>
-                    <button className="rounded-7 px-10 text-12 font-semibold text-[#60728f]">30D</button>
-                    <button className="rounded-7 px-10 text-12 font-semibold text-[#60728f]">90D</button>
-                  </div>
-                  <button className="inline-flex min-h-40 items-center gap-7 rounded-9 bg-[#2864e8] px-15 text-12 font-bold text-white shadow-[0_7px_16px_rgba(40,100,232,.18)] hover:bg-[#1f55ca]" onClick={() => go("admin-submissions")}>
+                <div className="flex shrink-0 flex-wrap items-center gap-10">
+                  <span className="inline-flex min-h-34 items-center gap-7 rounded-999 border border-line bg-white px-12 text-11 font-semibold text-muted">
+                    <span className="size-7 rounded-half bg-online" aria-hidden="true" /> Live overview
+                  </span>
+                  <button className="primary-button inline-flex min-h-40 items-center gap-7 rounded-9 px-15 text-12 font-bold text-white" onClick={() => go("admin-submissions")}>
                     <Plus size={16} /> Review submissions
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-16 max-1020:grid-cols-2 max-680:grid-cols-1">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-16 max-760:grid-cols-2 max-[420px]:grid-cols-1">
                 <Metric icon={<Users size={16} />} value={summary?.users ?? null} label="Students on the platform" tone="blue" />
                 <Metric icon={<Clock3 size={16} />} value={summary?.pending ?? null} label="Submissions awaiting review" tone="amber" />
                 <Metric icon={<Check size={16} />} value={summary?.approved ?? null} label="Approved PDFs" tone="green" />
@@ -691,6 +690,9 @@ function AdminSidebar({ section, open, onClose }: { section: string; open: boole
       <div className="flex h-60 items-center gap-11 border-b border-line px-16">
         <span className="grid h-34 w-34 shrink-0 place-items-center rounded-11 bg-brand text-white shadow-brand-sm"><ShieldCheck size={17} /></span>
         <p className="m-0 min-w-0 truncate text-[15px] font-semibold text-ink">Admin board</p>
+        <button className="ml-auto hidden h-32 w-32 shrink-0 place-items-center rounded-10 text-muted transition-colors hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close admin menu" onClick={onClose}>
+          <X size={16} />
+        </button>
       </div>
       <button className="flex items-center gap-8 border-b border-line px-16 py-13 text-12 font-semibold text-brand transition-colors hover:bg-pale" onClick={() => { go("dashboard"); onClose(); }}>
         <ArrowLeft size={14} /> Back to main app
@@ -760,7 +762,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
   const action = entry.action.replace(/_/g, " ").toLowerCase();
   const target = entry.metadata?.title ? ` "${entry.metadata.title}"` : "";
   return (
-    <div className="flex items-center gap-10 border-b border-line py-12 text-11 [&>span]:grid [&>span]:size-30 [&>span]:shrink-0 [&>span]:place-items-center [&>span]:rounded-full [&>span]:bg-pale [&>span]:text-brand [&>p]:m-0 [&>p]:min-w-0 [&>p]:flex-1 [&>p]:truncate [&>time]:whitespace-nowrap [&>time]:text-10 [&>time]:text-slate-icon">
+    <div className="flex min-w-0 items-center gap-10 border-b border-line py-12 text-11 [&>span]:grid [&>span]:size-30 [&>span]:shrink-0 [&>span]:place-items-center [&>span]:rounded-full [&>span]:bg-pale [&>span]:text-brand [&>p]:m-0 [&>p]:min-w-0 [&>p]:flex-1 [&>p]:truncate [&>time]:whitespace-nowrap [&>time]:text-10 [&>time]:text-slate-icon">
       <span><Activity size={14} /></span>
       <p><strong>{actor}</strong> {action}{target}</p>
       <time>{timeAgo(entry.createdAt)}</time>
@@ -771,8 +773,8 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
 function SuspendDialog({ user, onClose, onConfirm }: { user: AdminUser; onClose: () => void; onConfirm: (until: string, reason: string) => void }) {
   const [days, setDays] = useState("7");
   const [reason, setReason] = useState("Suspended by administrator");
-  return (
-    <div className="fixed inset-0 z-10 grid place-items-center bg-[#0f172a66] p-20" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-[#0f172a66] p-20" onClick={onClose} role="dialog" aria-modal="true">
       <div className="relative w-full max-w-[430px] rounded-17 bg-white p-27 shadow-[0_25px_60px_rgba(15,23,42,.2)] [&>h2]:mb-9 [&>h2]:mt-6 [&>h2]:text-[23px] [&>h2]:font-bold [&>p:not(.eyebrow)]:mb-20 [&>p:not(.eyebrow)]:text-12 [&>p:not(.eyebrow)]:leading-[1.55] [&>p:not(.eyebrow)]:text-muted" onClick={(event) => event.stopPropagation()}>
         <button className="absolute right-17 top-17 text-muted" onClick={onClose}><X size={17} /></button>
         <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Suspension</p>
@@ -795,8 +797,13 @@ function SuspendDialog({ user, onClose, onConfirm }: { user: AdminUser; onClose:
           <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-8 border border-red-200 bg-white px-11 text-11 font-bold text-danger" onClick={() => onConfirm(new Date(Date.now() + Number(days) * 86400000).toISOString(), reason.trim() || "Suspended by administrator")}>Suspend account</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
+}
+
+function todayLabel() {
+  return new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 }
 
 function timeAgo(iso: string) {

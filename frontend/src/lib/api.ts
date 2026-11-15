@@ -496,6 +496,56 @@ export function claimMission(missionId: string) {
 export function getMyXp() {
   return request<{ xp: number; level: number; tier: "FREE" | "PREMIUM"; premiumUntil?: string | null }>('/api/profile/xp', { method: 'GET' })
 }
+export type LeaderboardScope = "global" | "university"
+export type LeaderboardRange = "weekly" | "monthly" | "all-time"
+export type LeaderboardEntry = {
+  id: string
+  name: string
+  xp: number
+  totalXp: number
+  rank: number
+  level: number
+  universityName: string | null
+  facultyName: string | null
+  movement: number | null
+}
+export type LeaderboardPeriod = {
+  key: LeaderboardRange
+  label: string
+  startsAt: string | null
+  endsAt: string | null
+}
+export type LeaderboardData = {
+  scope: LeaderboardScope
+  range: LeaderboardRange
+  scopeLabel: string | null
+  universityName: string | null
+  period: LeaderboardPeriod
+  weekly: { startsAt: string; endsAt: string }
+  totalParticipants: number
+  leaders: LeaderboardEntry[]
+  current: {
+    id: string
+    xp: number
+    totalXp: number
+    rank: number | null
+    previousRank: number | null
+    movement: number | null
+    level: number
+    xpToNext: number | null
+    nextRank: number | null
+    universityName: string | null
+    facultyName: string | null
+  } | null
+  updatedAt: string
+}
+export function getLeaderboard(filters: { scope?: LeaderboardScope; range?: LeaderboardRange } = {}) {
+  const params = new URLSearchParams()
+  if (filters.scope) params.set("scope", filters.scope)
+  if (filters.range) params.set("range", filters.range)
+  const query = params.toString()
+  return request<LeaderboardData>(`/api/profile/leaderboard${query ? `?${query}` : ""}`, { method: "GET" })
+}
 export function deleteAccount(confirmText: string) {
   return request<void>('/api/profile', { method: 'DELETE', body: JSON.stringify({ confirmText }) })
 }

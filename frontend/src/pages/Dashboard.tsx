@@ -26,7 +26,7 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   const [courseMessage, setCourseMessage] = useState("");
   const [courseError, setCourseError] = useState("");
   const [savingCourse, setSavingCourse] = useState(false);
-  const [activePro, setActivePro] = useState(() => isProActive(profile?.tier, profile?.premiumUntil));
+  const [activePro, setActivePro] = useState(() => isProActive(profile?.subscriptionPlan, profile?.tier, profile?.premiumUntil));
   const [quota, setQuota] = useState<GenerationQuota | null>(null);
   useEffect(() => {
     setStats(getQuizStats());
@@ -35,7 +35,7 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
     getMyCourses()
       .then((result) => { setSchool(result.school); setCourses(result.courses); })
       .catch(() => { /* the courses card falls back to its empty state */ });
-    getMyXp().then((account) => setActivePro(isProActive(account.tier, account.premiumUntil))).catch(() => undefined);
+    getMyXp().then((account) => setActivePro(isProActive(profile?.subscriptionPlan, account.tier, account.premiumUntil))).catch(() => undefined);
     getGenerationQuota().then(setQuota).catch(() => undefined);
   }, []);
 
@@ -90,14 +90,14 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
       )}
 
 
-      {!activePro && <section className="mb-22 flex items-center gap-17 rounded-18 border border-[#cddcff] bg-[linear-gradient(110deg,#eef4ff,#fafbff_70%)] px-22 py-20 shadow-[0_10px_28px_#1d4ed80c] max-[640px]:flex-wrap max-[640px]:items-start [&>.primary-button]:shrink-0 max-[640px]:[&>.primary-button]:w-full">
-        <div className="grid size-44 shrink-0 place-items-center rounded-14 bg-[#2858dc] text-white"><Crown size={20} /></div>
-        <div className="flex-1 max-[640px]:min-w-[calc(100%-65px)] [&_.eyebrow]:mb-4 [&_.eyebrow]:text-10 [&_.eyebrow]:font-extrabold [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.08em] [&_.eyebrow]:text-[#315bca] [&_h2]:m-0 [&_h2]:font-grotesk [&_h2]:text-18 [&_h2]:font-bold [&_h2]:text-ink [&_p]:mb-0 [&_p]:mt-4 [&_p]:text-12 [&_p]:text-ink/75"><span className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get 100 AI credits monthly with Basic: ₦499 for month one, then ₦999/month.</p></div>
+      {!activePro && <section className="mb-22 flex items-center gap-17 rounded-18 border border-[#e5dcf4] bg-[linear-gradient(110deg,#f6f1fc,#fbfaff_70%)] px-22 py-20 shadow-[0_10px_28px_#6d4cc20c] max-[640px]:flex-wrap max-[640px]:items-start [&>.primary-button]:shrink-0 max-[640px]:[&>.primary-button]:w-full">
+        <div className="grid size-44 shrink-0 place-items-center rounded-14 bg-brand text-white"><Crown size={20} /></div>
+        <div className="flex-1 max-[640px]:min-w-[calc(100%-65px)] [&_.eyebrow]:mb-4 [&_.eyebrow]:text-10 [&_.eyebrow]:font-extrabold [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.08em] [&_h2]:m-0 [&_h2]:font-grotesk [&_h2]:text-18 [&_h2]:font-bold [&_h2]:text-ink [&_p]:mb-0 [&_p]:mt-4 [&_p]:text-12 [&_p]:text-ink/75"><span className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get 100 AI credits monthly with Basic: ₦499 for month one, then ₦999/month.</p></div>
         <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)]" onClick={() => go("profile")}>Choose a plan <ArrowRight size={16} /></button>
       </section>}
-      {quota && quota.limit !== null && <section className={`mt-0 mb-24 flex flex-wrap items-center gap-8 rounded-11 border border-[#dbeafe] bg-[#f8fbff] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
+      {quota && quota.limit !== null && <section className={`mt-0 mb-24 flex flex-wrap items-center gap-8 rounded-11 border border-[#e5dcf4] bg-[#faf8fe] px-13 py-11 text-11 text-brand [&>span]:min-w-0 [&>span]:flex-[1_1_240px] [&>span]:leading-[1.5] [&>button]:ml-auto [&>button]:flex-none [&>button]:cursor-pointer [&>button]:rounded-8 [&>button]:border-0 [&>button]:px-12 [&>button]:py-7 [&>button]:text-11 [&>button]:font-bold [&>button]:text-white ${quota.remaining === 0 ? "border-amber-200 bg-amber-50 text-warning" : ""}`}>
         <Sparkles size={14} />
-        <span><strong>{quota.tier.replace("_", " ")} plan:</strong> {quota.remaining} of {quota.limit} AI credits left this month{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString()}` : ""}.</span>
+        <span><strong>{quotaPlanName(quota.tier)} plan:</strong> {quota.remaining} of {quota.limit} AI credits left this month{quota.resetsAt ? ` · resets ${new Date(quota.resetsAt).toLocaleDateString()}` : ""}.</span>
         <button type="button" className="bg-brand" onClick={() => go(quota.remaining === 0 ? "profile" : "generate")}>{quota.remaining === 0 ? "View plans" : "Practice now"}</button>
       </section>}
 
@@ -110,7 +110,7 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
       <DashboardSection title="Your courses" action="Manage" onAction={() => go("profile")}>
         <div className="grid grid-cols-2 gap-18 max-760:gap-14 max-680:grid-cols-1">
           {courses.length === 0 ? (
-            <div className="grid min-h-[145px] place-content-center justify-items-center gap-7 rounded-16 border border-dashed border-[#bfdbfe] bg-[#f8fbff] p-18 text-center text-muted [&>svg]:text-brand [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>span]:text-11"><BookOpen size={20} /><strong>No course added yet</strong><span>Browse course PDFs or add a course on your profile.</span></div>
+            <div className="grid min-h-[145px] place-content-center justify-items-center gap-7 rounded-16 border border-dashed border-outline bg-[#faf8fe] p-18 text-center text-muted [&>svg]:text-brand [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>span]:text-11"><BookOpen size={20} /><strong>No course added yet</strong><span>Browse course PDFs or add a course on your profile.</span></div>
           ) : (
             courses.slice(0, 4).map((course) => (
               <article className="flex min-h-[145px] flex-col items-stretch rounded-15 border border-line bg-white p-16 text-left hover:border-outline" key={course.id}>
@@ -118,11 +118,11 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
                   <strong>{course.code}</strong>
                   <small>{course.title}</small>
                 </div>
-                <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50 mt-5 min-h-44 w-full justify-center" onClick={() => go(`generate/${encodeURIComponent(course.id)}`)}><Sparkles size={14} /> Practice</button>
+                <button className="mt-5 inline-flex min-h-44 w-full items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50" onClick={() => go(`generate/${encodeURIComponent(course.id)}`)}><Sparkles size={14} /> Practice</button>
               </article>
             ))
           )}
-          <button className="flex min-h-[145px] flex-col items-center justify-center gap-9 rounded-16 border-[1.5px] border-dashed border-outline bg-[#f8fbff] p-16 text-12 text-brand hover:border-brand hover:bg-pale [&>span]:grid [&>span]:size-32 [&>span]:place-items-center [&>span]:rounded-9 [&>span]:bg-pale" onClick={() => { setCourseFormOpen((open) => !open); setCourseError(""); }}><span><Plus size={15} /></span><strong>Add a course</strong></button>
+          <button className="flex min-h-[145px] flex-col items-center justify-center gap-9 rounded-16 border-[1.5px] border-dashed border-outline bg-[#faf8fe] p-16 text-12 text-brand hover:border-brand hover:bg-pale [&>span]:grid [&>span]:size-32 [&>span]:place-items-center [&>span]:rounded-9 [&>span]:bg-pale" onClick={() => { setCourseFormOpen((open) => !open); setCourseError(""); }}><span><Plus size={15} /></span><strong>Add a course</strong></button>
         </div>
         {courseFormOpen && <div className="mt-12 grid grid-cols-[1fr_1.4fr_auto] items-center gap-9 rounded-14 border border-line bg-white p-14 max-[600px]:grid-cols-1 [&>input]:h-40 [&>input]:min-w-0 [&>input]:rounded-9 [&>input]:border [&>input]:border-line [&>input]:bg-white [&>input]:px-11 [&>input]:text-12 [&>small]:col-span-full [&>small]:text-11 [&>small]:text-muted max-[600px]:[&>small]:col-auto [&>div]:flex [&>div]:justify-end [&>div]:gap-8">
           {!school && <small>Save your university and faculty on Profile first to organize courses.</small>}
@@ -135,7 +135,7 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
         {courseError && !courseFormOpen && <p className="upload-form-error">{courseError}</p>}
       </DashboardSection>
 
-      <details className="dashboard-fold mt-30"><summary>More ways to study</summary><section className="mt-14 grid gap-9 [&_button]:flex [&_button]:w-full [&_button]:items-center [&_button]:gap-12 [&_button]:rounded-13 [&_button]:border [&_button]:border-[#bfdbfe] [&_button]:bg-[#f8fbff] [&_button]:px-16 [&_button]:py-14 [&_button]:text-left [&_button]:text-brand [&_button_span]:flex-1 [&_button_strong]:block [&_button_strong]:text-12 [&_button_strong]:text-ink [&_button_small]:mt-3 [&_button_small]:block [&_button_small]:text-10 [&_button_small]:text-muted">
+      <details className="dashboard-fold mt-30"><summary>More ways to study</summary><section className="mt-14 grid gap-9 [&_button]:flex [&_button]:w-full [&_button]:items-center [&_button]:gap-12 [&_button]:rounded-13 [&_button]:border [&_button]:border-[#e5dcf4] [&_button]:bg-[#faf8fe] [&_button]:px-16 [&_button]:py-14 [&_button]:text-left [&_button]:text-brand [&_button_span]:flex-1 [&_button_strong]:block [&_button_strong]:text-12 [&_button_strong]:text-ink [&_button_small]:mt-3 [&_button_small]:block [&_button_small]:text-10 [&_button_small]:text-muted">
         <button onClick={() => go("generate")}><Sparkles size={16} /><span><strong>Create from my PDF</strong><small>Private AI practice set</small></span><ArrowRight size={16} /></button>
         <button onClick={() => go("hierarchy")}><FileText size={16} /><span><strong>Browse course library</strong><small>Find PDFs by course</small></span><ArrowRight size={16} /></button>
         <button onClick={() => go("history")}><History size={16} /><span><strong>My quizzes</strong><small>Saved quizzes and answer keys</small></span><ArrowRight size={16} /></button>
@@ -145,8 +145,15 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   );
 }
 
-function isProActive(tier?: "FREE" | "PREMIUM", premiumUntil?: string | null) {
-  return tier === "PREMIUM" && (!premiumUntil || new Date(premiumUntil).getTime() > Date.now());
+function quotaPlanName(tier: string) {
+  const names: Record<string, string> = { FREE: "Free", BASIC: "Basic", STUDENT_PLUS: "Student Plus", PREMIUM: "Premium" };
+  return names[tier] ?? tier.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isProActive(plan?: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM", tier?: "FREE" | "PREMIUM", premiumUntil?: string | null) {
+  const until = premiumUntil ? new Date(premiumUntil).getTime() : null;
+  if (plan && plan !== "FREE" && until && until > Date.now()) return true;
+  return tier === "PREMIUM" && (!until || until > Date.now());
 }
 
 

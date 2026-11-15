@@ -24,6 +24,7 @@ import { AdminPage } from "./pages/Admin";
 import { ResultsHistory } from "./pages/History";
 import { Onboarding } from "./pages/Onboarding";
 import { RewardsPage } from "./pages/Rewards";
+import { LeaderboardPage } from "./pages/Leaderboard";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
 import { LearnWithAI } from "./pages/Learn";
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from "./pages/AccountAccess";
@@ -35,12 +36,14 @@ const protectedRoutes: Route[] = [
   "personal",
   "learn",
   "hierarchy",
+  "material",
   "generate",
   "flashcards",
   "quiz",
   "results",
   "history",
   "rewards",
+  "leaderboard",
   "onboarding",
   "profile",
   "admin",
@@ -91,6 +94,7 @@ const ROUTE_TITLES: Record<Route, string> = {
   results: "Quiz results",
   history: "Past results",
   rewards: "Rewards",
+  leaderboard: "Leaderboard",
   onboarding: "Set up your study desk",
   profile: "Profile",
   admin: "Admin overview",
@@ -208,8 +212,12 @@ function App() {
   }, [authStatus, route]);
 
   useEffect(() => {
-    if (authStatus === "authenticated" && adminRoutes.includes(route) && !isAdmin) go("dashboard");
-  }, [authStatus, isAdmin, route]);
+    // A warm identity cache flips authStatus to "authenticated" before
+    // /api/auth/me rehydrates `isAdmin`, so wait for the profile itself before
+    // deciding an admin is not an admin — otherwise refreshing #admin bounces
+    // real admins back to the dashboard.
+    if (authStatus === "authenticated" && profile && adminRoutes.includes(route) && !isAdmin) go("dashboard");
+  }, [authStatus, isAdmin, profile, route]);
 
   const materialId = route === "material" ? window.location.hash.slice(1).split("/")[1] : undefined;
 
@@ -240,9 +248,16 @@ function App() {
     setSelectedMaterial(paper);
     go(`material/${encodeURIComponent(paper.id)}`);
   };
-  const studentRoutes: Route[] = ["dashboard", "hierarchy", "history", "rewards", "generate", "paper", "learn", "flashcards", "quiz", "results", "profile"];
+  /* Every signed-in study surface shares the student rail. `material` and
+     `personal` used to render without navigation because they were left out of
+     this list, so a student could land on a page with no way back. */
+  const studentRoutes: Route[] = ["dashboard", "hierarchy", "material", "personal", "history", "rewards", "leaderboard", "generate", "paper", "learn", "flashcards", "quiz", "results", "profile"];
   const showHeader = !["login", "signup", "forgot", "reset", "verify-email", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
-  if (authStatus === "checking" && protectedRoutes.includes(route)) {
+  // Admin destinations render outside the student shell, so while the cached
+  // identity is still being revalidated they would otherwise show a blank
+  // frame. Keep the session panel up until we know whether this is an admin.
+  const awaitingIdentity = authStatus === "checking" || (adminRoutes.includes(route) && authStatus === "authenticated" && !profile);
+  if (awaitingIdentity && protectedRoutes.includes(route)) {
     return <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted"><div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted"><motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" /><strong>Checking your session</strong><span>Getting your study desk ready…</span></div></div>;
   }
 
@@ -339,6 +354,7 @@ function App() {
       {route === "history" && <ResultsHistory onPractice={(set) => { setGeneratedSet(set); setQuizResult(null); go(`quiz/${set.id}`); }} />}
       {route === "profile" && <ProfilePage profile={profile} />}
       {route === "rewards" && <RewardsPage />}
+      {route === "leaderboard" && <LeaderboardPage />}
       {route === "onboarding" && <Onboarding />}
     </>
   );
