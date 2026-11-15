@@ -369,9 +369,9 @@ model studySet {
   createdAt DateTime @default(now())
 }
 
-/// A shareable code the admin creates ("free Pro for a week", XP bonuses, …).
+/// A shareable code the admin creates (Student Plus access and/or bonus XP).
 /// Students redeem it once on their profile; premiumDays extends premiumUntil
-/// (stacking from the later of now / their current expiry), xpBonus lands
+/// and adds monthly AI credits without replacing an active paid plan. XP lands
 /// immediately. Uses + expiry are optional caps the admin controls.
 model PromoCode {
   id             String    @id @default(cuid())
@@ -393,15 +393,20 @@ model PromoCode {
 }
 
 /// One student redeeming one promo code (unique pair = once per code each).
+/// Credit bonus and expiry are snapshotted so later promo edits do not change
+/// a reward that has already been redeemed.
 model CodeRedemption {
-  id        String   @id @default(cuid())
-  codeId    String
-  profileId String
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  codeId       String
+  profileId    String
+  bonusCredits Int      @default(0)
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
 
   code    PromoCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
   profile Profile   @relation("CodeRedemptions", fields: [profileId], references: [id], onDelete: Cascade)
 
   @@unique([codeId, profileId])
   @@index([profileId])
+  @@index([profileId, expiresAt])
 }

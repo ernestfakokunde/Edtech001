@@ -43,16 +43,22 @@ async function getAccount(profileId: string) {
 
 export async function getAiCreditQuota(profileId: string) {
   const account = await getAccount(profileId)
+  const now = new Date()
   const currentMonth = monthKey()
-  const used = await prisma.aiCreditUsage.aggregate({
-    where: { profileId, monthKey: currentMonth, status: { in: ['RESERVED', 'COMPLETED'] } },
-    _sum: { units: true },
-  })
-  const limit = AI_CREDIT_LIMITS[account.plan]
+  const [used, bonus] = await Promise.all([
+    prisma.aiCreditUsage.aggregate({
+      where: { profileId, monthKey: currentMonth, status: { in: ['RESERVED', 'COMPLETED'] } },
+      _sum: { units: true },
+    }),
+    prisma.codeRedemption.aggregate({ where: { profileId, expiresAt: { gt: now } }, _sum: { bonusCredits: true } }),
+  ])
+  const bonusCredits = bonus._sum.bonusCredits ?? 0
+  const limit = AI_CREDIT_LIMITS[account.plan] + bonusCredits
   const consumed = used._sum.units ?? 0
   return {
     tier: account.plan,
     limit,
+    bonusCredits,
     used: consumed,
     remaining: Math.max(0, limit - consumed),
     resetsAt: nextMonth(),
@@ -72,7 +78,12 @@ export async function reserveAiCredit(profileId: string, feature: CreditFeature,
         where: { profileId, monthKey: currentMonth, status: { in: ['RESERVED', 'COMPLETED'] } },
         _sum: { units: true },
       })
-      if ((usage._sum.units ?? 0) >= AI_CREDIT_LIMITS[plan]) throw new AiCreditsExhaustedError()
+      const bonus = await tx.codeRedemption.aggregate({
+        where: { profileId, expiresAt: { gt: new Date() } },
+        _sum: { bonusCredits: true },
+      })
+      const limit = AI_CREDIT_LIMITS[plan] + (bonus._sum.bonusCredits ?? 0)
+      if ((usage._sum.units ?? 0) >= limit) throw new AiCreditsExhaustedError()
       return tx.aiCreditUsage.create({ data: { profileId, monthKey: currentMonth, feature, requestId, status: 'RESERVED' } })
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 })
   } catch (reason) {

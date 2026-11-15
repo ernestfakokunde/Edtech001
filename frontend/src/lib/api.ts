@@ -93,7 +93,7 @@ export type ProfileMission = { id: string; title: string; description: string | 
 export type AdminMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; createdAt: string; claimCount: number }
 
 // Shared monthly AI-credit quota used by Learn, quizzes, and flashcards.
-export type GenerationQuota = { tier: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; limit: number; used: number; remaining: number; resetsAt: string }
+export type GenerationQuota = { tier: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; limit: number; used: number; remaining: number; resetsAt: string; bonusCredits?: number }
 export type AiCreditQuota = GenerationQuota
 
 export type ReferralInfo = { referralCode: string | null; tier: "FREE" | "PREMIUM"; xp: number; invites: number }
@@ -586,7 +586,7 @@ export function deleteAdminPromoCode(codeId: string) {
 }
 
 // Student side: redeem a promo code from the profile page.
-export type RedeemResult = { redeemed: boolean; code: string; plan: "STUDENT_PLUS"; credits: number; premiumDays: number; xpBonus: number; premiumUntil: string | null; xp: number; level: number }
+export type RedeemResult = { redeemed: boolean; code: string; plan: "STUDENT_PLUS"; credits: number; premiumDays: number; bonusExpiresAt: string; xpBonus: number; premiumUntil: string | null; xp: number; level: number }
 export function redeemPromoCode(code: string) {
   return request<RedeemResult>('/api/profile/redeem', { method: 'POST', body: JSON.stringify({ code }) })
 }

@@ -316,28 +316,32 @@ export async function redeemPromoCode(request: Request, response: Response) {
   try {
     const result = await prisma.$transaction(
       async (transaction) => {
-        const current = await transaction.profile.findUnique({ where: { id: me }, select: { premiumUntil: true, xp: true } })
+        const current = await transaction.profile.findUnique({ where: { id: me }, select: { premiumUntil: true, subscriptionPlan: true, tier: true, xp: true } })
         if (!current) throw new Error('PROFILE_MISSING')
-        const base = current.premiumUntil && current.premiumUntil > new Date() ? current.premiumUntil : new Date()
+        const now = new Date()
+        const base = current.premiumUntil && current.premiumUntil > now ? current.premiumUntil : now
         const giftedDays = promo.premiumDays > 0 ? promo.premiumDays : 30
         const premiumUntil = new Date(base.getTime() + giftedDays * 86400000)
+        const bonusExpiresAt = new Date(now.getTime() + giftedDays * 86400000)
+        const entitlementIsActive = !current.premiumUntil || current.premiumUntil > now
+        const hasActivePaidPlan = entitlementIsActive && (current.subscriptionPlan !== 'FREE' || current.tier === 'PREMIUM')
         const updated = await transaction.profile.update({
           where: { id: me },
           data: {
             tier: 'PREMIUM',
-            subscriptionPlan: 'STUDENT_PLUS',
+            ...(hasActivePaidPlan ? {} : { subscriptionPlan: 'STUDENT_PLUS' }),
             premiumUntil,
             xp: promo.xpBonus > 0 ? { increment: promo.xpBonus } : undefined,
           },
           select: { premiumUntil: true, xp: true },
         })
-        await transaction.codeRedemption.create({ data: { codeId: promo.id, profileId: me } })
-        return { premiumUntil: updated.premiumUntil, xp: updated.xp }
+        await transaction.codeRedemption.create({ data: { codeId: promo.id, profileId: me, bonusCredits: PLAN_CATALOG.STUDENT_PLUS.credits, expiresAt: bonusExpiresAt } })
+        return { premiumUntil: updated.premiumUntil, bonusExpiresAt, xp: updated.xp }
       },
       { maxWait: 10000, timeout: 15000 },
     )
-    await prisma.auditEvent.create({ data: { actorId: me, action: 'PROMO_CODE_REDEEMED', entityType: 'PromoCode', entityId: promo.id, metadata: { code: promo.code, premiumDays: promo.premiumDays, xpBonus: promo.xpBonus } } })
-    response.json({ redeemed: true, code: promo.code, plan: 'STUDENT_PLUS', credits: PLAN_CATALOG.STUDENT_PLUS.credits, premiumDays: promo.premiumDays > 0 ? promo.premiumDays : 30, xpBonus: promo.xpBonus, premiumUntil: result.premiumUntil, xp: result.xp, level: Math.floor(result.xp / 200) + 1 })
+    await prisma.auditEvent.create({ data: { actorId: me, action: 'PROMO_CODE_REDEEMED', entityType: 'PromoCode', entityId: promo.id, metadata: { code: promo.code, premiumDays: promo.premiumDays, bonusCredits: PLAN_CATALOG.STUDENT_PLUS.credits, bonusExpiresAt: result.bonusExpiresAt, xpBonus: promo.xpBonus } } })
+    response.json({ redeemed: true, code: promo.code, plan: 'STUDENT_PLUS', credits: PLAN_CATALOG.STUDENT_PLUS.credits, premiumDays: promo.premiumDays > 0 ? promo.premiumDays : 30, bonusExpiresAt: result.bonusExpiresAt, xpBonus: promo.xpBonus, premiumUntil: result.premiumUntil, xp: result.xp, level: Math.floor(result.xp / 200) + 1 })
   } catch {
     response.status(500).json({ message: 'Could not redeem that code right now.' })
   }

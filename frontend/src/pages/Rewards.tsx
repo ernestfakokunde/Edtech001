@@ -36,7 +36,7 @@ export function RewardsPage() {
     try {
       const result = await redeemPromoCode(code.trim());
       setXp(result.xp); setLevel(result.level); setCode("");
-      const reward = [`Student Plus (${result.credits} AI credits/month)`, result.xpBonus ? `${result.xpBonus} bonus XP` : ""].filter(Boolean).join(" and ");
+      const reward = [`+${result.credits} AI credits/month for ${result.premiumDays} days`, result.xpBonus ? `${result.xpBonus} bonus XP` : ""].filter(Boolean).join(" and ");
       setMessage(reward ? `Code redeemed — you received ${reward}.` : "Code redeemed.");
     } catch (reason) { setError(errorMessage(reason, "Could not redeem that code.")); }
     finally { setWorking(""); }
