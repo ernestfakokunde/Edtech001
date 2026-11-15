@@ -348,3 +348,221 @@ export async function getXp(request: Request, response: Response) {
   const xp = me?.xp ?? 0
   response.json({ xp, level: Math.floor(xp / 200) + 1, tier: me?.tier ?? 'FREE', premiumUntil: me?.premiumUntil ?? null })
 }
+
+type LeaderboardScope = 'global' | 'university'
+type LeaderboardRange = 'weekly' | 'monthly' | 'all-time'
+
+type LeaderboardProfile = {
+  id: string
+  displayName: string | null
+  username: string | null
+  xp: number
+  createdAt: Date
+  university: { name: string } | null
+  faculty: { name: string } | null
+}
+
+type ScoredLeaderboardProfile = LeaderboardProfile & { score: number; rank: number }
+
+/** Monday 00:00 UTC — the start of the current weekly competition. */
+function startOfUtcWeek(date: Date) {
+  const midnight = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  const sinceMonday = (midnight.getUTCDay() + 6) % 7
+  return new Date(midnight.getTime() - sinceMonday * 86400000)
+}
+
+function addUtcDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * 86400000)
+}
+
+/** First day of the month 00:00 UTC — the start of the current monthly period. */
+function startOfUtcMonth(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
+}
+
+function addUtcMonths(date: Date, months: number) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1))
+}
+
+/**
+ * XP earned inside a window, grouped by learner. Every XP source in the app
+ * writes a durable row: daily sign-ins, claimed missions, redeemed promo bonus
+ * XP and referral bonuses. Reading those rows keeps weekly/monthly rankings
+ * tied to real activity instead of an invented counter.
+ */
+async function periodXpByProfile(start: Date, end: Date) {
+  const rows = await prisma.$queryRaw<{ id: string; xp: number }[]>`
+    WITH period_scores AS (
+      SELECT "profileId" AS id, SUM("xpAwarded")::int AS xp
+      FROM "DailyLoginReward"
+      WHERE "createdAt" >= ${start} AND "createdAt" < ${end}
+      GROUP BY "profileId"
+      UNION ALL
+      SELECT claimed."profileId" AS id, SUM(mission."xpReward")::int AS xp
+      FROM "UserClaimedMission" claimed
+      JOIN "Mission" mission ON mission."id" = claimed."missionId"
+      WHERE claimed."claimedAt" >= ${start} AND claimed."claimedAt" < ${end}
+      GROUP BY claimed."profileId"
+      UNION ALL
+      SELECT redemption."profileId" AS id, SUM(promo."xpBonus")::int AS xp
+      FROM "CodeRedemption" redemption
+      JOIN "PromoCode" promo ON promo."id" = redemption."codeId"
+      WHERE redemption."createdAt" >= ${start} AND redemption."createdAt" < ${end} AND promo."xpBonus" > 0
+      GROUP BY redemption."profileId"
+      UNION ALL
+      SELECT event."actorId" AS id, SUM(COALESCE((event."metadata"->>'xpBonus')::int, 0))::int AS xp
+      FROM "AuditEvent" event
+      WHERE event."action" = 'REFERRAL_ACCEPTED'
+        AND event."createdAt" >= ${start} AND event."createdAt" < ${end}
+        AND event."actorId" IS NOT NULL
+      GROUP BY event."actorId"
+    )
+    SELECT id, SUM(xp)::int AS xp
+    FROM period_scores
+    GROUP BY id
+  `
+  return new Map(rows.map((row) => [row.id, Number(row.xp)]))
+}
+
+function rankLeaderboard(rows: LeaderboardProfile[], scoreOf: (row: LeaderboardProfile) => number, includeZero: boolean): ScoredLeaderboardProfile[] {
+  return rows
+    .map((row) => ({ ...row, score: scoreOf(row) }))
+    .filter((row) => includeZero || row.score > 0)
+    .sort((left, right) => right.score - left.score
+      || left.createdAt.getTime() - right.createdAt.getTime()
+      || left.id.localeCompare(right.id))
+    .map((row, index) => ({ ...row, rank: index + 1 }))
+}
+
+export async function listLeaderboard(request: Request, response: Response) {
+  const me = getProfile(request).id
+  const scope: LeaderboardScope = request.query.scope === 'university' ? 'university' : 'global'
+  const range: LeaderboardRange = request.query.range === 'weekly'
+    ? 'weekly'
+    : request.query.range === 'monthly'
+      ? 'monthly'
+      : 'all-time'
+
+  const now = new Date()
+  const weekStart = startOfUtcWeek(now)
+  const weekEnd = addUtcDays(weekStart, 7)
+  const monthStart = startOfUtcMonth(now)
+  const monthEnd = addUtcMonths(monthStart, 1)
+  const selectedStart = range === 'weekly' ? weekStart : range === 'monthly' ? monthStart : null
+  const selectedEnd = range === 'weekly' ? weekEnd : range === 'monthly' ? monthEnd : null
+
+  const currentProfile = await prisma.profile.findUnique({
+    where: { id: me },
+    select: {
+      id: true,
+      xp: true,
+      createdAt: true,
+      displayName: true,
+      username: true,
+      universityId: true,
+      university: { select: { name: true } },
+      faculty: { select: { name: true } },
+    },
+  })
+  if (!currentProfile) {
+    response.status(404).json({ message: 'Profile not found.' })
+    return
+  }
+
+  // The university board is the current learner's own university. Until they
+  // save a school there is no board to rank, so return an honest empty result.
+  const universityId = currentProfile.universityId
+  const canRankScope = scope === 'global' || Boolean(universityId)
+  const profiles = canRankScope
+    ? await prisma.profile.findMany({
+      where: {
+        suspendedUntil: null,
+        ...(scope === 'university' && universityId ? { universityId } : {}),
+      },
+      select: {
+        id: true,
+        displayName: true,
+        username: true,
+        xp: true,
+        createdAt: true,
+        university: { select: { name: true } },
+        faculty: { select: { name: true } },
+      },
+    })
+    : []
+
+  const [currentPeriodXp, previousPeriodXp] = await Promise.all([
+    range === 'weekly'
+      ? periodXpByProfile(weekStart, weekEnd)
+      : range === 'monthly'
+        ? periodXpByProfile(monthStart, monthEnd)
+        : Promise.resolve(new Map<string, number>()),
+    range === 'weekly'
+      ? periodXpByProfile(addUtcDays(weekStart, -7), weekStart)
+      : range === 'monthly'
+        ? periodXpByProfile(addUtcMonths(monthStart, -1), monthStart)
+        : periodXpByProfile(weekStart, weekEnd),
+  ])
+
+  const scoreOf = (profile: LeaderboardProfile) => range === 'all-time'
+    ? profile.xp
+    : currentPeriodXp.get(profile.id) ?? 0
+  // All-time movement is the rank change caused by this week's XP. Weekly and
+  // monthly movement compares against the immediately preceding period.
+  const previousScoreOf = (profile: LeaderboardProfile) => range === 'all-time'
+    ? Math.max(0, profile.xp - (previousPeriodXp.get(profile.id) ?? 0))
+    : previousPeriodXp.get(profile.id) ?? 0
+
+  const ranked = rankLeaderboard(profiles, scoreOf, range === 'all-time')
+  const previousRanked = rankLeaderboard(profiles, previousScoreOf, range === 'all-time')
+  const previousRankById = new Map(previousRanked.map((row) => [row.id, row.rank]))
+
+  const currentRow = ranked.find((row) => row.id === me)
+  const currentRank = currentRow?.rank ?? null
+  const currentScore = currentRow?.score ?? 0
+  const previousRank = previousRankById.get(me) ?? null
+  const movement = currentRank !== null && previousRank !== null ? previousRank - currentRank : null
+  const above = currentRank !== null && currentRank > 1 ? ranked[currentRank - 2] : null
+  const xpToNext = above ? Math.max(1, above.score - currentScore + 1) : null
+  const totalXp = currentProfile.xp
+
+  response.json({
+    scope,
+    range,
+    scopeLabel: scope === 'university' ? currentProfile.university?.name ?? null : 'Global',
+    universityName: currentProfile.university?.name ?? null,
+    period: {
+      key: range,
+      label: range === 'weekly' ? 'This week' : range === 'monthly' ? 'This month' : 'All time',
+      startsAt: selectedStart,
+      endsAt: selectedEnd,
+    },
+    weekly: { startsAt: weekStart, endsAt: weekEnd },
+    totalParticipants: ranked.length,
+    leaders: ranked.slice(0, 50).map((row) => ({
+      id: row.id,
+      name: row.displayName || row.username || 'Student',
+      xp: row.score,
+      totalXp: row.xp,
+      rank: row.rank,
+      level: Math.floor(row.xp / 200) + 1,
+      universityName: row.university?.name ?? null,
+      facultyName: row.faculty?.name ?? null,
+      movement: previousRankById.has(row.id) ? previousRankById.get(row.id)! - row.rank : null,
+    })),
+    current: {
+      id: me,
+      xp: currentScore,
+      totalXp,
+      rank: currentRank,
+      previousRank,
+      movement,
+      level: Math.floor(totalXp / 200) + 1,
+      xpToNext,
+      nextRank: currentRank !== null && currentRank > 1 ? currentRank - 1 : null,
+      universityName: currentProfile.university?.name ?? null,
+      facultyName: currentProfile.faculty?.name ?? null,
+    },
+    updatedAt: now,
+  })
+}
