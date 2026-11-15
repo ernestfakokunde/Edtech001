@@ -382,9 +382,12 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
           <button className="hidden h-36 w-36 shrink-0 place-items-center rounded-9 border border-line bg-white text-muted max-1020:grid" aria-label="Open navigation" onClick={() => setOpen(true)}>
             <Menu size={18} />
           </button>
-          <div className="ml-12 min-w-0">
-            <strong className="block truncate text-13 font-semibold text-ink">{pageTitle(route)}</strong>
-            <small className="hidden text-10 text-muted max-680:block">Study smarter</small>
+          <div className="ml-12 flex min-w-0 items-center gap-9">
+            {route === "dashboard" && <span className="grid size-32 shrink-0 place-items-center rounded-9 bg-pale text-brand"><LayoutDashboard size={16} /></span>}
+            <div className="min-w-0">
+              <strong className="block truncate text-13 font-semibold text-ink">{pageTitle(route)}</strong>
+              <small className="hidden text-10 text-muted max-680:block">Study smarter</small>
+            </div>
           </div>
           <div className="ml-auto flex items-center gap-10">
             <div className="relative" ref={profileMenuRef}>
