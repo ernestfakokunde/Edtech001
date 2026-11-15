@@ -1601,12 +1601,9 @@ body,
 .app-glass-root {
   position: relative;
   isolation: isolate;
-  background: transparent !important;
-}
-.app-glass-root::before {
-  position: fixed;
-  z-index: -1;
-  inset: 0;
+  /* Keep the color field on the actual app canvas. A negative z-index fixed
+     pseudo-element can end up behind the document canvas in some browsers,
+     leaving every translucent surface looking solid. */
   background:
     radial-gradient(ellipse 720px 620px at 14% 12%, color-mix(in srgb, var(--theme-brand) 13%, transparent), transparent 72%),
     radial-gradient(ellipse 780px 660px at 88% 32%, color-mix(in srgb, #c4a8f4 15%, transparent), transparent 72%),
@@ -1615,12 +1612,10 @@ body,
     linear-gradient(color-mix(in srgb, var(--theme-brand) 2%, transparent) 1px, transparent 1px),
     var(--theme-wash);
   background-size: auto, auto, auto, 48px 48px, 48px 48px, auto;
-  content: "";
-  pointer-events: none;
 }
 .user-sidebar,
 .user-topbar {
-  background: color-mix(in srgb, var(--theme-surface) 58%, transparent) !important;
+  background: color-mix(in srgb, var(--theme-surface) 42%, transparent) !important;
   border-color: color-mix(in srgb, white 44%, var(--theme-line)) !important;
   box-shadow: 0 12px 36px color-mix(in srgb, var(--theme-brand-deep) 9%, transparent), inset 0 1px 0 color-mix(in srgb, white 48%, transparent);
   -webkit-backdrop-filter: blur(28px) saturate(165%);
@@ -1654,7 +1649,7 @@ body,
 .user-shell-content .practice-material-card,
 .user-shell-content .flashcard-surface,
 .user-shell-content [role="dialog"] {
-  background: color-mix(in srgb, var(--theme-surface) 58%, transparent) !important;
+  background: color-mix(in srgb, var(--theme-surface) 44%, transparent) !important;
   border-color: color-mix(in srgb, white 44%, var(--theme-line)) !important;
   box-shadow: 0 18px 42px color-mix(in srgb, var(--theme-brand-deep) 9%, transparent), inset 0 1px 0 color-mix(in srgb, white 52%, transparent);
   -webkit-backdrop-filter: blur(24px) saturate(155%);
@@ -1669,7 +1664,7 @@ body,
 }
 .app-glass-root main:not(.landing-page) article[class*="rounded-"],
 .app-glass-root main:not(.landing-page) section[class*="rounded-"] {
-  background: color-mix(in srgb, var(--theme-surface) 58%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 44%, transparent);
   border-color: color-mix(in srgb, white 42%, var(--theme-line));
   box-shadow: 0 16px 38px color-mix(in srgb, var(--theme-brand-deep) 8%, transparent), inset 0 1px 0 color-mix(in srgb, white 48%, transparent);
   -webkit-backdrop-filter: blur(22px) saturate(155%);
@@ -1691,13 +1686,29 @@ body,
   -webkit-backdrop-filter: blur(26px) saturate(160%);
   backdrop-filter: blur(26px) saturate(160%);
 }
+
+/* The mobile drawer sits over live page content, so keep its surface much
+   more opaque than the desktop rail. This preserves the glass edge without
+   letting the dashboard text bleed through the navigation. */
+@media (max-width: 1020px) {
+  .app-glass-root .user-sidebar {
+    background: color-mix(in srgb, var(--theme-surface) 90%, transparent) !important;
+    box-shadow: 18px 0 48px color-mix(in srgb, #17112b 22%, transparent), inset -1px 0 0 color-mix(in srgb, white 56%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(135%);
+    backdrop-filter: blur(18px) saturate(135%);
+  }
+  :root[data-theme="dark"] .app-glass-root .user-sidebar {
+    background: color-mix(in srgb, var(--theme-surface) 92%, transparent) !important;
+    box-shadow: 18px 0 48px #0007, inset -1px 0 0 #c4b5fd24;
+  }
+}
 .app-glass-root main:not(.landing-page) [class*="rounded-"][class*="bg-white"]:not(button),
 .app-glass-root main:not(.landing-page) [class*="rounded-"][class*="bg-[#f8fbff]"],
 .app-glass-root main:not(.landing-page) [class*="rounded-"][class*="bg-[#f7faff]"],
 .app-glass-root main:not(.landing-page) [class*="rounded-"][class*="bg-[#edf5ff]"],
 .app-glass-root main:not(.landing-page) [class*="rounded-"][class*="bg-[#eff6ff]"],
 .app-glass-root main:not(.landing-page) article[class*="rounded-"] {
-  background: color-mix(in srgb, var(--theme-surface) 58%, transparent) !important;
+  background: color-mix(in srgb, var(--theme-surface) 44%, transparent) !important;
   border-color: color-mix(in srgb, white 42%, var(--theme-line)) !important;
   box-shadow: 0 16px 38px color-mix(in srgb, var(--theme-brand-deep) 8%, transparent), inset 0 1px 0 color-mix(in srgb, white 48%, transparent);
   -webkit-backdrop-filter: blur(22px) saturate(155%);
@@ -1964,7 +1975,7 @@ body,
 @media (max-width: 760px) { .rewards-hero,.rewards-content-grid { grid-template-columns: 1fr; } .rewards-level-card { max-width: none; } .rewards-hero-sparkle-two { right: 18px; bottom: 16px; } }
 @media (max-width: 480px) { .rewards-daily-card,.rewards-panel { padding: 15px; } .rewards-mission { align-items: flex-start; flex-wrap: wrap; } .rewards-mission-copy { flex-basis: calc(100% - 54px); } .rewards-claim-button,.rewards-claimed { margin-left: 42px; } .rewards-panel-heading { align-items: flex-start; } .rewards-count-badge { padding: 5px 7px; } }
 @media (prefers-reduced-motion: reduce) { .rewards-hero-sparkle,.rewards-progress-track > span,.rewards-notice,.rewards-mission,.rewards-claim-button,.rewards-copy-button { animation: none !important; transition: none !important; } }
-:root[data-theme="dark"] .app-glass-root::before {
+:root[data-theme="dark"] .app-glass-root {
   background:
     radial-gradient(ellipse 740px 600px at 14% 12%, #7c3aed25, transparent 72%),
     radial-gradient(ellipse 780px 660px at 88% 32%, #a78bfa1b, transparent 72%),
@@ -1976,7 +1987,7 @@ body,
 }
 :root[data-theme="dark"] .user-sidebar,
 :root[data-theme="dark"] .user-topbar {
-  background: color-mix(in srgb, var(--theme-surface) 62%, transparent) !important;
+  background: color-mix(in srgb, var(--theme-surface) 46%, transparent) !important;
   border-color: color-mix(in srgb, #c4b5fd 18%, var(--theme-line)) !important;
   box-shadow: 0 14px 42px #0005, inset 0 1px 0 #ffffff12;
 }
@@ -1992,7 +2003,7 @@ body,
 :root[data-theme="dark"] .user-shell-content .practice-material-card,
 :root[data-theme="dark"] .user-shell-content .flashcard-surface,
 :root[data-theme="dark"] .user-shell-content [role="dialog"] {
-  background: color-mix(in srgb, var(--theme-surface) 72%, transparent) !important;
+  background: color-mix(in srgb, var(--theme-surface) 58%, transparent) !important;
   border-color: color-mix(in srgb, #c4b5fd 20%, var(--theme-line)) !important;
   box-shadow: 0 18px 44px #0004, inset 0 1px 0 #ffffff14;
 }

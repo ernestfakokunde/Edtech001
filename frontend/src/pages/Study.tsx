@@ -58,6 +58,23 @@ export function PersonalPractice() {
   );
 }
 
+export function RepositoryComingSoon() {
+  return (
+    <PageFrame
+      eyebrow="Coming soon"
+      title="Course repository"
+      subtitle="The course library is being prepared. It will be available here soon."
+      back="dashboard"
+    >
+      <div className="grid min-h-220 place-content-center justify-items-center gap-10 rounded-18 border border-dashed border-ghost-border bg-ghost-surface p-24 text-center text-12 text-muted">
+        <BookOpen size={26} className="text-brand" />
+        <strong className="text-15 font-bold text-ink">Course repository is coming soon</strong>
+        <span className="max-w-360 leading-[1.6]">We’re working on a better way to browse course materials and share PDFs. Your study tools are still available from the dashboard.</span>
+      </div>
+    </PageFrame>
+  );
+}
+
 export function Hierarchy({
   onMaterial,
 }: {

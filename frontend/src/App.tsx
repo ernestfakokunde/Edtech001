@@ -6,6 +6,7 @@ import { AuthPage } from "./pages/Auth";
 import { Dashboard } from "./pages/Dashboard";
 import {
   Hierarchy,
+  RepositoryComingSoon,
   MaterialDetails,
   PersonalPractice,
   Flashcards,
@@ -50,6 +51,9 @@ const protectedRoutes: Route[] = [
   "admin-submissions",
   "admin-activity",
 ];
+
+// Keep the repository implementation in place while the feature is paused.
+const COURSE_REPOSITORY_ENABLED = false;
 
 const adminRoutes: Route[] = [
   "admin",
@@ -257,7 +261,9 @@ function App() {
       {route === "verify-email" && <VerifyEmailPage token={safeDecode(sub)} onVerified={() => void refreshProfile()} />}
       {route === "personal" && <PersonalPractice />}
       {route === "learn" && <LearnWithAI />}
-      {route === "hierarchy" && <Hierarchy onMaterial={chooseMaterial} />}
+      {route === "hierarchy" && (COURSE_REPOSITORY_ENABLED
+        ? <Hierarchy onMaterial={chooseMaterial} />
+        : <RepositoryComingSoon />)}
       {route === "material" && (selectedMaterial ? <MaterialDetails paper={selectedMaterial} /> : <div className="min-h-screen bg-[radial-gradient(circle_at_90%_0%,#612b8250_0,transparent_30%),var(--color-wash)] text-ink grid min-h-screen place-items-center gap-12 text-center text-13 text-muted"><div className="grid min-w-[min(360px,calc(100vw-36px))] justify-items-center gap-7 rounded-12 border border-line bg-white px-24 py-22 shadow-[0_12px_28px_rgba(31,55,92,.06)] [&>strong]:text-14 [&>strong]:text-ink [&>span:last-child]:text-12 [&>span:last-child]:text-muted"><motion.span animate={{ rotate: 360 }} transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }} className="size-28 rounded-8 border-[3px] border-[#454367] border-t-[#b4a6ff]" aria-hidden="true" /><strong>Loading material</strong><span>Opening the paper details…</span></div></div>)}
       {route === "generate" && (
         <GenerateFlow
