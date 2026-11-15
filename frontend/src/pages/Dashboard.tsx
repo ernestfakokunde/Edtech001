@@ -157,5 +157,13 @@ function isProActive(plan?: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM", tier?
 }
 
 
-function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) { return <div className="min-h-[124px] rounded-16 border border-line bg-white px-18 py-14 max-760:px-12 max-760:py-13 [&>span]:mb-12 [&>span]:block [&>strong]:block [&>strong]:font-grotesk [&>strong]:text-[20px] [&>strong]:font-bold [&>small]:mt-2 [&>small]:block [&>small]:text-11 [&>small]:text-muted"><span className={`mb-12 grid size-30 place-items-center rounded-9 ${tone === "amber" ? "bg-[#fef3c7] text-[#d97706]" : tone === "green" ? "bg-[#ecfdf5] text-[#059669]" : "bg-pale text-brand"}`}>{icon}</span><strong>{value}</strong><small>{label}</small></div>; }
+function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) {
+  return (
+    <div className="grid min-h-[92px] grid-cols-[30px_minmax(0,1fr)] grid-rows-[auto_auto] items-center gap-x-12 gap-y-2 rounded-16 border border-line bg-white px-18 py-14 max-760:px-12 max-760:py-13">
+      <span className={`row-span-2 grid size-30 place-items-center self-center rounded-9 ${tone === "amber" ? "bg-[#fef3c7] text-[#d97706]" : tone === "green" ? "bg-[#ecfdf5] text-[#059669]" : "bg-pale text-brand"}`}>{icon}</span>
+      <strong className="block self-end font-grotesk text-[20px] font-bold">{value}</strong>
+      <small className="block self-start text-11 text-muted">{label}</small>
+    </div>
+  );
+}
 function DashboardSection({ title, action, onAction, children }: { title: string; action: string; onAction: () => void; children: React.ReactNode }) { return <section className="mb-29"><div className="mb-13 flex items-center justify-between [&>h2]:m-0 [&>h2]:text-16 [&>h2]:tracking-[-.02em] [&>button]:text-12 [&>button]:font-bold [&>button]:text-brand"><h2>{title}</h2><button onClick={onAction}>{action}</button></div>{children}</section>; }
