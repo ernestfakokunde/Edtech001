@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Mail, Menu, MessageCircle, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Gift, History, LayoutDashboard, LogOut, Mail, Menu, MessageCircle, ShieldCheck, Sparkles, Trophy, UserRound, X } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import type { Route } from "../types";
 import { resendVerificationEmail, type AuthProfile } from "../lib/api";
@@ -57,6 +57,7 @@ function pageTitle(route: Route) {
     results: "Results",
     history: "My quizzes",
     rewards: "Rewards",
+    leaderboard: "Leaderboard",
     profile: "My profile",
     privacy: "Privacy policy",
     terms: "Terms of use",
@@ -217,6 +218,7 @@ const USER_NAV: UserNavItem[] = [
   { key: "generate", hash: "generate", label: "Practice sets", icon: <Sparkles size={16} />, group: "Study" },
   { key: "history", hash: "history", label: "My quizzes", icon: <History size={16} />, group: "Study" },
   { key: "rewards", hash: "rewards", label: "Rewards", icon: <Gift size={16} />, group: "Account" },
+  { key: "leaderboard", hash: "leaderboard", label: "Leaderboard", icon: <Trophy size={16} />, group: "Account" },
   { key: "profile", hash: "profile", label: "Profile settings", icon: <UserRound size={16} />, group: "Account" },
   { key: "admin", hash: "admin", label: "Admin board", icon: <ShieldCheck size={16} />, group: "Account", adminOnly: true },
 ];

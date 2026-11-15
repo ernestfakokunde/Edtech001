@@ -23,6 +23,7 @@ import { AdminPage } from "./pages/Admin";
 import { ResultsHistory } from "./pages/History";
 import { Onboarding } from "./pages/Onboarding";
 import { RewardsPage } from "./pages/Rewards";
+import { LeaderboardPage } from "./pages/Leaderboard";
 import { PrivacyPage, TermsPage } from "./pages/Legal";
 import { LearnWithAI } from "./pages/Learn";
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from "./pages/AccountAccess";
@@ -41,6 +42,7 @@ const protectedRoutes: Route[] = [
   "results",
   "history",
   "rewards",
+  "leaderboard",
   "onboarding",
   "profile",
   "admin",
@@ -88,6 +90,7 @@ const ROUTE_TITLES: Record<Route, string> = {
   results: "Quiz results",
   history: "Past results",
   rewards: "Rewards",
+  leaderboard: "Leaderboard",
   onboarding: "Set up your study desk",
   profile: "Profile",
   admin: "Admin overview",
@@ -244,7 +247,7 @@ function App() {
   /* Every signed-in study surface shares the student rail. `material` and
      `personal` used to render without navigation because they were left out of
      this list, so a student could land on a page with no way back. */
-  const studentRoutes: Route[] = ["dashboard", "hierarchy", "material", "personal", "history", "rewards", "generate", "paper", "learn", "flashcards", "quiz", "results", "profile"];
+  const studentRoutes: Route[] = ["dashboard", "hierarchy", "material", "personal", "history", "rewards", "leaderboard", "generate", "paper", "learn", "flashcards", "quiz", "results", "profile"];
   const showHeader = !["login", "signup", "forgot", "reset", "verify-email", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   // Admin destinations render outside the student shell, so while the cached
   // identity is still being revalidated they would otherwise show a blank
@@ -345,6 +348,7 @@ function App() {
       {route === "history" && <ResultsHistory onPractice={(set) => { setGeneratedSet(set); setQuizResult(null); go(`quiz/${set.id}`); }} />}
       {route === "profile" && <ProfilePage profile={profile} />}
       {route === "rewards" && <RewardsPage />}
+      {route === "leaderboard" && <LeaderboardPage />}
       {route === "onboarding" && <Onboarding />}
     </>
   );

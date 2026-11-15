@@ -19,6 +19,7 @@ export type Route =
   | "results"
   | "history"
   | "rewards"
+  | "leaderboard"
   | "onboarding"
   | "profile"
   | "privacy"

@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { addMyCourse, claimMission, deleteAccount, getReferralInfo, getXp, listMissions, listMyCourses, redeemPromoCode, removeMyCourse, saveSchool, updateProfile } from '../controllers/profile.controller.js'
+import { addMyCourse, claimMission, deleteAccount, getReferralInfo, getXp, listLeaderboard, listMissions, listMyCourses, redeemPromoCode, removeMyCourse, saveSchool, updateProfile } from '../controllers/profile.controller.js'
 import { requireAuth } from '../middleware/auth.js'
 import { promoRedeemLimit } from '../middleware/rateLimit.js'
 
@@ -15,4 +15,5 @@ profileRouter.get('/referral', getReferralInfo)
 profileRouter.get('/missions', listMissions)
 profileRouter.post('/missions/:missionId/claim', claimMission)
 profileRouter.get('/xp', getXp)
+profileRouter.get('/leaderboard', listLeaderboard)
 profileRouter.delete('/', deleteAccount)
