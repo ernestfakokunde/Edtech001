@@ -251,12 +251,12 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
   return (
     <aside
       aria-label="Student navigation"
-      className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-[216px] flex-col border-r border-line bg-white transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
+      className={`user-sidebar font-inter antialiased fixed inset-y-0 left-0 z-40 flex w-[216px] flex-col border-r border-line bg-white transition-transform duration-200 max-1020:w-[min(288px,calc(100vw-24px))] ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}
     >
       <div className="flex h-56 items-center gap-11 border-b border-line px-15">
         <BrandLogo className="h-27" />
         <span className="flex-1" />
-        <button className="hidden h-32 w-32 shrink-0 place-items-center rounded-10 text-muted hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close navigation" onClick={onClose}>
+        <button className="hidden h-40 w-40 shrink-0 place-items-center rounded-10 text-muted hover:bg-pale hover:text-ink max-1020:grid" aria-label="Close navigation" onClick={onClose}>
           <X size={16} />
         </button>
       </div>
@@ -271,7 +271,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
                 <button
                   key={item.key}
                   aria-current={active ? "page" : undefined}
-                  className={`${userNavBase} ${active ? userNavActive : userNavIdle}`}
+                  className={`${userNavBase} min-h-44 touch-manipulation ${active ? userNavActive : userNavIdle}`}
                   onClick={() => { go(item.hash); onClose(); }}
                 >
                   <span className={`grid size-30 shrink-0 place-items-center rounded-8 ${active ? "bg-white/15" : "bg-pale"}`}>{item.icon}</span>
@@ -289,7 +289,7 @@ function UserSidebar({ route, sub, profile, isAdmin, open, onClose, onLogout }: 
           <span className="min-w-0 flex-1"><strong>{displayNameOf(profile)}</strong><small>{planLabel(profile)}</small></span>
           <UserRound size={14} />
         </button>
-        <button className="user-sidebar-signout" onClick={onLogout}>
+        <button className="user-sidebar-signout min-h-44" onClick={onLogout}>
           <LogOut size={15} /><span>Sign out</span>
         </button>
       </div>
@@ -358,6 +358,17 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
   // Any navigation closes the drawer so a tap on a nav item reveals the page.
   useEffect(() => { setOpen(false); }, [route, sub]);
   useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", closeOnEscape);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+  useEffect(() => {
     function closeMenus(event: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) setProfileMenuOpen(false);
     }
@@ -378,8 +389,8 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
         onLogout={onLogout}
       />
       <div className="user-shell-content ml-[216px] min-h-screen max-1020:ml-0">
-        <header className="user-topbar sticky top-0 z-20 flex h-64 items-center gap-10 border-b border-line bg-white px-18">
-          <button className="hidden h-36 w-36 shrink-0 place-items-center rounded-9 border border-line bg-white text-muted max-1020:grid" aria-label="Open navigation" onClick={() => setOpen(true)}>
+        <header className="user-topbar sticky top-0 z-20 flex h-64 items-center gap-10 border-b border-line bg-white px-18 max-480:h-60 max-480:px-12">
+          <button className="hidden h-44 w-44 shrink-0 place-items-center rounded-10 border border-line bg-white text-muted max-1020:grid" aria-label="Open navigation" onClick={() => setOpen(true)}>
             <Menu size={18} />
           </button>
           <div className="ml-12 min-w-0">
@@ -388,7 +399,7 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
           </div>
           <div className="ml-auto flex items-center gap-10">
             <div className="relative" ref={profileMenuRef}>
-              <button className="flex items-center gap-8 rounded-10 px-4 py-4 hover:bg-pale" aria-label="Open profile menu" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((value) => !value)}>
+              <button className="flex min-h-44 items-center gap-8 rounded-10 px-4 py-4 hover:bg-pale" aria-label="Open profile menu" aria-expanded={profileMenuOpen} onClick={() => setProfileMenuOpen((value) => !value)}>
                 <span className="grid h-32 w-32 shrink-0 place-items-center rounded-half bg-pale text-11 font-bold text-brand">{initialsOf(profile)}</span>
                 <span className="hidden max-w-130 text-left max-860:block"><strong className="block truncate text-11 font-semibold text-ink">{displayNameOf(profile)}</strong><small className="block truncate text-10 text-muted">{planLabel(profile)}</small></span>
               </button>
