@@ -105,7 +105,7 @@ export function Header({ route, isAdmin = false, profile }: { route: Route; isAd
           </button>
         </div>
         {homeMenuOpen && (
-          <div className="border-t border-line bg-[var(--theme-surface)] px-[clamp(20px,6vw,88px)] py-14 shadow-card max-680:block">
+          <div className="home-menu-panel border-t border-line px-[clamp(20px,6vw,88px)] py-14 shadow-card max-680:block">
             <nav className="mx-auto grid max-w-[1440px] gap-4" aria-label="Mobile navigation">
               <button className="flex min-h-44 items-center justify-between rounded-10 px-12 text-left text-13 font-semibold text-ink hover:bg-pale" onClick={() => jump("how-it-works")}>How it works <ArrowUpRight size={15} className="text-muted" /></button>
               <button className="flex min-h-44 items-center justify-between rounded-10 px-12 text-left text-13 font-semibold text-ink hover:bg-pale" onClick={() => jump("pricing")}>Pricing <ArrowUpRight size={15} className="text-muted" /></button>
