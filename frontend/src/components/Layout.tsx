@@ -340,6 +340,39 @@ function EmailVerificationBanner({ email }: { email?: string | null }) {
 }
 
 /**
+ * Pins the page while a drawer is open. iOS ignores overflow:hidden on body,
+ * which let the page scroll behind the drawer and made the fixed rail feel
+ * loose, so the body is pinned in place and the exact scroll offset is
+ * restored when the drawer closes. Shared by the student shell and admin board.
+ */
+export function useDrawerScrollLock(open: boolean) {
+  useEffect(() => {
+    if (!open) return;
+    const scrollY = window.scrollY;
+    const previous = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      right: document.body.style.right,
+    };
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    return () => {
+      document.body.style.overflow = previous.overflow;
+      document.body.style.position = previous.position;
+      document.body.style.top = previous.top;
+      document.body.style.left = previous.left;
+      document.body.style.right = previous.right;
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+}
+
+/**
  * Page frame for signed-in students: fixed rail + a compact top bar that only
  * appears below 1020px (menu button, brand, avatar). Children keep their own
  * layouts; the shell only handles the offset and the drawer.
@@ -361,13 +394,9 @@ export function UserShell({ route, sub, profile, isAdmin, onLogout, children }: 
     if (!open) return;
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
     document.addEventListener("keydown", closeOnEscape);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-      document.body.style.overflow = previousOverflow;
-    };
+    return () => { document.removeEventListener("keydown", closeOnEscape); };
   }, [open]);
+  useDrawerScrollLock(open);
   useEffect(() => {
     function closeMenus(event: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) setProfileMenuOpen(false);

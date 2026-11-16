@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Activity, ArrowLeft, Ban, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, FileText, Flag, LayoutDashboard, Menu, Plus, Power, Search, ShieldCheck, Sparkles, Ticket, Trash2, UserRound, Users, X } from "lucide-react";
-import { go } from "../components/Layout";
+import { go, useDrawerScrollLock } from "../components/Layout";
 import { motion } from "motion/react";
 import type { Route } from "../types";
 import { createAdminMission, createAdminPromoCode, deleteAdminMission, deleteAdminPromoCode, errorMessage, getAdminActivity, getAdminMissions, getAdminPromoCodes, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getModerationSummary, getUniversities, promoteAdminUser, reviewSubmission, suspendAdminUser, unsuspendAdminUser, updateAdminMission, updateAdminPromoCode } from "../lib/api";
@@ -102,6 +102,9 @@ export function AdminPage({ section }: { section: string }) {
   const [promoteEmail, setPromoteEmail] = useState("");
   const [promoting, setPromoting] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  // Keep the page pinned behind the drawer so it cannot scroll on touch
+  // devices while the rail is open (same lock as the student shell).
+  useDrawerScrollLock(navOpen);
 
   // ── Loaders — one per section so the board only asks for what is on screen
   async function loadUsers() {
@@ -686,7 +689,7 @@ function Metric({ icon, value, label, tone }: { icon: ReactNode; value: number |
 
 function AdminSidebar({ section, open, onClose }: { section: string; open: boolean; onClose: () => void }) {
   return (
-    <aside className={`fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-[#e6ebf2] bg-white font-inter antialiased transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
+    <aside className={`admin-sidebar fixed inset-y-0 left-0 z-40 flex w-240 flex-col border-r border-[#e6ebf2] bg-white font-inter antialiased transition-transform duration-200 ${open ? "translate-x-0" : "max-1020:-translate-x-full"}`}>
       <div className="flex h-60 items-center gap-11 border-b border-line px-16">
         <span className="grid h-34 w-34 shrink-0 place-items-center rounded-11 bg-brand text-white shadow-brand-sm"><ShieldCheck size={17} /></span>
         <p className="m-0 min-w-0 truncate text-[15px] font-semibold text-ink">Admin board</p>

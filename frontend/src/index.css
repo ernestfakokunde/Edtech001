@@ -1228,6 +1228,9 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   box-shadow: 8px 0 28px color-mix(in srgb, var(--theme-brand-deep) 6%, transparent);
 }
 .user-sidebar nav button { min-height: 36px; padding: 6px 9px; font-size: 11px; gap: 9px; }
+/* Drawer-internal scrolling must not chain to the page behind the rail. */
+.user-sidebar nav,
+.admin-sidebar nav { overscroll-behavior: contain; }
 .user-sidebar nav button > span:first-child { width: 26px; height: 26px; }
 .user-sidebar nav > div + div { padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--theme-line) 72%, transparent); }
 .user-sidebar-footer { background: color-mix(in srgb, var(--theme-surface) 82%, transparent); }
