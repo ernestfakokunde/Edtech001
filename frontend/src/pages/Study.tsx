@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -528,10 +528,13 @@ function PlayerFrame({
   children,
   count,
   onExit,
+  progress,
 }: {
   children: React.ReactNode;
   count: string;
   onExit: () => void;
+  /* 0–100 live progress. Omit to keep the static placeholder bar. */
+  progress?: number;
 }) {
   return (
     <main className="mx-auto grid min-h-[calc(100vh-88px)] w-full max-w-800 content-center px-[clamp(18px,3vw,32px)] pt-30 pb-52 max-680:min-w-0 max-680:px-18">
@@ -547,7 +550,10 @@ function PlayerFrame({
         <Sparkles size={15} className="text-brand" />
       </div>
       <div className="quiz-progress-track mb-26 h-5 max-w-800 overflow-hidden rounded-full bg-[#e7edf6]">
-        <span className="block h-full w-[34%] rounded-full bg-brand" />
+        <span
+          className={`block h-full rounded-full ${progress !== undefined ? "bg-brand transition-[width] duration-500 ease-out" : "w-[34%] bg-brand"}`}
+          style={progress !== undefined ? { width: `${Math.min(Math.max(progress, 0), 100)}%` } : undefined}
+        />
       </div>
       {children}
     </main>
@@ -582,6 +588,67 @@ export function QuestionPaper({ set, onBack }: { set: GeneratedSet; onBack: () =
   );
 }
 
+/* Lightweight canvas confetti for the flashcard completion moment. No
+   dependency: ~120 brand-palette particles under one rAF loop, capped at one
+   burst, pointer-transparent, and skipped entirely for reduced motion. */
+const CONFETTI_COLORS = ["#6d28d9", "#8b5cf6", "#c4b5fd", "#22c55e", "#f59e0b", "#ec4899", "#ffffff"];
+
+function ConfettiBurst() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    const scale = Math.min(window.devicePixelRatio || 1, 2);
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    context.scale(scale, scale);
+    const particles = Array.from({ length: 120 }, () => ({
+      x: width / 2 + (Math.random() - 0.5) * width * 0.65,
+      y: height * 0.32 + (Math.random() - 0.5) * 40,
+      vx: (Math.random() - 0.5) * 11,
+      vy: -(Math.random() * 11 + 4),
+      size: 5 + Math.random() * 6,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      rotation: Math.random() * Math.PI,
+      spin: (Math.random() - 0.5) * 0.25,
+    }));
+    let raf = 0;
+    const started = performance.now();
+    const tick = (now: number) => {
+      const life = Math.max(0, 1 - (now - started) / 2400);
+      context.clearRect(0, 0, width, height);
+      let alive = false;
+      for (const particle of particles) {
+        particle.vy += 0.25;
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.rotation += particle.spin;
+        if (life > 0 && particle.y < height + 24) {
+          alive = true;
+          context.save();
+          context.globalAlpha = Math.min(1, life * 2);
+          context.translate(particle.x, particle.y);
+          context.rotate(particle.rotation);
+          context.fillStyle = particle.color;
+          context.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size * 0.62);
+          context.restore();
+        }
+      }
+      if (alive && life > 0) raf = requestAnimationFrame(tick);
+      else context.clearRect(0, 0, width, height);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 z-[80]" aria-hidden="true" />;
+}
+
+type Grade = "known" | "unknown";
+
 export function Flashcards({
   set,
   onExit,
@@ -591,55 +658,232 @@ export function Flashcards({
   onExit: () => void;
   onQuiz?: () => void;
 }) {
+  const total = set.items.length;
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const total = set.items.length;
+  const [direction, setDirection] = useState<"next" | "prev">("next");
+  const [grades, setGrades] = useState<Record<number, Grade>>({});
+  const [feedback, setFeedback] = useState<Grade | null>(null);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragStartX = useRef<number | null>(null);
+  const dragMoved = useRef(0);
+  const advanceTimer = useRef<number | null>(null);
+  const reducedMotion = useRef(false);
+  useEffect(() => {
+    reducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return () => { if (advanceTimer.current) window.clearTimeout(advanceTimer.current); };
+  }, []);
   const card = total > 0 ? set.items[index]?.question : undefined;
+  const gradedCount = Object.keys(grades).length;
+  const knownCount = Object.values(grades).filter((grade) => grade === "known").length;
+  const reviewCount = gradedCount - knownCount;
+  const finished = total > 0 && gradedCount === total;
+  const busy = feedback !== null;
+
+  function goTo(nextIndex: number, nextDirection: "next" | "prev") {
+    if (nextIndex < 0 || nextIndex >= total || busy) return;
+    if (advanceTimer.current) window.clearTimeout(advanceTimer.current);
+    setDirection(nextDirection);
+    setIndex(nextIndex);
+    setFlipped(false);
+    setFeedback(null);
+    setDragX(0);
+  }
+
+  /* Mark the current card and glide on after the feedback animation. */
+  function grade(result: Grade) {
+    if (!card || finished || busy) return;
+    setGrades((current) => ({ ...current, [index]: result }));
+    setFeedback(result);
+    setFlipped(false);
+    if (advanceTimer.current) window.clearTimeout(advanceTimer.current);
+    advanceTimer.current = window.setTimeout(() => {
+      setFeedback(null);
+      if (index < total - 1) goTo(index + 1, "next");
+    }, reducedMotion.current ? 120 : 620);
+  }
+
+  /* Keyboard study flow: Space/Enter flip, arrows move, K = know, D = don't. */
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey || finished) return;
+      const target = event.target as HTMLElement;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      if ((event.key === " " || event.key === "Enter") && target.tagName === "BUTTON") return;
+      if (event.key === " " || event.key === "Enter") {
+        event.preventDefault();
+        if (card && !busy) setFlipped((value) => !value);
+      } else if (event.key === "ArrowRight") goTo(index + 1, "next");
+      else if (event.key === "ArrowLeft") goTo(index - 1, "prev");
+      else if (event.key === "k" || event.key === "K") grade("known");
+      else if (event.key === "d" || event.key === "D" || event.key === "x" || event.key === "X") grade("unknown");
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  function onPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+    if (busy || finished || !card) return;
+    dragStartX.current = event.clientX;
+    dragMoved.current = 0;
+    setDragging(true);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+  function onPointerMove(event: React.PointerEvent<HTMLButtonElement>) {
+    if (dragStartX.current === null) return;
+    const offset = event.clientX - dragStartX.current;
+    dragMoved.current = Math.max(dragMoved.current, Math.abs(offset));
+    setDragX(offset);
+  }
+  function endDrag(event: React.PointerEvent<HTMLButtonElement>) {
+    if (dragStartX.current === null) return;
+    const offset = event.clientX - dragStartX.current;
+    dragStartX.current = null;
+    setDragging(false);
+    setDragX(0);
+    if (offset < -70) goTo(index + 1, "next");
+    else if (offset > 70) goTo(index - 1, "prev");
+  }
+
+  function reviewAgain() {
+    if (advanceTimer.current) window.clearTimeout(advanceTimer.current);
+    setGrades({});
+    setIndex(0);
+    setFlipped(false);
+    setFeedback(null);
+    setDragX(0);
+  }
+
   return (
-    <PlayerFrame count={`Card ${Math.min(index + 1, Math.max(total, 1))} of ${total}`} onExit={onExit}>
-      {card ? (
-        <button className="flashcard-surface flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center gap-16 rounded-20 border border-line bg-white px-26 py-32 text-ink shadow-[0_20px_36px_rgba(15,23,42,.06)] transition-shadow hover:shadow-[0_24px_42px_rgba(15,23,42,.09)] max-680:min-h-[240px] max-680:px-16 max-680:py-20" onClick={() => setFlipped(!flipped)}>
-          <div className="flashcard-content grid justify-items-center gap-16" key={`${index}-${flipped ? "answer" : "question"}`}>
-            <span className="rounded-999 bg-pale px-10 py-4 text-10 font-bold uppercase text-brand">{flipped ? "Answer" : "Question"}</span>
-            <strong className="max-w-full whitespace-pre-wrap text-[19px] font-bold leading-[1.5] [overflow-wrap:anywhere]">{flipped ? card.answer : card.prompt}</strong>
-            {flipped && card.explanation && <p className="max-w-420 text-12 leading-160 text-slate-700 max-680:max-w-full">{card.explanation}</p>}
-            <small className="inline-flex items-center gap-6 text-11 text-muted">
-              <RotateCcw size={14} /> Tap to {flipped ? "see question" : "reveal answer"}
+    <PlayerFrame
+      count={finished ? `${total} of ${total} graded` : `Card ${Math.min(index + 1, Math.max(total, 1))} of ${total}`}
+      onExit={onExit}
+      progress={total > 0 ? (gradedCount / total) * 100 : 0}
+    >
+      <p className="sr-only" aria-live="polite">
+        {finished
+          ? `Deck complete. ${knownCount} known, ${reviewCount} to review.`
+          : `Card ${index + 1} of ${total}${flipped ? ", answer shown" : ""}.`}
+      </p>
+      {total === 0 ? (
+        <div className="grid min-h-[320px] w-full place-items-center rounded-20 border border-dashed border-[#bfdbfe] bg-[#f8fbff] text-12 text-muted">This set has no cards yet.</div>
+      ) : finished ? (
+        <div className="relative grid justify-items-center gap-16 rounded-20 border border-line bg-white px-26 py-36 text-center shadow-[0_22px_40px_rgba(15,23,42,.07)] max-680:px-16 max-680:py-24" role="status">
+          <ConfettiBurst />
+          <div className="fc-complete-ring">
+            <strong className="text-[32px] font-bold text-ink">{Math.round((knownCount / total) * 100)}%</strong>
+          </div>
+          <div className="grid gap-6">
+            <span className="text-15 font-bold text-brand">Deck complete</span>
+            <small className="max-w-380 text-12 leading-160 text-muted">
+              You marked {knownCount} of {total} cards as known{reviewCount ? ` — ${reviewCount} ${reviewCount === 1 ? "card needs" : "cards need"} another look.` : ". Perfect run."}
             </small>
           </div>
-        </button>
+          <div className="flex flex-wrap justify-center gap-8">
+            <span className="fc-grade-pill known"><Check size={12} /> {knownCount} known</span>
+            <span className="fc-grade-pill unknown"><X size={12} /> {reviewCount} to review</span>
+          </div>
+          <div className="mt-6 flex flex-wrap justify-center gap-10 [&>button]:flex-1 max-480:w-full max-480:flex-col">
+            <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={reviewAgain}>
+              <RotateCcw size={15} /> Review again
+            </button>
+            {onQuiz && (
+              <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onQuiz}>
+                Try this as a quiz <ArrowRight size={14} />
+              </button>
+            )}
+            <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={onExit}>
+              Back to dashboard
+            </button>
+          </div>
+        </div>
       ) : (
-        <div className="grid min-h-[320px] w-full place-items-center rounded-20 border border-dashed border-[#bfdbfe] bg-[#f8fbff] text-12 text-muted">This set has no cards yet.</div>
-      )}
-      <div className="mt-22 flex items-center justify-center gap-12">
-        <button
-          className="icon-button"
-          disabled={index === 0 || total === 0}
-          onClick={() => {
-            setIndex(index - 1);
-            setFlipped(false);
-          }}
-        >
-          <ArrowLeft size={17} />
-        </button>
-        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={total === 0} onClick={() => setFlipped(!flipped)}>
-          <FlipHorizontal2 size={15} /> Flip card
-        </button>
-        <button
-          className="icon-button"
-          disabled={index === total - 1 || total === 0}
-          onClick={() => {
-            setIndex(index + 1);
-            setFlipped(false);
-          }}
-        >
-          <ArrowRight size={17} />
-        </button>
-      </div>
-      {onQuiz && (
-        <button className="mt-22 inline-flex items-center gap-6 border-0 bg-transparent text-12 font-semibold text-brand" onClick={onQuiz}>
-          Try this as a quiz <ArrowRight size={14} />
-        </button>
+        <>
+          <div className="mb-18 flex items-center justify-center gap-8">
+            <span className="fc-grade-pill known"><Check size={12} /> {knownCount} known</span>
+            <span className="fc-grade-pill unknown"><X size={12} /> {reviewCount} to review</span>
+            <span className="fc-grade-pill" style={{ background: "color-mix(in srgb, var(--theme-brand) 10%, transparent)", color: "var(--theme-brand-deep)" }}>{total - gradedCount} ungraded</span>
+          </div>
+          <div className="fc-scene">
+            <div key={index} className={direction === "next" ? "fc-enter-next" : "fc-enter-prev"}>
+              <div
+                className={`fc-drag ${dragging ? "is-dragging" : ""} ${feedback === "unknown" ? "fc-bad" : ""} ${feedback === "known" ? "fc-good" : ""}`}
+                style={dragX !== 0 ? { transform: `translateX(${dragX}px) rotate(${dragX / 26}deg)` } : undefined}
+              >
+                <button
+                  type="button"
+                  className={`fc-card ${flipped ? "is-flipped" : ""}`}
+                  aria-pressed={flipped}
+                  aria-label={flipped ? "Show question" : "Reveal answer"}
+                  onClick={() => { if (dragMoved.current <= 8 && !busy) setFlipped((value) => !value); }}
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                >
+                  <span className="fc-face fc-front flashcard-surface">
+                    <span className="rounded-999 bg-pale px-10 py-4 text-10 font-bold uppercase text-brand">Question</span>
+                    <span className="block max-w-full whitespace-pre-wrap text-[19px] font-bold leading-[1.5] text-ink [overflow-wrap:anywhere]">{card?.prompt}</span>
+                    <small className="inline-flex items-center gap-6 text-11 text-muted">
+                      <FlipHorizontal2 size={14} /> Tap or press Space to reveal
+                    </small>
+                  </span>
+                  <span className="fc-face fc-back flashcard-surface" aria-hidden={!flipped}>
+                    <span className="rounded-999 px-10 py-4 text-10 font-bold uppercase" style={{ background: "color-mix(in srgb, #22c55e 12%, transparent)", color: "#15803d" }}>Answer</span>
+                    <span className="block max-w-full whitespace-pre-wrap text-[18px] font-bold leading-[1.5] text-ink [overflow-wrap:anywhere]">{card?.answer}</span>
+                    {card?.explanation && <span className="block max-w-420 text-12 leading-160 text-slate-700 max-680:max-w-full">{card.explanation}</span>}
+                    <small className="inline-flex items-center gap-6 text-11 text-muted">
+                      <RotateCcw size={14} /> Tap to see the question
+                    </small>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-22 grid gap-12">
+            <div className="flex items-center justify-center gap-12">
+              <button
+                className="inline-flex min-h-44 items-center justify-center gap-7 rounded-10 border border-[#fca5a5] bg-white px-16 text-12 font-bold text-[#dc2626] transition-colors duration-200 hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={busy}
+                onClick={() => grade("unknown")}
+              >
+                <X size={15} /> Don&apos;t know
+              </button>
+              <button
+                className="fc-grade fc-grade-known inline-flex min-h-44 items-center justify-center gap-7 rounded-10 px-16 text-12 font-bold text-white disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={busy}
+                onClick={() => grade("known")}
+              >
+                <Check size={15} /> Know it
+              </button>
+            </div>
+            <div className="flex items-center justify-center gap-12">
+              <button
+                className="icon-button"
+                disabled={index === 0 || busy}
+                aria-label="Previous card"
+                onClick={() => goTo(index - 1, "prev")}
+              >
+                <ArrowLeft size={17} />
+              </button>
+              <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={busy} onClick={() => setFlipped((value) => !value)}>
+                <FlipHorizontal2 size={15} /> Flip card
+              </button>
+              <button
+                className="icon-button"
+                disabled={index === total - 1 || busy}
+                aria-label="Next card"
+                onClick={() => goTo(index + 1, "next")}
+              >
+                <ArrowRight size={17} />
+              </button>
+            </div>
+            <p className="m-0 text-center text-10 text-muted max-1020:hidden">
+              Space to flip · Arrow keys to move · K = know it · D = don&apos;t know
+            </p>
+          </div>
+        </>
       )}
     </PlayerFrame>
   );
