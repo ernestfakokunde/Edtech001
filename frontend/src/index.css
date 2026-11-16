@@ -368,8 +368,8 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
     background: #fffaf7e8 !important;
     backdrop-filter: blur(18px);
   }
-  :root[data-theme="light"] .home-header > div { height: 82px; }
-  :root[data-theme="light"] .home-header nav {
+  :root[data-theme="light"] .home-header > div:first-child { height: 82px; }
+  :root[data-theme="light"] .home-header > div:first-child nav {
     gap: 4px !important;
     padding: 4px;
     border: 1px solid #f0e2e5;
@@ -377,12 +377,12 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
     background: #fffdfc;
     box-shadow: 0 8px 24px #71374d0b;
   }
-  :root[data-theme="light"] .home-header nav button {
+  :root[data-theme="light"] .home-header > div:first-child nav button {
     border-radius: 999px;
     padding: 10px 16px;
     color: #716974 !important;
   }
-  :root[data-theme="light"] .home-header nav button:hover {
+  :root[data-theme="light"] .home-header > div:first-child nav button:hover {
     background: #fff0f5;
     color: #de568f !important;
   }
@@ -513,11 +513,11 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
     background: #ffffffef !important;
     border-color: #e8e1f4 !important;
   }
-  :root[data-theme="light"] .home-header nav {
+  :root[data-theme="light"] .home-header > div:first-child nav {
     border-color: #e8e1f4;
     box-shadow: 0 5px 16px #2f1e5410;
   }
-  :root[data-theme="light"] .home-header nav button:hover {
+  :root[data-theme="light"] .home-header > div:first-child nav button:hover {
     background: #f3efff;
     color: #5b3b9e !important;
   }
@@ -870,11 +870,23 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 .auth-study-preview > div:nth-of-type(2) > div { background: #b8a5ff; }
 .auth-study-preview > div:last-child { border-color: #ffffff24; color: #e1dcff; }
 @media (max-width: 1020px) {
-  .auth-visual-panel { min-height: 480px; }
+  /* Stacked layout (panel sits below the form): the photo backdrop and
+     glassmorphism showcase read as a cramped, low-contrast strip — white
+     copy lands on the lightest part of the photo. Swap the inline photo
+     for the solid brand surface, drop the showcase/footer, and let the
+     panel read as a compact banner. Desktop columns keep the photo. */
+  .auth-visual-panel {
+    min-height: auto;
+    padding: 44px clamp(22px, 6vw, 64px) 48px;
+    background-image: none !important;
+  }
+  .auth-visual-panel > .wordmark { display: none; }
+  .auth-visual-showcase,
+  .auth-visual-footer { display: none; }
+  .auth-visual-copy { margin-top: 0; margin-bottom: 0; }
 }
 @media (max-width: 680px) {
-  .auth-visual-panel { min-height: auto; padding: 26px 20px 30px; }
-  .auth-visual-panel > .wordmark { display: none; }
+  .auth-visual-panel { padding: 32px 22px 38px; }
   .auth-visual-copy h1 { max-width: 440px; }
   .auth-study-preview { margin-left: 0; }
 }
@@ -958,7 +970,13 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
 :root[data-theme="dark"] .home-header .home-menu-button:hover {
   background: #ffffff14;
 }
-:root[data-theme="dark"] .home-header nav {
+/* Mobile dropdown panel: scoped surface colors so it stays legible in both
+   themes and never picks up the desktop pill-nav treatment above. */
+.home-header .home-menu-panel { background-color: var(--theme-surface); }
+:root[data-theme="dark"] .home-header .home-menu-panel { background-color: #12121bf5; border-color: #343247; }
+:root[data-theme="dark"] .home-header .home-menu-panel nav button { color: #f2efff !important; }
+:root[data-theme="dark"] .home-header .home-menu-panel nav button:hover { background: #ffffff12; }
+:root[data-theme="dark"] .home-header > div:first-child nav {
   gap: 4px !important;
   padding: 4px;
   border: 1px solid #302b45;
@@ -966,12 +984,12 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   background: #151421;
   box-shadow: 0 8px 24px #0000002e;
 }
-:root[data-theme="dark"] .home-header nav button {
+:root[data-theme="dark"] .home-header > div:first-child nav button {
   border-radius: 999px;
   padding: 10px 16px;
   color: #b7b1c9 !important;
 }
-:root[data-theme="dark"] .home-header nav button:hover {
+:root[data-theme="dark"] .home-header > div:first-child nav button:hover {
   background: #29233d;
   color: #fff !important;
 }
@@ -1210,6 +1228,9 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   box-shadow: 8px 0 28px color-mix(in srgb, var(--theme-brand-deep) 6%, transparent);
 }
 .user-sidebar nav button { min-height: 36px; padding: 6px 9px; font-size: 11px; gap: 9px; }
+/* Drawer-internal scrolling must not chain to the page behind the rail. */
+.user-sidebar nav,
+.admin-sidebar nav { overscroll-behavior: contain; }
 .user-sidebar nav button > span:first-child { width: 26px; height: 26px; }
 .user-sidebar nav > div + div { padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--theme-line) 72%, transparent); }
 .user-sidebar-footer { background: color-mix(in srgb, var(--theme-surface) 82%, transparent); }
