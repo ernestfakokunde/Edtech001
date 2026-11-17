@@ -29,6 +29,18 @@ enum GeneratedSetType {
   FLASHCARD
 }
 
+enum MissionActionType {
+  FLASHCARD_SET_CREATED
+  QUIZ_CREATED
+  LEARN_MESSAGE_SENT
+}
+
+enum GiftPlan {
+  BASIC
+  STUDENT_PLUS
+  PREMIUM
+}
+
 enum AccountTier {
   FREE
   PREMIUM
@@ -69,9 +81,10 @@ model Profile {
   university University? @relation(fields: [universityId], references: [id], onDelete: SetNull)
   faculty    Faculty?    @relation(fields: [facultyId], references: [id], onDelete: SetNull)
 
-  referredBy Profile?             @relation("Referral", fields: [referredById], references: [id], onDelete: SetNull)
-  referrals  Profile[]            @relation("Referral")
-  claims     UserClaimedMission[]
+  referredBy      Profile?              @relation("Referral", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals       Profile[]             @relation("Referral")
+  claims          UserClaimedMission[]
+  missionProgress UserMissionProgress[]
 
   redeemedCodes     CodeRedemption[] @relation("CodeRedemptions")
   createdPromoCodes PromoCode[]      @relation("PromoCodeCreator")
@@ -338,16 +351,32 @@ model AuditEvent {
 /// claim active missions once each and the XP lands on their profile — points
 /// fuel the FREE → PREMIUM roadmap later.
 model Mission {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   title       String
   description String?
-  xpReward    Int      @default(10)
-  isActive    Boolean  @default(true)
+  xpReward    Int                @default(10)
+  actionType  MissionActionType?
+  targetCount Int                @default(1)
+  isActive    Boolean            @default(true)
   createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
-  claims UserClaimedMission[]
+  claims   UserClaimedMission[]
+  progress UserMissionProgress[]
+}
+
+model UserMissionProgress {
+  profileId String
+  missionId String
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, missionId])
+  @@index([missionId])
 }
 
 model UserClaimedMission {
@@ -377,6 +406,7 @@ model PromoCode {
   id             String    @id @default(cuid())
   code           String    @unique
   description    String?
+  giftPlan       GiftPlan  @default(STUDENT_PLUS)
   premiumDays    Int       @default(0)
   xpBonus        Int       @default(0)
   maxRedemptions Int?
@@ -396,12 +426,12 @@ model PromoCode {
 /// Credit bonus and expiry are snapshotted so later promo edits do not change
 /// a reward that has already been redeemed.
 model CodeRedemption {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   codeId       String
   profileId    String
-  bonusCredits Int      @default(0)
+  bonusCredits Int       @default(0)
   expiresAt    DateTime?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   code    PromoCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
   profile Profile   @relation("CodeRedemptions", fields: [profileId], references: [id], onDelete: Cascade)

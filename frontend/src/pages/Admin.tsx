@@ -5,7 +5,7 @@ import { go, useDrawerScrollLock } from "../components/Layout";
 import { motion } from "motion/react";
 import type { Route } from "../types";
 import { createAdminMission, createAdminPromoCode, deleteAdminMission, deleteAdminPromoCode, errorMessage, getAdminActivity, getAdminMissions, getAdminPromoCodes, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getModerationSummary, getUniversities, promoteAdminUser, reviewSubmission, suspendAdminUser, unsuspendAdminUser, updateAdminMission, updateAdminPromoCode } from "../lib/api";
-import type { ActivityEntry, AdminMission, AdminPromoCode, AdminUser, Department, Faculty, Pagination, RepositorySubmission, University } from "../lib/api";
+import type { ActivityEntry, AdminMission, AdminPromoCode, AdminUser, Department, Faculty, GiftPlan, MissionActionType, Pagination, RepositorySubmission, University } from "../lib/api";
 
 /* Phase 5 — standalone admin board: a Tailwind sidebar shell (drawer below
    1020px) with one sub-page per concern. App.tsx maps each `admin-*` hash
@@ -93,10 +93,10 @@ export function AdminPage({ section }: { section: string }) {
   const [suspending, setSuspending] = useState<AdminUser | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [missions, setMissions] = useState<AdminMission[]>([]);
-  const [missionForm, setMissionForm] = useState({ title: "", description: "", xpReward: 10 });
+  const [missionForm, setMissionForm] = useState<{ title: string; description: string; xpReward: number; actionType: MissionActionType; targetCount: number }>({ title: "", description: "", xpReward: 10, actionType: "FLASHCARD_SET_CREATED", targetCount: 1 });
   const [creatingMission, setCreatingMission] = useState(false);
   const [promoCodes, setPromoCodes] = useState<AdminPromoCode[]>([]);
-  const [promoForm, setPromoForm] = useState({ code: "", description: "", premiumDays: 30, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
+  const [promoForm, setPromoForm] = useState<{ code: string; description: string; giftPlan: GiftPlan; premiumDays: number; xpBonus: number; maxRedemptions: string; expiresAt: string }>({ code: "", description: "", giftPlan: "STUDENT_PLUS", premiumDays: 30, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
   const [creatingPromo, setCreatingPromo] = useState(false);
   const [copiedCode, setCopiedCode] = useState("");
   const [promoteEmail, setPromoteEmail] = useState("");
@@ -204,8 +204,8 @@ export function AdminPage({ section }: { section: string }) {
   async function createMission() {
     setNotice(""); setError(""); setCreatingMission(true);
     try {
-      await createAdminMission({ title: missionForm.title.trim(), description: missionForm.description.trim() || undefined, xpReward: Math.max(1, Math.round(Number(missionForm.xpReward)) || 10) });
-      setMissionForm({ title: "", description: "", xpReward: 10 });
+      await createAdminMission({ title: missionForm.title.trim(), description: missionForm.description.trim() || undefined, xpReward: Math.max(1, Math.round(Number(missionForm.xpReward)) || 10), actionType: missionForm.actionType, targetCount: Math.max(1, Math.round(Number(missionForm.targetCount)) || 1) });
+      setMissionForm({ title: "", description: "", xpReward: 10, actionType: "FLASHCARD_SET_CREATED", targetCount: 1 });
       setNotice("Mission created — students can claim it from their profile.");
       await loadMissions();
     } catch (reason) { setError(errorMessage(reason, "Could not create the mission.")); }
@@ -228,12 +228,13 @@ export function AdminPage({ section }: { section: string }) {
       const result = await createAdminPromoCode({
         code: promoForm.code.trim(),
         description: promoForm.description.trim() || undefined,
+        giftPlan: promoForm.giftPlan,
         premiumDays: Math.max(0, Math.round(Number(promoForm.premiumDays)) || 0),
         xpBonus: Math.max(0, Math.round(Number(promoForm.xpBonus)) || 0),
         maxRedemptions: promoForm.maxRedemptions.trim() ? Math.max(1, Math.round(Number(promoForm.maxRedemptions))) : null,
         expiresAt: promoForm.expiresAt ? new Date(`${promoForm.expiresAt}T23:59:59`).toISOString() : null,
       });
-      setPromoForm({ code: "", description: "", premiumDays: 30, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
+      setPromoForm({ code: "", description: "", giftPlan: "STUDENT_PLUS", premiumDays: 30, xpBonus: 0, maxRedemptions: "", expiresAt: "" });
       setNotice(`Code ${result.promo.code} created — copy it and share it with students.`);
       await loadPromoCodes();
     } catch (reason) { setError(errorMessage(reason, "Could not create the code.")); }
@@ -515,15 +516,27 @@ export function AdminPage({ section }: { section: string }) {
                 <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Missions</p><h2>XP challenges</h2></div>
                 <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Flag size={14} /> {missions.length} missions</span>
               </div>
-              <p className="mb-14 mt-[-10px] text-12 text-muted">Students claim these once from their study desk or profile for XP. Pause a mission to stop new claims.</p>
-              <div className={`${adminFormGrid} grid-cols-[minmax(200px,2fr)_minmax(200px,2fr)_minmax(90px,120px)_auto] items-end`}>
+              <p className="mb-14 mt-[-10px] text-12 text-muted">Choose a supported action and target. Progress is recorded from successful server-confirmed study actions; XP unlocks when the target is reached.</p>
+              <div className={`${adminFormGrid} grid-cols-[repeat(auto-fit,minmax(180px,1fr))] items-end`}>
                 <label className={adminLabel}>
                   Mission title
-                  <input className={adminField} value={missionForm.title} onChange={(event) => setMissionForm({ ...missionForm, title: event.target.value })} placeholder="Upload 3 exam PDFs" />
+                  <input className={adminField} value={missionForm.title} onChange={(event) => setMissionForm({ ...missionForm, title: event.target.value })} placeholder="Create 3 quizzes" />
                 </label>
                 <label className={adminLabel}>
                   Description <span className="font-normal text-slate-icon">(optional)</span>
                   <input className={adminField} value={missionForm.description} onChange={(event) => setMissionForm({ ...missionForm, description: event.target.value })} placeholder="What the student has to do" />
+                </label>
+                <label className={adminLabel}>
+                  Track action
+                  <select className={adminField} value={missionForm.actionType} onChange={(event) => setMissionForm({ ...missionForm, actionType: event.target.value as MissionActionType })}>
+                    <option value="FLASHCARD_SET_CREATED">Create flashcard sets</option>
+                    <option value="QUIZ_CREATED">Create quizzes</option>
+                    <option value="LEARN_MESSAGE_SENT">Ask the AI tutor</option>
+                  </select>
+                </label>
+                <label className={adminLabel}>
+                  Actions required
+                  <input className={adminField} type="number" min={1} max={100} value={missionForm.targetCount} onChange={(event) => setMissionForm({ ...missionForm, targetCount: Number(event.target.value) })} />
                 </label>
                 <label className={adminLabel}>
                   XP reward
@@ -546,10 +559,10 @@ export function AdminPage({ section }: { section: string }) {
           {section === "promo" && (
             <section className="rounded-12 border border-line bg-white p-24 shadow-[0_6px_18px_rgba(31,55,92,.05)]">
               <div className="mb-20 flex items-center justify-between gap-14 [&_h2]:mt-4 [&_h2]:text-[21px] [&_h2]:font-bold [&_h2]:text-ink">
-                <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Promo codes</p><h2>Give out free Pro</h2></div>
+                <div><p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Promo codes</p><h2>Gift a subscription plan</h2></div>
                 <span className="inline-flex items-center gap-6 text-11 font-bold text-success-deep"><Ticket size={14} /> {promoCodes.length} codes</span>
               </div>
-              <p className="mb-14 mt-[-10px] text-12 text-muted">Share a code and students redeem Student Plus with 300 monthly AI credits, plus any bonus XP, once per student. Leave uses empty for unlimited.</p>
+              <p className="mb-14 mt-[-10px] text-12 text-muted">Choose a plan and gift duration. Students receive that plan’s monthly credits for the gift period, plus any bonus XP. Leave uses empty for unlimited.</p>
               <div className={`${adminFormGrid} grid-cols-[minmax(200px,240px)_minmax(220px,1fr)_auto] items-end`}>
                 <label className={adminLabel}>
                   Code
@@ -560,9 +573,17 @@ export function AdminPage({ section }: { section: string }) {
                   <input className={adminField} value={promoForm.description} onChange={(event) => setPromoForm({ ...promoForm, description: event.target.value })} placeholder="What it says to students" />
                 </label>
                 <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none h-42 w-full" disabled={!promoForm.code.trim() || creatingPromo} onClick={() => void createPromo()}><Plus size={15} /> Create code</button>
-                <div className="col-span-full grid grid-cols-4 gap-10 max-760:grid-cols-2">
+                <div className="col-span-full grid grid-cols-5 gap-10 max-760:grid-cols-2">
                   <label className={adminLabel}>
-                    Student Plus days
+                    Gift plan
+                    <select className={adminField} value={promoForm.giftPlan} onChange={(event) => setPromoForm({ ...promoForm, giftPlan: event.target.value as GiftPlan })}>
+                      <option value="BASIC">Basic · 100 credits/month</option>
+                      <option value="STUDENT_PLUS">Student Plus · 300 credits/month</option>
+                      <option value="PREMIUM">Premium · 600 credits/month</option>
+                    </select>
+                  </label>
+                  <label className={adminLabel}>
+                    Gift days
                     <input className={adminField} type="number" min={1} value={promoForm.premiumDays} onChange={(event) => setPromoForm({ ...promoForm, premiumDays: Number(event.target.value) })} />
                   </label>
                   <label className={adminLabel}>
@@ -820,16 +841,17 @@ function timeAgo(iso: string) {
 }
 
 function MissionRow({ mission, onToggle, onDelete }: { mission: AdminMission; onToggle: () => void; onDelete: () => void }) {
+  const actionLabel = mission.actionType === "FLASHCARD_SET_CREATED" ? "Flashcard sets" : mission.actionType === "QUIZ_CREATED" ? "Quizzes" : mission.actionType === "LEARN_MESSAGE_SENT" ? "AI tutor messages" : "Needs action setup";
   return (
     <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-white px-14 py-12 max-760:flex-col max-760:items-start ${mission.isActive ? "" : "opacity-55"}`}>
       <div className="mission-icon"><Flag size={15} /></div>
       <div className="mission-main">
         <strong>{mission.title}</strong>
         <span>{mission.description || "No description."}</span>
-        <small>+{mission.xpReward} XP · {mission.claimCount} claimed{mission.isActive ? "" : " · paused"}</small>
+        <small>{actionLabel} · {mission.targetCount} required · +{mission.xpReward} XP · {mission.claimCount} claimed{mission.isActive ? "" : " · paused"}</small>
       </div>
       <div className="flex shrink-0 gap-8 max-760:justify-start">
-        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onToggle}><Power size={14} /> {mission.isActive ? "Pause" : "Resume"}</button>
+        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" disabled={!mission.actionType} title={!mission.actionType ? "Delete and recreate this legacy mission with a supported action." : undefined} onClick={onToggle}><Power size={14} /> {mission.isActive ? "Pause" : "Resume"}</button>
         <button className="inline-flex min-h-36 items-center justify-center gap-6 rounded-9 border border-line bg-white px-12 text-12 font-semibold text-muted transition-colors duration-200 hover:border-outline hover:text-brand disabled:cursor-default disabled:opacity-50 danger" aria-label={`Delete ${mission.title}`} onClick={onDelete}><Trash2 size={14} /></button>
       </div>
     </div>
@@ -840,8 +862,10 @@ function PromoRow({ promo, copied, onCopy, onToggle, onDelete }: { promo: AdminP
   const usedUp = promo.maxRedemptions !== null && promo.redemptionCount >= promo.maxRedemptions;
   const expired = Boolean(promo.expiresAt && new Date(promo.expiresAt) <= new Date());
   const grants: string[] = [];
-  if (promo.premiumDays > 0) grants.push(`${promo.premiumDays} day${promo.premiumDays === 1 ? "" : "s"} of Student Plus`);
-  grants.push("300 AI credits/month");
+  const planLabel = promo.giftPlan === "BASIC" ? "Basic" : promo.giftPlan === "PREMIUM" ? "Premium" : "Student Plus";
+  const planCredits = promo.giftPlan === "BASIC" ? 100 : promo.giftPlan === "PREMIUM" ? 600 : 300;
+  if (promo.premiumDays > 0) grants.push(`${promo.premiumDays} day${promo.premiumDays === 1 ? "" : "s"} of ${planLabel}`);
+  grants.push(`${planCredits} AI credits/month`);
   if (promo.xpBonus > 0) grants.push(`${promo.xpBonus} bonus XP`);
   return (
     <div className={`flex items-center justify-between gap-14 rounded-12 border border-line bg-white px-14 py-12 max-760:flex-col max-760:items-start ${!promo.isActive || usedUp || expired ? "opacity-55" : ""}`}>

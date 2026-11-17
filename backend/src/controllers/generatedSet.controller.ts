@@ -9,6 +9,7 @@ import { extractText } from '../utils/extractText.js'
 import { generateStudyItems, AiNotConfiguredError, GenerationFailedError, isAiConfigured, type GeneratedItem } from '../services/ai.service.js'
 import { recordGenerationFailure } from '../services/generationDiagnostics.js'
 import { AiCreditsExhaustedError, completeAiCredit, getAiCreditQuota, refundAiCredit, reserveAiCredit } from '../services/aiCredits.service.js'
+import { recordMissionAction } from '../services/missions.service.js'
 
 /** A hard ceiling on AI output: protects provider cost and keeps one request
  * from monopolising the model for a minute. */
@@ -365,6 +366,8 @@ export async function generateStudySet(request: Request, response: Response) {
       },
     })
     if (creditReservation) await completeAiCredit(creditReservation.id)
+    try { await recordMissionAction(profile.id, type === 'QUIZ' ? 'QUIZ_CREATED' : 'FLASHCARD_SET_CREATED') }
+    catch (reason) { console.error('[missions] Could not record completed study set:', reason) }
     response.status(201).json({ set })
   } catch (reason) {
     console.error('[generate] saving the generated set failed:', reason)

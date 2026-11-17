@@ -5,6 +5,7 @@ import { AiNotConfiguredError, chatWithStudyMaterial, GenerationFailedError, typ
 import { extractText } from '../utils/extractText.js'
 import { assertDocumentSignature, fileExtension } from '../utils/file.js'
 import { AiCreditsExhaustedError, completeAiCredit, getAiCreditQuota, refundAiCredit, reserveAiCredit } from '../services/aiCredits.service.js'
+import { recordMissionAction } from '../services/missions.service.js'
 
 const MAX_DOCUMENT_TEXT = 60_000
 
@@ -57,6 +58,8 @@ export async function askLearnTutor(request: Request, response: Response) {
     creditReservation = await reserveAiCredit(profile.id, 'LEARN', creditRequestId)
     const answer = await chatWithStudyMaterial({ text: text || undefined, topic: topic || undefined, question, history })
     await completeAiCredit(creditReservation.id)
+    try { await recordMissionAction(profile.id, 'LEARN_MESSAGE_SENT') }
+    catch (reason) { console.error('[missions] Could not record completed tutor message:', reason) }
     response.json({ answer, quota: await getAiCreditQuota(profile.id) })
   } catch (reason) {
     if (creditReservation) await refundAiCredit(creditReservation.id)

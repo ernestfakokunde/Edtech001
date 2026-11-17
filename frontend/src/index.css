@@ -1154,6 +1154,8 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   -webkit-tap-highlight-color: transparent;
 }
 .fc-card.is-flipped { transform: rotateY(180deg); }
+.user-shell-content .fc-card:not(:disabled):hover { transform: none; }
+.user-shell-content .fc-card.is-flipped:not(:disabled):hover { transform: rotateY(180deg); }
 .fc-card:focus-visible { outline: none; }
 .fc-card:focus-visible .fc-face { outline: 3px solid color-mix(in srgb, var(--theme-brand) 52%, transparent); outline-offset: 3px; }
 .fc-face {
@@ -1173,9 +1175,7 @@ html, body, #root { min-height: 100%; background: var(--theme-wash); color: var(
   scrollbar-width: thin;
 }
 .fc-front { visibility: visible; }
-.fc-back { transform: rotateY(180deg); visibility: hidden; }
-.fc-card.is-flipped .fc-front { visibility: hidden; }
-.fc-card.is-flipped .fc-back { visibility: visible; }
+.fc-back { transform: rotateY(180deg); }
 .fc-drag { transition: transform .25s ease-out; }
 .fc-drag.is-dragging { transition: none; cursor: grabbing; }
 @keyframes fc-shake {
@@ -1833,6 +1833,11 @@ body,
   box-shadow: 0 18px 42px color-mix(in srgb, var(--theme-brand-deep) 9%, transparent), inset 0 1px 0 color-mix(in srgb, white 52%, transparent);
   -webkit-backdrop-filter: blur(24px) saturate(155%);
   backdrop-filter: blur(24px) saturate(155%);
+}
+/* Backdrop filters on both rotating faces can produce a bright seam in Chromium. */
+.user-shell-content .fc-face {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 .user-shell-content input:not([type="checkbox"]),
 .user-shell-content textarea,

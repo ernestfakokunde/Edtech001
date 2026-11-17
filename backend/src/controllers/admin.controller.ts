@@ -225,7 +225,7 @@ export async function listPromoCodes(_request: Request, response: Response) {
   })
   response.json({
     codes: codes.map((code) => ({
-      id: code.id, code: code.code, description: code.description, premiumDays: code.premiumDays, xpBonus: code.xpBonus,
+      id: code.id, code: code.code, description: code.description, giftPlan: code.giftPlan, premiumDays: code.premiumDays, xpBonus: code.xpBonus,
       maxRedemptions: code.maxRedemptions, expiresAt: code.expiresAt, isActive: code.isActive, createdAt: code.createdAt,
       redemptionCount: code._count.redemptions,
       createdBy: code.createdBy?.displayName ?? code.createdBy?.email ?? null,
@@ -236,19 +236,20 @@ export async function listPromoCodes(_request: Request, response: Response) {
 /** POST /api/admin/promo-codes — issue a new code (what it grants + caps). */
 export async function createPromoCode(request: Request, response: Response) {
   const actor = (request as AuthenticatedRequest).profile
-  const body = request.body as { code?: string; description?: string; premiumDays?: number; xpBonus?: number; maxRedemptions?: number | null; expiresAt?: string | null }
+  const body = request.body as { code?: string; description?: string; giftPlan?: string; premiumDays?: number; xpBonus?: number; maxRedemptions?: number | null; expiresAt?: string | null }
   const code = typeof body.code === 'string' ? body.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') : ''
   if (code.length < 4) { response.status(400).json({ message: 'Use a code of at least 4 letters, numbers, dashes or underscores.' }); return }
   const premiumDays = Number(body.premiumDays ?? 0)
+  const giftPlan = body.giftPlan ?? 'STUDENT_PLUS'
   const xpBonus = Number(body.xpBonus ?? 0)
-  if (!Number.isInteger(premiumDays) || premiumDays < 1 || !Number.isInteger(xpBonus) || xpBonus < 0) { response.status(400).json({ message: 'Student Plus days must be a whole number of 1 or more, and bonus XP must be 0 or more.' }); return }
+  if (!['BASIC', 'STUDENT_PLUS', 'PREMIUM'].includes(giftPlan) || !Number.isInteger(premiumDays) || premiumDays < 1 || !Number.isInteger(xpBonus) || xpBonus < 0) { response.status(400).json({ message: 'Choose a paid plan, enter at least 1 gift day, and use a whole number of bonus XP.' }); return }
   const maxRedemptions = body.maxRedemptions == null || body.maxRedemptions === ('' as unknown) ? null : Number(body.maxRedemptions)
   if (maxRedemptions !== null && (!Number.isInteger(maxRedemptions) || maxRedemptions < 1)) { response.status(400).json({ message: 'Max uses must be a whole number of 1 or more (or empty for unlimited).' }); return }
   const expiresAt = body.expiresAt ? new Date(body.expiresAt) : null
   if (expiresAt && (Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date())) { response.status(400).json({ message: 'Expiry must be a date in the future.' }); return }
   try {
-    const created = await prisma.promoCode.create({ data: { code, description: body.description?.trim() || null, premiumDays, xpBonus, maxRedemptions, expiresAt, createdById: actor.id } })
-    await prisma.auditEvent.create({ data: { actorId: actor.id, action: 'PROMO_CODE_CREATED', entityType: 'PromoCode', entityId: created.id, metadata: { code, premiumDays, xpBonus, maxRedemptions } } })
+    const created = await prisma.promoCode.create({ data: { code, description: body.description?.trim() || null, giftPlan: giftPlan as 'BASIC' | 'STUDENT_PLUS' | 'PREMIUM', premiumDays, xpBonus, maxRedemptions, expiresAt, createdById: actor.id } })
+    await prisma.auditEvent.create({ data: { actorId: actor.id, action: 'PROMO_CODE_CREATED', entityType: 'PromoCode', entityId: created.id, metadata: { code, giftPlan, premiumDays, xpBonus, maxRedemptions } } })
     response.status(201).json({ promo: created })
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') { response.status(409).json({ message: 'A code with those exact letters already exists.' }); return }
@@ -259,9 +260,10 @@ export async function createPromoCode(request: Request, response: Response) {
 /** PATCH /api/admin/promo-codes/:codeId — tweak the reward, caps or pause it. */
 export async function updatePromoCode(request: Request, response: Response) {
   const codeId = routeParam(request, 'codeId')
-  const body = request.body as Partial<{ description: string | null; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean }>
+  const body = request.body as Partial<{ description: string | null; giftPlan: string; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean }>
   const data: Record<string, unknown> = {}
   if (body.description !== undefined) data.description = body.description?.trim() || null
+  if (body.giftPlan !== undefined) { if (!['BASIC', 'STUDENT_PLUS', 'PREMIUM'].includes(body.giftPlan)) { response.status(400).json({ message: 'Choose a valid paid plan.' }); return } data.giftPlan = body.giftPlan }
   if (body.premiumDays !== undefined) { if (!Number.isInteger(body.premiumDays) || body.premiumDays < 1) { response.status(400).json({ message: 'Student Plus days must be a whole number of 1 or more.' }); return } data.premiumDays = body.premiumDays }
   if (body.xpBonus !== undefined) { if (!Number.isInteger(body.xpBonus) || body.xpBonus < 0) { response.status(400).json({ message: 'Bonus XP must be a whole number of 0 or more.' }); return } data.xpBonus = body.xpBonus }
   if (body.maxRedemptions !== undefined) data.maxRedemptions = body.maxRedemptions === null ? null : Number(body.maxRedemptions)
@@ -289,33 +291,44 @@ export async function deletePromoCode(request: Request, response: Response) {
 
 export async function listMissions(_request: Request, response: Response) {
   const missions = await prisma.mission.findMany({ orderBy: { createdAt: 'desc' }, include: { claims: { select: { profileId: true } } } })
-  response.json({ missions: missions.map((mission) => ({ id: mission.id, title: mission.title, description: mission.description, xpReward: mission.xpReward, isActive: mission.isActive, createdAt: mission.createdAt, claimCount: mission.claims.length })) })
+  response.json({ missions: missions.map((mission) => ({ id: mission.id, title: mission.title, description: mission.description, xpReward: mission.xpReward, actionType: mission.actionType, targetCount: mission.targetCount, isActive: mission.isActive, createdAt: mission.createdAt, claimCount: mission.claims.length })) })
 }
 
 export async function createMission(request: Request, response: Response) {
   const actor = (request as AuthenticatedRequest).profile
-  const { title, description, xpReward } = request.body as { title?: string; description?: string; xpReward?: number }
+  const { title, description, xpReward, actionType, targetCount } = request.body as { title?: string; description?: string; xpReward?: number; actionType?: string; targetCount?: number }
   const cleanTitle = typeof title === 'string' ? title.trim() : ''
   const cleanDescription = typeof description === 'string' ? description.trim() : ''
   const reward = Number(xpReward)
-  if (!cleanTitle || !Number.isInteger(reward) || reward <= 0 || reward > 1000) { response.status(400).json({ message: 'A mission title and an XP reward between 1 and 1000 are required.' }); return }
-  const mission = await prisma.mission.create({ data: { title: cleanTitle, description: cleanDescription || null, xpReward: reward, createdById: actor.id } })
-  await prisma.auditEvent.create({ data: { actorId: actor.id, action: 'MISSION_CREATED', entityType: 'Mission', entityId: mission.id, metadata: { title: cleanTitle, xpReward: reward } } })
-  response.status(201).json({ mission: { id: mission.id, title: mission.title, description: mission.description, xpReward: mission.xpReward, isActive: mission.isActive, createdAt: mission.createdAt, claimCount: 0 } })
+  const target = Number(targetCount)
+  const validAction = ['FLASHCARD_SET_CREATED', 'QUIZ_CREATED', 'LEARN_MESSAGE_SENT'].includes(actionType ?? '')
+  if (!cleanTitle || !validAction || !Number.isInteger(target) || target < 1 || target > 100 || !Number.isInteger(reward) || reward <= 0 || reward > 1000) {
+    response.status(400).json({ message: 'Choose a supported action, a target between 1 and 100, and an XP reward between 1 and 1000.' }); return
+  }
+  const mission = await prisma.mission.create({ data: { title: cleanTitle, description: cleanDescription || null, xpReward: reward, actionType: actionType as 'FLASHCARD_SET_CREATED' | 'QUIZ_CREATED' | 'LEARN_MESSAGE_SENT', targetCount: target, createdById: actor.id } })
+  await prisma.auditEvent.create({ data: { actorId: actor.id, action: 'MISSION_CREATED', entityType: 'Mission', entityId: mission.id, metadata: { title: cleanTitle, xpReward: reward, actionType, targetCount: target } } })
+  response.status(201).json({ mission: { id: mission.id, title: mission.title, description: mission.description, xpReward: mission.xpReward, actionType: mission.actionType, targetCount: mission.targetCount, isActive: mission.isActive, createdAt: mission.createdAt, claimCount: 0 } })
 }
 
 export async function updateMission(request: Request, response: Response) {
   const actor = (request as AuthenticatedRequest).profile
   const missionId = routeParam(request, 'missionId')
-  const { title, description, xpReward, isActive, active } = request.body as { title?: string; description?: string | null; xpReward?: number; isActive?: boolean; active?: boolean }
-  const patch: { title?: string; description?: string | null; xpReward?: number; isActive?: boolean } = {}
+  const { title, description, xpReward, isActive, active, actionType, targetCount } = request.body as { title?: string; description?: string | null; xpReward?: number; isActive?: boolean; active?: boolean; actionType?: string; targetCount?: number }
+  const patch: { title?: string; description?: string | null; xpReward?: number; isActive?: boolean; actionType?: 'FLASHCARD_SET_CREATED' | 'QUIZ_CREATED' | 'LEARN_MESSAGE_SENT'; targetCount?: number } = {}
   if (typeof title === 'string' && title.trim()) patch.title = title.trim()
   if (description !== undefined) patch.description = typeof description === 'string' && description.trim() ? description.trim() : null
   if (xpReward !== undefined && Number.isInteger(Number(xpReward)) && Number(xpReward) > 0 && Number(xpReward) <= 1000) patch.xpReward = Number(xpReward)
+  if (actionType !== undefined && ['FLASHCARD_SET_CREATED', 'QUIZ_CREATED', 'LEARN_MESSAGE_SENT'].includes(actionType)) patch.actionType = actionType as NonNullable<typeof patch.actionType>
+  if (targetCount !== undefined && Number.isInteger(Number(targetCount)) && Number(targetCount) >= 1 && Number(targetCount) <= 100) patch.targetCount = Number(targetCount)
   if (typeof isActive === 'boolean') patch.isActive = isActive
   if (typeof active === 'boolean') patch.isActive = active
   if (Object.keys(patch).length === 0) { response.status(400).json({ message: 'Nothing to update.' }); return }
   try {
+    if (patch.isActive === true) {
+      const current = await prisma.mission.findUnique({ where: { id: missionId }, select: { actionType: true } })
+      if (!current) { response.status(404).json({ message: 'Mission not found.' }); return }
+      if (patch.actionType === undefined && current.actionType === null) { response.status(400).json({ message: 'Configure an action for this legacy mission before activating it.' }); return }
+    }
     const mission = await prisma.mission.update({ where: { id: missionId }, data: patch })
     await prisma.auditEvent.create({ data: { actorId: actor.id, action: 'MISSION_UPDATED', entityType: 'Mission', entityId: missionId, metadata: patch } })
     response.json({ mission })

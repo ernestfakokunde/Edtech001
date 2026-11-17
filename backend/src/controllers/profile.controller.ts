@@ -211,10 +211,11 @@ export async function getReferralInfo(request: Request, response: Response) {
 export async function listMissions(request: Request, response: Response) {
   const me = getProfile(request).id
   const rewardDay = new Date().toISOString().slice(0, 10)
-  const [profile, missions, claims, dailyLoginClaims] = await Promise.all([
+  const [profile, missions, claims, progressRows, dailyLoginClaims] = await Promise.all([
     prisma.profile.findUnique({ where: { id: me }, select: { xp: true, tier: true } }),
     prisma.mission.findMany({ orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }] }),
     prisma.userClaimedMission.findMany({ where: { profileId: me }, select: { missionId: true, claimedAt: true } }),
+    prisma.userMissionProgress.findMany({ where: { profileId: me }, select: { missionId: true, count: true } }),
     prisma.$queryRaw<{ xpAwarded: number; createdAt: Date }[]>`
       SELECT "xpAwarded", "createdAt" FROM "DailyLoginReward"
       WHERE "profileId" = ${me} AND "rewardDay" = ${rewardDay} LIMIT 1
@@ -222,6 +223,7 @@ export async function listMissions(request: Request, response: Response) {
   ])
   const dailyLoginClaim = dailyLoginClaims[0]
   const claimed = new Map(claims.map((claim) => [claim.missionId, claim.claimedAt]))
+  const progress = new Map(progressRows.map((row) => [row.missionId, row.count]))
   response.json({
     xp: profile?.xp ?? 0,
     level: Math.floor((profile?.xp ?? 0) / 200) + 1,
@@ -233,28 +235,42 @@ export async function listMissions(request: Request, response: Response) {
       description: mission.description,
       xpReward: mission.xpReward,
       isActive: mission.isActive,
+      actionType: mission.actionType,
+      targetCount: mission.targetCount,
+      progress: progress.get(mission.id) ?? 0,
       claimedAt: claimed.get(mission.id) ?? null,
     })),
   })
 }
 
 /**
- * POST /api/profile/missions/:missionId/claim — claim an active mission once.
- * XP is added to the profile and the miss/claimed link is recorded.
+ * POST /api/profile/missions/:missionId/claim — claim a completed active mission once.
+ * Completion and XP award are checked and recorded atomically.
  */
 export async function claimMission(request: Request, response: Response) {
   const me = getProfile(request).id
   const missionId = Array.isArray(request.params.missionId) ? request.params.missionId[0] : request.params.missionId
   try {
-    const mission = await prisma.mission.findUnique({ where: { id: missionId } })
-    if (!mission || !mission.isActive) { response.status(404).json({ message: 'That mission is not available right now.' }); return }
-    const existing = await prisma.userClaimedMission.findUnique({ where: { profileId_missionId: { profileId: me, missionId } } })
-    if (existing) { response.status(409).json({ message: 'You already claimed this mission.' }); return }
-    await prisma.userClaimedMission.create({ data: { profileId: me, missionId } })
-    const profile = await prisma.profile.update({ where: { id: me }, data: { xp: { increment: mission.xpReward } }, select: { xp: true } })
+    const result = await prisma.$transaction(async (tx) => {
+      const mission = await tx.mission.findUnique({ where: { id: missionId } })
+      if (!mission || !mission.isActive || !mission.actionType) throw new Error('MISSION_UNAVAILABLE')
+      const existing = await tx.userClaimedMission.findUnique({ where: { profileId_missionId: { profileId: me, missionId } } })
+      if (existing) throw new Error('MISSION_ALREADY_CLAIMED')
+      const progress = await tx.userMissionProgress.findUnique({ where: { profileId_missionId: { profileId: me, missionId } } })
+      if ((progress?.count ?? 0) < mission.targetCount) throw new Error('MISSION_NOT_COMPLETE')
+      await tx.userClaimedMission.create({ data: { profileId: me, missionId } })
+      const profile = await tx.profile.update({ where: { id: me }, data: { xp: { increment: mission.xpReward } }, select: { xp: true } })
+      return { mission, profile }
+    })
+    const { mission, profile } = result
     await prisma.auditEvent.create({ data: { actorId: me, action: 'MISSION_CLAIMED', entityType: 'Mission', entityId: missionId, metadata: { xpEarned: mission.xpReward } } })
     response.status(201).json({ xp: profile.xp, level: Math.floor(profile.xp / 200) + 1, xpEarned: mission.xpReward, missionId })
-  } catch { response.status(500).json({ message: 'Could not claim that mission.' }) }
+  } catch (reason) {
+    if (reason instanceof Error && reason.message === 'MISSION_UNAVAILABLE') { response.status(404).json({ message: 'That mission is not available right now.' }); return }
+    if (reason instanceof Error && reason.message === 'MISSION_ALREADY_CLAIMED') { response.status(409).json({ message: 'You already claimed this mission.' }); return }
+    if (reason instanceof Error && reason.message === 'MISSION_NOT_COMPLETE') { response.status(409).json({ message: 'Complete the mission before claiming its XP.' }); return }
+    response.status(500).json({ message: 'Could not claim that mission.' })
+  }
 }
 
 /**
@@ -298,7 +314,7 @@ export async function deleteAccount(request: Request, response: Response) {
  */
 /**
  * POST /api/profile/redeem — a student redeems a promo code they were given.
- * Active codes with uses left grant premium days (stacked on top of the later
+ * Active codes with uses left grant a selected plan (stacked on top of the later
  * of now / their current premium window) and/or bonus XP — once per student.
  */
 export async function redeemPromoCode(request: Request, response: Response) {
@@ -321,6 +337,7 @@ export async function redeemPromoCode(request: Request, response: Response) {
         const now = new Date()
         const base = current.premiumUntil && current.premiumUntil > now ? current.premiumUntil : now
         const giftedDays = promo.premiumDays > 0 ? promo.premiumDays : 30
+        const giftedCredits = PLAN_CATALOG[promo.giftPlan].credits
         const premiumUntil = new Date(base.getTime() + giftedDays * 86400000)
         const bonusExpiresAt = new Date(now.getTime() + giftedDays * 86400000)
         const entitlementIsActive = !current.premiumUntil || current.premiumUntil > now
@@ -329,19 +346,19 @@ export async function redeemPromoCode(request: Request, response: Response) {
           where: { id: me },
           data: {
             tier: 'PREMIUM',
-            ...(hasActivePaidPlan ? {} : { subscriptionPlan: 'STUDENT_PLUS' }),
+            ...(hasActivePaidPlan ? {} : { subscriptionPlan: promo.giftPlan }),
             premiumUntil,
             xp: promo.xpBonus > 0 ? { increment: promo.xpBonus } : undefined,
           },
           select: { premiumUntil: true, xp: true },
         })
-        await transaction.codeRedemption.create({ data: { codeId: promo.id, profileId: me, bonusCredits: PLAN_CATALOG.STUDENT_PLUS.credits, expiresAt: bonusExpiresAt } })
-        return { premiumUntil: updated.premiumUntil, bonusExpiresAt, xp: updated.xp }
+        await transaction.codeRedemption.create({ data: { codeId: promo.id, profileId: me, bonusCredits: hasActivePaidPlan ? giftedCredits : 0, expiresAt: bonusExpiresAt } })
+        return { premiumUntil: updated.premiumUntil, bonusExpiresAt, xp: updated.xp, giftedCredits }
       },
       { maxWait: 10000, timeout: 15000 },
     )
-    await prisma.auditEvent.create({ data: { actorId: me, action: 'PROMO_CODE_REDEEMED', entityType: 'PromoCode', entityId: promo.id, metadata: { code: promo.code, premiumDays: promo.premiumDays, bonusCredits: PLAN_CATALOG.STUDENT_PLUS.credits, bonusExpiresAt: result.bonusExpiresAt, xpBonus: promo.xpBonus } } })
-    response.json({ redeemed: true, code: promo.code, plan: 'STUDENT_PLUS', credits: PLAN_CATALOG.STUDENT_PLUS.credits, premiumDays: promo.premiumDays > 0 ? promo.premiumDays : 30, bonusExpiresAt: result.bonusExpiresAt, xpBonus: promo.xpBonus, premiumUntil: result.premiumUntil, xp: result.xp, level: Math.floor(result.xp / 200) + 1 })
+    await prisma.auditEvent.create({ data: { actorId: me, action: 'PROMO_CODE_REDEEMED', entityType: 'PromoCode', entityId: promo.id, metadata: { code: promo.code, plan: promo.giftPlan, premiumDays: promo.premiumDays, credits: result.giftedCredits, bonusExpiresAt: result.bonusExpiresAt, xpBonus: promo.xpBonus } } })
+    response.json({ redeemed: true, code: promo.code, plan: promo.giftPlan, credits: result.giftedCredits, premiumDays: promo.premiumDays > 0 ? promo.premiumDays : 30, bonusExpiresAt: result.bonusExpiresAt, xpBonus: promo.xpBonus, premiumUntil: result.premiumUntil, xp: result.xp, level: Math.floor(result.xp / 200) + 1 })
   } catch {
     response.status(500).json({ message: 'Could not redeem that code right now.' })
   }

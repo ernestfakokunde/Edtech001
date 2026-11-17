@@ -88,9 +88,10 @@ export type QuizAttempt = {
 }
 export type QuizAttemptStats = { attempts: number; average: number; best: number }
 
-// Missions: students claim active ones for XP (visible on their profile).
-export type ProfileMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; claimedAt: string | null }
-export type AdminMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; createdAt: string; claimCount: number }
+// Mission actions are incremented only by successful server-side user actions.
+export type MissionActionType = "FLASHCARD_SET_CREATED" | "QUIZ_CREATED" | "LEARN_MESSAGE_SENT"
+export type ProfileMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; actionType: MissionActionType | null; targetCount: number; progress: number; claimedAt: string | null }
+export type AdminMission = { id: string; title: string; description: string | null; xpReward: number; isActive: boolean; actionType: MissionActionType | null; targetCount: number; createdAt: string; claimCount: number }
 
 // Shared monthly AI-credit quota used by Learn, quizzes, and flashcards.
 export type GenerationQuota = { tier: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM"; limit: number; used: number; remaining: number; resetsAt: string; bonusCredits?: number }
@@ -559,10 +560,10 @@ export function getGenerationQuota() {
 export function getAdminMissions() {
   return request<{ missions: AdminMission[] }>('/api/admin/missions', { method: 'GET' })
 }
-export function createAdminMission(input: { title: string; description?: string; xpReward: number }) {
+export function createAdminMission(input: { title: string; description?: string; xpReward: number; actionType: MissionActionType; targetCount: number }) {
   return request<{ mission: AdminMission }>('/api/admin/missions', { method: 'POST', body: JSON.stringify(input) })
 }
-export function updateAdminMission(missionId: string, input: Partial<{ title: string; description: string | null; xpReward: number; isActive: boolean }>) {
+export function updateAdminMission(missionId: string, input: Partial<{ title: string; description: string | null; xpReward: number; isActive: boolean; actionType: MissionActionType; targetCount: number }>) {
   return request<{ mission: AdminMission }>(`/api/admin/missions/${encodeURIComponent(missionId)}`, { method: 'PATCH', body: JSON.stringify(input) })
 }
 export function deleteAdminMission(missionId: string) {
@@ -570,15 +571,16 @@ export function deleteAdminMission(missionId: string) {
 }
 
 // ── Admin: promo codes (issue Student Plus days / bonus XP) ────────────────
-export type AdminPromoCode = { id: string; code: string; description: string | null; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean; createdAt: string; redemptionCount: number; createdBy: string | null }
+export type GiftPlan = "BASIC" | "STUDENT_PLUS" | "PREMIUM"
+export type AdminPromoCode = { id: string; code: string; description: string | null; giftPlan: GiftPlan; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean; createdAt: string; redemptionCount: number; createdBy: string | null }
 
 export function getAdminPromoCodes() {
   return request<{ codes: AdminPromoCode[] }>('/api/admin/promo-codes', { method: 'GET' })
 }
-export function createAdminPromoCode(input: { code: string; description?: string; premiumDays: number; xpBonus: number; maxRedemptions?: number | null; expiresAt?: string | null }) {
+export function createAdminPromoCode(input: { code: string; description?: string; giftPlan: GiftPlan; premiumDays: number; xpBonus: number; maxRedemptions?: number | null; expiresAt?: string | null }) {
   return request<{ promo: AdminPromoCode }>('/api/admin/promo-codes', { method: 'POST', body: JSON.stringify(input) })
 }
-export function updateAdminPromoCode(codeId: string, input: Partial<{ description: string | null; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean }>) {
+export function updateAdminPromoCode(codeId: string, input: Partial<{ description: string | null; giftPlan: GiftPlan; premiumDays: number; xpBonus: number; maxRedemptions: number | null; expiresAt: string | null; isActive: boolean }>) {
   return request<{ promo: AdminPromoCode }>(`/api/admin/promo-codes/${encodeURIComponent(codeId)}`, { method: 'PATCH', body: JSON.stringify(input) })
 }
 export function deleteAdminPromoCode(codeId: string) {
@@ -586,7 +588,7 @@ export function deleteAdminPromoCode(codeId: string) {
 }
 
 // Student side: redeem a promo code from the profile page.
-export type RedeemResult = { redeemed: boolean; code: string; plan: "STUDENT_PLUS"; credits: number; premiumDays: number; bonusExpiresAt: string; xpBonus: number; premiumUntil: string | null; xp: number; level: number }
+export type RedeemResult = { redeemed: boolean; code: string; plan: GiftPlan; credits: number; premiumDays: number; bonusExpiresAt: string; xpBonus: number; premiumUntil: string | null; xp: number; level: number }
 export function redeemPromoCode(code: string) {
   return request<RedeemResult>('/api/profile/redeem', { method: 'POST', body: JSON.stringify({ code }) })
 }

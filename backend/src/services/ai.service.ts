@@ -22,7 +22,7 @@ export type GeneratedItem = {
   }
 }
 
-const PROMPT_VERSION = '3'
+const PROMPT_VERSION = '4'
 const MAX_PROMPT_CHARACTERS = 60_000
 const MAX_CHAT_DOCUMENT_CHARACTERS = 32_000
 const MAX_CHAT_HISTORY_MESSAGES = 4
@@ -234,7 +234,10 @@ function buildPrompt({ text, kind, length }: { text: string; kind: GeneratedSetK
     '',
     'CONTENT AND QUALITY RULES:',
     '- Test core concepts, definitions, terminology, mechanisms, cause and effect, comparisons, and application where supported.',
-    '- Prioritize topics emphasized or repeated in the material and cover different topics across it.',
+    '- Select questions only from the substantive teaching or examinable content in the body of the material. Prefer explanations, concepts, methods, evidence, examples, and worked problems.',
+    '- Treat titles, section headings, headers, front matter, course or module codes and names, school or department names, instructor/student names, author names, file names, and document labels as metadata, not study content. Never make a question whose answer is one of those details.',
+    '- Do not turn a heading or a bold phrase into a question just because it appears prominent. Use it only when the body explains a substantive concept under it.',
+    '- Prioritize important concepts explained in the body and cover distinct topics across it.',
     '- Use only facts clearly supported by the material; never fill gaps with outside knowledge.',
     '- Make each question self-contained. Do not refer to “the document”, “the passage”, or “above”.',
     '- Do not ask about authors, institutions, publication details, page or chapter numbers, references, or incidental formatting.',
@@ -413,6 +416,7 @@ function parseItem(raw: unknown, kind: GeneratedSetKind): { prompt: string; answ
   const prompt = typeof item.prompt === 'string' ? item.prompt.trim() : ''
   const answer = typeof item.answer === 'string' ? item.answer.trim() : ''
   if (!prompt || !answer) return null
+  if (isMetadataQuestion(prompt)) return null
 
   const explanation = typeof item.explanation === 'string' && item.explanation.trim() ? item.explanation.trim() : null
 
@@ -429,4 +433,9 @@ function parseItem(raw: unknown, kind: GeneratedSetKind): { prompt: string; answ
   }
 
   return { prompt, answer, explanation }
+}
+
+/** Discard obvious questions about document/course metadata if a model ignores the prompt. */
+function isMetadataQuestion(prompt: string) {
+  return /\b(?:author|writer|instructor|lecturer|teacher|student name|institution|university|school name|department name|course code|course name|course title|module code|module name|document title|file name|filename|table of contents|page number|chapter number|publication date|prepared by|written by|uploaded file|(?:document|page|section) (?:header|heading)|(?:header|heading|title) of (?:the )?(?:document|course|file|material|section)|(?:what|which) (?:is|was) (?:the )?(?:title|header|heading))\b/i.test(prompt)
 }

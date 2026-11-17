@@ -36,7 +36,8 @@ export function RewardsPage() {
     try {
       const result = await redeemPromoCode(code.trim());
       setXp(result.xp); setLevel(result.level); setCode("");
-      const reward = [`+${result.credits} AI credits/month for ${result.premiumDays} days`, result.xpBonus ? `${result.xpBonus} bonus XP` : ""].filter(Boolean).join(" and ");
+      const planName = result.plan === "BASIC" ? "Basic" : result.plan === "PREMIUM" ? "Premium" : "Student Plus";
+      const reward = [`${planName} access with ${result.credits} AI credits/month for ${result.premiumDays} days`, result.xpBonus ? `${result.xpBonus} bonus XP` : ""].filter(Boolean).join(" and ");
       setMessage(reward ? `Code redeemed — you received ${reward}.` : "Code redeemed.");
     } catch (reason) { setError(errorMessage(reason, "Could not redeem that code.")); }
     finally { setWorking(""); }
@@ -82,8 +83,8 @@ export function RewardsPage() {
             <header className="rewards-panel-heading"><span className="rewards-panel-icon"><Sparkles size={18} /></span><div><p className="rewards-eyebrow">Challenges</p><h2>Extra ways to earn</h2><p>Finish a challenge and claim your XP.</p></div><span className="rewards-count-badge">{unclaimed} left</span></header>
             {missions.length ? <ul className="rewards-mission-list">{missions.map((mission) => <li className={`rewards-mission ${mission.claimedAt ? "claimed" : ""}`} key={mission.id}>
               <span className="rewards-mission-icon">{mission.claimedAt ? <Check size={16} /> : <Gift size={16} />}</span>
-              <div className="rewards-mission-copy"><strong>{mission.title}</strong><span>{mission.description || "Complete this challenge to earn XP."}</span><small>+{mission.xpReward} XP</small></div>
-              {mission.claimedAt ? <span className="rewards-claimed"><Check size={13} /> Claimed</span> : <button className="rewards-claim-button" disabled={working === mission.id} onClick={() => void claim(mission.id)}>{working === mission.id ? "Claiming…" : "Claim"}<ArrowRight size={14} /></button>}
+              <div className="rewards-mission-copy"><strong>{mission.title}</strong><span>{mission.description || "Complete this challenge to earn XP."}</span><small>{Math.min(mission.progress, mission.targetCount)}/{mission.targetCount} completed · +{mission.xpReward} XP</small></div>
+              {mission.claimedAt ? <span className="rewards-claimed"><Check size={13} /> Claimed</span> : <button className="rewards-claim-button" disabled={working === mission.id || mission.progress < mission.targetCount || !mission.isActive} onClick={() => void claim(mission.id)}>{working === mission.id ? "Claiming…" : mission.progress >= mission.targetCount ? "Claim XP" : "In progress"}{mission.progress >= mission.targetCount && <ArrowRight size={14} />}</button>}
             </li>)}</ul> : <div className="rewards-empty"><span><PartyPopper size={19} /></span><strong>You’re all caught up</strong><p>New challenges will show up here as they become available.</p></div>}
           </section>
 

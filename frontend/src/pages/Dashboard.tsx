@@ -57,7 +57,7 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   }
 
   return (
-    <main className="dashboard-workspace mx-auto w-full max-w-[1200px] px-[clamp(20px,4vw,48px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
+    <main className="dashboard-workspace mx-auto flex w-full max-w-[1200px] flex-col px-[clamp(20px,4vw,48px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
       <section className="mb-23 [&>.eyebrow]:mb-12 [&>h1]:mb-5 [&>h1]:mt-0 [&>h1]:text-[clamp(24px,3vw,32px)] [&>p:last-child]:m-0 [&>p:last-child]:text-13 [&>p:last-child]:text-muted">
         <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Your study desk</p>
         <h1>Welcome back, {displayNameOf(profile)}</h1>
@@ -89,8 +89,14 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
         </section>
       )}
 
+      <section className="mb-24 grid grid-cols-3 gap-12 max-760:grid-cols-1" aria-label="Quick study actions">
+        <QuickAction icon={<Sparkles size={17} />} title="Create practice" detail="Turn a PDF into flashcards or a quiz" onClick={() => go("generate")} />
+        <QuickAction icon={<FileText size={17} />} title="Browse course library" detail="Find study materials by course" onClick={() => go("hierarchy")} />
+        <QuickAction icon={<History size={17} />} title="Continue studying" detail="Open your saved sets and results" onClick={() => go("history")} />
+      </section>
 
-      {!activePro && <section className="mb-22 flex items-center gap-17 rounded-18 border border-[#e5dcf4] bg-[linear-gradient(110deg,#f6f1fc,#fbfaff_70%)] px-22 py-20 shadow-[0_10px_28px_#6d4cc20c] max-[640px]:flex-wrap max-[640px]:items-start [&>.primary-button]:shrink-0 max-[640px]:[&>.primary-button]:w-full">
+
+      {!activePro && <section className="order-last mt-18 flex items-center gap-17 rounded-18 border border-[#e5dcf4] bg-[linear-gradient(110deg,#f6f1fc,#fbfaff_70%)] px-22 py-20 shadow-[0_10px_28px_#6d4cc20c] max-[640px]:flex-wrap max-[640px]:items-start [&>.primary-button]:shrink-0 max-[640px]:[&>.primary-button]:w-full">
         <div className="grid size-44 shrink-0 place-items-center rounded-14 bg-brand text-white"><Crown size={20} /></div>
         <div className="flex-1 max-[640px]:min-w-[calc(100%-65px)] [&_.eyebrow]:mb-4 [&_.eyebrow]:text-10 [&_.eyebrow]:font-extrabold [&_.eyebrow]:uppercase [&_.eyebrow]:tracking-[.08em] [&_h2]:m-0 [&_h2]:font-grotesk [&_h2]:text-18 [&_h2]:font-bold [&_h2]:text-ink [&_p]:mb-0 [&_p]:mt-4 [&_p]:text-12 [&_p]:text-ink/75"><span className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">RecappEdu Pro</span><h2>Practice without limits</h2><p>Get 100 AI credits monthly with Basic: ₦499 for month one, then ₦999/month.</p></div>
         <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)]" onClick={() => go("profile")}>Choose a plan <ArrowRight size={16} /></button>
@@ -108,7 +114,7 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
       </div></section>
 
       <DashboardSection title="Your courses" action="Manage" onAction={() => go("profile")}>
-        <div className="grid grid-cols-2 gap-18 max-760:gap-14 max-680:grid-cols-1">
+        <div className="grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-14">
           {courses.length === 0 ? (
             <div className="grid min-h-[145px] place-content-center justify-items-center gap-7 rounded-16 border border-dashed border-outline bg-[#faf8fe] p-18 text-center text-muted [&>svg]:text-brand [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>span]:text-11"><BookOpen size={20} /><strong>No course added yet</strong><span>Browse course PDFs or add a course on your profile.</span></div>
           ) : (
@@ -156,6 +162,16 @@ function isProActive(plan?: "FREE" | "BASIC" | "STUDENT_PLUS" | "PREMIUM", tier?
   return tier === "PREMIUM" && (!until || until > Date.now());
 }
 
+
+function QuickAction({ icon, title, detail, onClick }: { icon: React.ReactNode; title: string; detail: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="flex min-h-[82px] items-center gap-12 rounded-14 border border-line bg-white px-16 py-13 text-left transition hover:-translate-y-1 hover:border-outline hover:shadow-card">
+      <span className="grid size-36 shrink-0 place-items-center rounded-10 bg-pale text-brand">{icon}</span>
+      <span className="min-w-0 flex-1"><strong className="block text-12 font-bold text-ink">{title}</strong><small className="mt-3 block text-10 leading-140 text-muted">{detail}</small></span>
+      <ArrowRight size={15} className="shrink-0 text-brand" />
+    </button>
+  );
+}
 
 function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: string }) {
   return (

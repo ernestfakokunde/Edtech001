@@ -63,6 +63,10 @@ const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
 const MAX_ATTEMPTS = 3 // 1 initial attempt + 2 retries
 const BASE_BACKOFF_MS = 800
 const MAX_BACKOFF_MS = 8000
+// Interactive tutor replies should fail over promptly instead of leaving the
+// chat in its loading state indefinitely. Longer generation jobs keep the
+// existing retry behavior.
+const CHAT_PROVIDER_TIMEOUT_MS = 45_000
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -83,6 +87,7 @@ async function postJson(
   headers: Record<string, string>,
   body: unknown,
   maxAttempts: number = MAX_ATTEMPTS,
+  timeoutMs?: number,
 ): Promise<unknown> {
   let lastError: AiProviderTransportError | null = null
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -92,6 +97,7 @@ async function postJson(
         method: 'POST',
         headers: { 'content-type': 'application/json', ...headers },
         body: JSON.stringify(body),
+        ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
       })
     } catch (reason) {
       lastError = new AiProviderTransportError(providerLabel, reason instanceof Error ? reason.message : 'network error')
@@ -145,7 +151,7 @@ async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey
     max_tokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
     system,
     messages: [{ role: 'user', content: userText }],
-  })
+  }, format === 'text' ? 1 : MAX_ATTEMPTS, format === 'text' ? CHAT_PROVIDER_TIMEOUT_MS : undefined)
 
   const blocks = isRecord(data) && Array.isArray(data.content) ? data.content : []
   const text = blocks
@@ -179,7 +185,7 @@ async function completeOpenAiCompatible(
     max_tokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
     temperature: 0,
     stream: false,
-  })
+  }, format === 'text' ? 1 : MAX_ATTEMPTS, format === 'text' ? CHAT_PROVIDER_TIMEOUT_MS : undefined)
 
   function firstMessageContent(): string {
     if (!isRecord(data) || !Array.isArray(data.choices)) return ''
@@ -210,6 +216,8 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
         config: {
           maxOutputTokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
           temperature: 0,
+          ...(format === 'text' ? { abortSignal: AbortSignal.timeout(CHAT_PROVIDER_TIMEOUT_MS) } : {}),
+          ...(format === 'text' && model.startsWith('gemini-3.') ? { thinkingConfig: { thinkingLevel: 'low' as const } } : {}),
           responseMimeType: format === 'json' ? 'application/json' : 'text/plain',
           ...(format === 'json' ? { responseSchema: {
             type: Type.ARRAY,
@@ -248,7 +256,9 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
   // id does not exist for this key), lighter sibling models from
   // GEMINI_FALLBACK_MODELS take over — they usually have spare capacity
   // during demand spikes.
-  const models = [config.model, ...(config.fallbackModels ?? [])]
+  // Keep interactive chats bounded; service-level provider failover will try
+  // the next configured provider after a timeout or upstream error.
+  const models = format === 'text' ? [config.model] : [config.model, ...(config.fallbackModels ?? [])]
   const attempts: string[] = []
   let lastStatus: number | undefined
   for (let index = 0; index < models.length; index++) {
