@@ -72,7 +72,7 @@ export class GenerationFailedError extends Error {
 
 export type StudyChatMessage = { role: 'user' | 'assistant'; content: string }
 
-export async function chatWithStudyMaterialStream(input: { text?: string; topic?: string; question: string; history: StudyChatMessage[] }): AsyncGenerator<string> {
+export async function* chatWithStudyMaterialStream(input: { text?: string; topic?: string; question: string; history: StudyChatMessage[] }): AsyncGenerator<string> {
   const candidates = resolveCandidates(null)
   if (candidates.length === 0) throw new AiNotConfiguredError()
   const history = input.history.slice(-MAX_CHAT_HISTORY_MESSAGES).map((message) => `${message.role === 'user' ? 'STUDENT' : 'TUTOR'}: ${message.content.slice(0, MAX_CHAT_HISTORY_CHARACTERS)}`).join('\n\n')
