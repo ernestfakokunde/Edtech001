@@ -385,10 +385,12 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
           maxOutputTokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
           temperature: 0,
           ...(format === 'text' ? { abortSignal: AbortSignal.timeout(CHAT_PROVIDER_TIMEOUT_MS) } : {}),
-          // Gemini 2.5+ and 3.x both think before they answer; for a chat
-          // reply the student wants words on screen fast, so cap thinking at
-          // minimal. Without this, a simple tutor question takes ~40s.
-          ...(format === 'text' && model.startsWith('gemini-') ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
+          // Gemini 2.5+ thinks before it answers; for a chat reply the student
+          // wants words on screen fast, so cap thinking at minimal. Only 2.5
+          // models accept MINIMAL — 3.x rejects it with a 400 — so the guard
+          // is pinned to the 2.5 line. (A 3.x model here runs at its default
+          // thinking depth; that's a model behavior, not something we can tune.)
+          ...(format === 'text' && model.startsWith('gemini-2.5') ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
           responseMimeType: format === 'json' ? 'application/json' : 'text/plain',
           ...(format === 'json' ? { responseSchema: {
             type: Type.ARRAY,
@@ -495,7 +497,7 @@ async function* streamGemini(
         abortSignal: controller.signal,
         // Gemini 3.x thinks before it answers; for a chat reply the student
         // wants words on screen fast, so cap thinking at minimal.
-        ...(config.model.startsWith('gemini-') ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
+        ...(config.model.startsWith('gemini-2.5') ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
         responseMimeType: 'text/plain',
       },
     })
