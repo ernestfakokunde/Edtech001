@@ -1,5 +1,5 @@
 import { env, type AiProviderConfig, type AiProviderId } from '../config/env.js'
-import { GoogleGenAI, Type } from '@google/genai'
+import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai'
 
 /**
  * A ready-to-call AI provider. `complete()` returns the raw completion text
@@ -16,6 +16,13 @@ export type AiProvider = {
   label: string
   model: string
   complete(system: string, userText: string, document?: { pdfBase64: string }, format?: 'json' | 'text'): Promise<{ text: string; model: string }>
+  /**
+   * Streaming variant for the study tutor. Yields text chunks as the model
+   * writes them so the UI can show an answer building up instead of a spinner
+   * for the whole round trip. Generation (JSON arrays) does not stream: it has
+   * to be parsed and validated as a whole before anything is stored.
+   */
+  completeStream?(system: string, userText: string, document?: { pdfBase64: string }): AsyncGenerator<string>
 }
 
 /** Thrown when a provider's HTTP call fails (transport error, non-2xx, or an empty body). */
@@ -42,6 +49,13 @@ type ProviderInput = {
     document?: { pdfBase64: string },
     format?: 'json' | 'text',
   ) => Promise<{ text: string; model: string }>
+  /** Optional streaming implementation for the interactive study tutor. */
+  stream?: (
+    config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { baseUrl?: string; fallbackModels?: string[] },
+    system: string,
+    userText: string,
+    document?: { pdfBase64: string },
+  ) => AsyncGenerator<string>
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -163,6 +177,80 @@ async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey
 }
 
 /**
+ * Streams a chat reply from the Anthropic Messages API. Anthropic's streaming
+ * events are `message_start`, `content_block_start`, `content_block_delta`
+ * (the actual text lives in `delta.text`), `content_block_end`, `message_delta`
+ * and `message_stop`. Only `content_block_delta` events carry text, so the
+ * others are skipped.
+ *
+ * Interactive chats get one attempt — see streamOpenAiCompatible.
+ */
+async function* streamAnthropic(
+  config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>>,
+  system: string,
+  userText: string,
+): AsyncGenerator<string> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), CHAT_PROVIDER_TIMEOUT_MS)
+  let response: Response
+  try {
+    response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': config.apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'accept': 'text/event-stream',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        max_tokens: MAX_CHAT_TOKENS,
+        system,
+        messages: [{ role: 'user', content: userText }],
+        stream: true,
+      }),
+      signal: controller.signal,
+    })
+  } catch (reason) {
+    throw new AiProviderTransportError('Anthropic', reason instanceof Error ? reason.message : 'network error')
+  } finally {
+    clearTimeout(timer)
+  }
+
+  if (!response.ok || !response.body) {
+    const raw = await response.text().catch(() => '')
+    throw new AiProviderTransportError('Anthropic', raw.slice(0, 200) || `HTTP ${response.status}`, response.status)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let sawStop = false
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const events = buffer.split(/\n\n/)
+      buffer = events.pop() ?? ''
+      for (const event of events) {
+        const lines = event.split('\n')
+        const dataLine = lines.find((line) => line.startsWith('data:'))
+        if (!dataLine) continue
+        if (dataLine.slice(5).trim() === '[DONE]') { sawStop = true; return }
+        const data = safeJson(dataLine.slice(5))
+        if (!isRecord(data) || data.type !== 'content_block_delta') continue
+        const delta = data.delta
+        if (isRecord(delta) && typeof delta.text === 'string' && delta.text) yield delta.text
+      }
+    }
+  } catch (reason) {
+    throw new AiProviderTransportError('Anthropic', reason instanceof Error ? reason.message : 'stream interrupted')
+  }
+  if (!sawStop) throw new AiProviderTransportError('Anthropic', 'stream ended without message_stop')
+}
+
+/**
  * OpenAI-compatible Chat Completions — used verbatim by OpenAI, Grok (xAI) and
  * any custom endpoint (DeepSeek, Mistral, OpenRouter, LM Studio, …).
  */
@@ -199,6 +287,86 @@ async function completeOpenAiCompatible(
   return { text, model: config.model }
 }
 
+/**
+ * Streams a chat reply from an OpenAI-compatible endpoint. The wire format is
+ * Server-Sent Events: each line is `data: {...}` and the stream ends with
+ * `data: [DONE]`. A chunk carries the next piece of the answer in
+ * `choices[0].delta.content`; the first chunk is often empty, so a chunk with
+ * no delta is skipped rather than emitted as a blank.
+ *
+ * Interactive chats get one attempt: a transport failure here fails over to
+ * the next provider in the service layer, and a second attempt would mean
+ * re-sending the whole prompt for no benefit.
+ */
+async function* streamOpenAiCompatible(
+  providerLabel: string,
+  config: Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+  system: string,
+  userText: string,
+  document?: { pdfBase64: string },
+): AsyncGenerator<string> {
+  const baseUrl = config.baseUrl.replace(/\/+$/, '')
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), CHAT_PROVIDER_TIMEOUT_MS)
+  let response: Response
+  try {
+    response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${config.apiKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: userText },
+        ],
+        max_tokens: MAX_CHAT_TOKENS,
+        temperature: 0,
+        stream: true,
+      }),
+      signal: controller.signal,
+    })
+  } catch (reason) {
+    throw new AiProviderTransportError(providerLabel, reason instanceof Error ? reason.message : 'network error')
+  } finally {
+    clearTimeout(timer)
+  }
+
+  if (!response.ok || !response.body) {
+    const raw = await response.text().catch(() => '')
+    const reason = raw.slice(0, 200) || `HTTP ${response.status}`
+    throw new AiProviderTransportError(providerLabel, reason, response.status)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let sawDone = false
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data:')) continue
+        const payload = trimmed.slice(5).trim()
+        if (payload === '[DONE]') { sawDone = true; return }
+        const data = safeJson(payload)
+        if (!isRecord(data) || !Array.isArray(data.choices)) continue
+        const choice = data.choices[0]
+        if (!isRecord(choice) || !isRecord(choice.delta)) continue
+        const content = choice.delta.content
+        if (typeof content === 'string' && content) yield content
+      }
+    }
+  } catch (reason) {
+    throw new AiProviderTransportError(providerLabel, reason instanceof Error ? reason.message : 'stream interrupted')
+  }
+  if (!sawDone) throw new AiProviderTransportError(providerLabel, 'stream ended without [DONE]')
+}
+
 /** Google Gemini generateContent API — https://ai.google.dev/api/generate-content */
 async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] }, system: string, userText: string, document?: { pdfBase64: string }, format: 'json' | 'text' = 'json'): Promise<{ text: string; model: string }> {
   const ai = new GoogleGenAI({ apiKey: config.apiKey })
@@ -217,7 +385,7 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
           maxOutputTokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
           temperature: 0,
           ...(format === 'text' ? { abortSignal: AbortSignal.timeout(CHAT_PROVIDER_TIMEOUT_MS) } : {}),
-          ...(format === 'text' && model.startsWith('gemini-3.') ? { thinkingConfig: { thinkingLevel: 'low' as const } } : {}),
+          ...(format === 'text' && model.startsWith('gemini-3.') ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
           responseMimeType: format === 'json' ? 'application/json' : 'text/plain',
           ...(format === 'json' ? { responseSchema: {
             type: Type.ARRAY,
@@ -290,8 +458,66 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
   )
 }
 
+/**
+ * Streams a chat reply from the Gemini generateContent API. The SDK's
+ * `generateContentStream` yields `GenerateContentResponse` objects whose
+ * `.text` holds the next chunk; concatenating them gives the full reply.
+ *
+ * Only the primary model is used for chat — the multi-model cascade is for
+ * structured generation, where a wrong shape costs a whole round trip.
+ */
+async function* streamGemini(
+  config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] },
+  system: string,
+  userText: string,
+  document?: { pdfBase64: string },
+): AsyncGenerator<string> {
+  const ai = new GoogleGenAI({ apiKey: config.apiKey })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), CHAT_PROVIDER_TIMEOUT_MS)
+  let empty = true
+  try {
+    const stream = await ai.models.generateContentStream({
+      model: config.model,
+      contents: [{
+        role: 'user',
+        parts: [
+          ...(document ? [{ inlineData: { mimeType: 'application/pdf', data: document.pdfBase64 } }] : []),
+          { text: `${system}\n\n${userText}` },
+        ],
+      }],
+      config: {
+        maxOutputTokens: MAX_CHAT_TOKENS,
+        temperature: 0,
+        abortSignal: controller.signal,
+        // Gemini 3.x thinks before it answers; for a chat reply the student
+        // wants words on screen fast, so cap thinking at minimal.
+        ...(config.model.startsWith('gemini-3.') ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
+        responseMimeType: 'text/plain',
+      },
+    })
+    for await (const chunk of stream) {
+      const text = chunk.text ?? ''
+      if (text) { empty = false; yield text }
+    }
+  } catch (error) {
+    if (error instanceof AiProviderTransportError) throw error
+    const detail = error instanceof Error ? error.message : String(error)
+    const statusMatch = /(?:status|code)\s*[:=]?\s*(\d{3})/i.exec(detail)
+    const status = statusMatch ? Number(statusMatch[1]) : undefined
+    const lower = detail.toLowerCase()
+    const code = status === 401 || status === 403 || lower.includes('api key not valid') || lower.includes('invalid api key')
+      ? 'AI_BAD_KEY'
+      : status === 429 || status === 503 ? 'AI_OVERLOADED' : 'AI_FAILED'
+    throw new AiProviderTransportError('Gemini', detail, status, code)
+  } finally {
+    clearTimeout(timer)
+  }
+  if (empty) throw new AiProviderTransportError('Gemini', 'the model returned no text')
+}
+
 function makeProvider(input: ProviderInput): AiProvider {
-  return {
+  const provider: AiProvider = {
     id: input.id,
     label: input.config.label,
     model: input.config.model,
@@ -304,6 +530,8 @@ function makeProvider(input: ProviderInput): AiProvider {
         format,
       ),
   }
+  if (!input.stream) return provider
+  return { ...provider, completeStream: input.stream.bind(undefined, { apiKey: input.config.apiKey!, model: input.config.model, baseUrl: input.config.baseUrl!, fallbackModels: input.config.fallbackModels }) }
 }
 
 /**
