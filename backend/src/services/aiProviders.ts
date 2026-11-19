@@ -544,7 +544,7 @@ export function getConfiguredProviders(): AiProvider[] {
   const configured: AiProvider[] = []
 
   if (providers.anthropic.apiKey) {
-    configured.push(makeProvider({ id: 'anthropic', config: providers.anthropic, complete: completeAnthropic }))
+    configured.push(makeProvider({ id: 'anthropic', config: providers.anthropic, complete: completeAnthropic, stream: streamAnthropic }))
   }
   if (providers.openai.apiKey) {
     configured.push(makeProvider({
@@ -556,6 +556,12 @@ export function getConfiguredProviders(): AiProvider[] {
         system,
         userText,
         format,
+      ),
+      stream: (config, system, userText) => streamOpenAiCompatible(
+        providers.openai.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
       ),
     }))
   }
@@ -569,6 +575,12 @@ export function getConfiguredProviders(): AiProvider[] {
         system,
         userText,
         format,
+      ),
+      stream: (config, system, userText) => streamOpenAiCompatible(
+        providers.grok.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
       ),
     }))
   }
@@ -587,10 +599,16 @@ export function getConfiguredProviders(): AiProvider[] {
         userText,
         format,
       ),
+      stream: (config, system, userText) => streamOpenAiCompatible(
+        providers.groq.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
+      ),
     }))
   }
   if (providers.gemini.apiKey) {
-    configured.push(makeProvider({ id: 'gemini', config: providers.gemini, complete: completeGemini }))
+    configured.push(makeProvider({ id: 'gemini', config: providers.gemini, complete: completeGemini, stream: streamGemini }))
   }
   if (providers.custom.apiKey && providers.custom.baseUrl) {
     configured.push(makeProvider({
@@ -602,6 +620,12 @@ export function getConfiguredProviders(): AiProvider[] {
         system,
         userText,
         format,
+      ),
+      stream: (config, system, userText) => streamOpenAiCompatible(
+        providers.custom.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
       ),
     }))
   }

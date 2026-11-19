@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
-import { AiNotConfiguredError, chatWithStudyMaterial, GenerationFailedError, type StudyChatMessage } from '../services/ai.service.js'
+import { AiNotConfiguredError, chatWithStudyMaterial, chatWithStudyMaterialStream, GenerationFailedError, type StudyChatMessage } from '../services/ai.service.js'
 import { extractText } from '../utils/extractText.js'
 import { assertDocumentSignature, fileExtension } from '../utils/file.js'
 import { AiCreditsExhaustedError, completeAiCredit, getAiCreditQuota, refundAiCredit, reserveAiCredit } from '../services/aiCredits.service.js'
@@ -56,11 +56,20 @@ export async function askLearnTutor(request: Request, response: Response) {
   let creditReservation: { id: string } | undefined
   try {
     creditReservation = await reserveAiCredit(profile.id, 'LEARN', creditRequestId)
-    const answer = await chatWithStudyMaterial({ text: text || undefined, topic: topic || undefined, question, history })
+    response.setHeader('Content-Type', 'text/event-stream')
+    response.setHeader('Cache-Control', 'no-cache')
+    response.setHeader('Connection', 'keep-alive')
+    let fullAnswer = ''
+    for await (const chunk of chatWithStudyMaterialStream({ text: text || undefined, topic: topic || undefined, question, history })) {
+      response.write(`data: ${JSON.stringify({ content: chunk })}\n\n`)
+      fullAnswer += chunk
+    }
+    response.write(`data: ${JSON.stringify({ quota: await getAiCreditQuota(profile.id) })}\n\n`)
+    response.write('data: [DONE]\n\n')
+    response.end()
     await completeAiCredit(creditReservation.id)
     try { await recordMissionAction(profile.id, 'LEARN_MESSAGE_SENT') }
     catch (reason) { console.error('[missions] Could not record completed tutor message:', reason) }
-    response.json({ answer, quota: await getAiCreditQuota(profile.id) })
   } catch (reason) {
     if (creditReservation) await refundAiCredit(creditReservation.id)
     if (reason instanceof AiCreditsExhaustedError) {
