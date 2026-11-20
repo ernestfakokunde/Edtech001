@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowUp, FileText, Lightbulb, LoaderCircle, Paperclip, RotateCcw, Sparkles } from "lucide-react";
-import { askLearnTutor, errorMessage, uploadFileProblem, uploadLearnDocument, type AiCreditQuota, type LearnChatMessage } from "../lib/api";
+import { ArrowUp, FileText, Lightbulb, Paperclip, RotateCcw, Sparkles } from "lucide-react";
+import { askLearnTutor, errorMessage, getLearnChat, listLearnChats, uploadFileProblem, uploadLearnDocument, type AiCreditQuota, type LearnChatMessage, type SavedLearnChat } from "../lib/api";
 
 const DOCUMENT_SUGGESTIONS = ["Summarise the key ideas", "Explain a difficult concept", "Quiz me on this material"];
 const TOPIC_SUGGESTIONS = ["Give me a learning roadmap", "Ask me a warm-up question"];
 
 function displayTutorText(content: string) {
-  return content.replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{2,}/g, "\n\n").trim();
+  return content
+    .replace(/\r\n?/g, "\n")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/^\s*#+\s*/gm, "")
+    .replace(/^\s*\*\s+/gm, "• ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{2,}/g, "\n\n")
+    .trim();
 }
 
 export function LearnWithAI() {
@@ -22,6 +30,8 @@ export function LearnWithAI() {
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
   const [quota, setQuota] = useState<AiCreditQuota | null>(null);
+  const [chatId, setChatId] = useState<string | undefined>();
+  const [savedChats, setSavedChats] = useState<SavedLearnChat[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -33,6 +43,31 @@ export function LearnWithAI() {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, busy]);
 
+  useEffect(() => {
+    listLearnChats().then(({ chats }) => setSavedChats(chats)).catch(() => undefined);
+  }, []);
+
+  async function openSavedChat(id: string) {
+    setError("");
+    setBusy(true);
+    try {
+      const { chat } = await getLearnChat(id);
+      setChatId(chat.id);
+      setFileTitle(chat.documentName ?? "");
+      setActiveTopic(chat.topic ?? "");
+      setDocumentText(chat.documentText ?? "");
+      setMessages(chat.messages);
+      setQuota(null);
+    } catch (reason) { setError(errorMessage(reason, "We could not open that chat. Please try again.")); }
+    finally { setBusy(false); }
+  }
+
+  function startNewChat() {
+    setChatId(undefined);
+    setFileTitle(""); setActiveTopic(""); setTopicInput(""); setDocumentText("");
+    setMessages([]); setQuestion(""); setError(""); setTruncated(false);
+  }
+
   async function chooseFile(file?: File) {
     if (!file) return;
     setError("");
@@ -42,6 +77,7 @@ export function LearnWithAI() {
     setUploading(true);
     try {
       const result = await uploadLearnDocument(file);
+      setChatId(undefined);
       setFileTitle(result.title);
       setActiveTopic("");
       setDocumentText(result.documentText);
@@ -57,6 +93,7 @@ export function LearnWithAI() {
     const topic = topicInput.trim();
     if (topic.length < 2) { setError("Enter a topic with at least two characters."); return; }
     setError("");
+    setChatId(undefined);
     setActiveTopic(topic);
     setFileTitle("");
     setDocumentText("");
@@ -67,12 +104,14 @@ export function LearnWithAI() {
     setTopicInput("");
     setBusy(true);
     try {
+      setMessages((current) => [...current, { role: "assistant", content: "" }]);
       const result = await askLearnTutor({
         topic,
         question: topic,
         history: [],
-      });
-      setMessages((current) => [...current, { role: "assistant", content: result.answer }]);
+      }, (chunk) => setMessages((current) => current.map((message, index) => index === current.length - 1 && message.role === "assistant" ? { ...message, content: message.content + chunk } : message)));
+      setChatId(result.chatId);
+      void listLearnChats().then(({ chats }) => setSavedChats(chats)).catch(() => undefined);
       setQuota(result.quota);
     } catch (reason) {
       setMessages([]);
@@ -84,15 +123,19 @@ export function LearnWithAI() {
     event?.preventDefault();
     const asked = (suggestion ?? question).trim();
     if (!asked || (!documentText && !activeTopic) || busy) return;
-    const history = messages.slice(-8);
+    // Keep every turn within the backend's request validation limit. Tutor
+    // replies can be longer than that after streaming a full explanation.
+    const history = messages.slice(-20).map((message) => ({ ...message, content: message.content.slice(0, 2000) }));
     setQuestion(""); setError(""); setBusy(true);
     setMessages((current) => [...current, { role: "user", content: asked }]);
     try {
-      const result = await askLearnTutor({ documentText: documentText || undefined, topic: activeTopic || undefined, question: asked, history });
-      setMessages((current) => [...current, { role: "assistant", content: result.answer }]);
+      setMessages((current) => [...current, { role: "assistant", content: "" }]);
+      const result = await askLearnTutor({ documentText: documentText || undefined, documentName: fileTitle || undefined, topic: activeTopic || undefined, question: asked, history, chatId }, (chunk) => setMessages((current) => current.map((message, index) => index === current.length - 1 && message.role === "assistant" ? { ...message, content: message.content + chunk } : message)));
+      setChatId(result.chatId);
+      void listLearnChats().then(({ chats }) => setSavedChats(chats)).catch(() => undefined);
       setQuota(result.quota);
     } catch (reason) {
-      setMessages((current) => current.slice(0, -1));
+      setMessages((current) => current.slice(0, -1).filter((message, index, all) => !(index === all.length - 1 && message.role === "user")));
       setQuestion(asked);
       setError(errorMessage(reason, "Your tutor could not answer just now. Please try again."));
     } finally { setBusy(false); }
@@ -107,18 +150,38 @@ export function LearnWithAI() {
   }
 
   function resetSession() {
-    setFileTitle(""); setActiveTopic(""); setTopicInput(""); setDocumentText("");
-    setMessages([]); setQuestion(""); setError(""); setTruncated(false);
+    startNewChat();
   }
 
   return (
     <main
-      className={`learn-chat-page flex min-h-[calc(100dvh-64px)] flex-col ${dragging ? "bg-pale" : "bg-wash"}`}
+      className={`learn-chat-page flex min-h-[calc(100dvh-64px)] justify-center gap-16 px-[clamp(10px,3vw,24px)] ${dragging ? "bg-pale" : "bg-wash"}`}
       onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
     >
-      <section className="mx-auto flex w-full max-w-[820px] flex-1 flex-col px-[clamp(14px,4vw,28px)]">
+      <aside className="flex w-[210px] shrink-0 flex-col border-r border-line py-20 max-760:hidden" aria-label="Past chats">
+        <button className="mb-16 flex min-h-38 items-center justify-center gap-7 rounded-10 border border-line bg-white px-10 text-11 font-semibold text-ink hover:border-brand hover:text-brand" onClick={startNewChat}><RotateCcw size={13} /> New chat</button>
+        <h2 className="mb-8 px-5 text-10 font-bold uppercase tracking-[.08em] text-muted">Recent chats</h2>
+        <nav className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+          {savedChats.map((chat) => <button key={chat.id} onClick={() => void openSavedChat(chat.id)} className={`rounded-9 px-9 py-8 text-left transition-colors hover:bg-white ${chat.id === chatId ? "bg-white text-brand shadow-sm" : "text-ink"}`}>
+            <span className="block truncate text-11 font-semibold">{chat.title}</span>
+            <span className="mt-3 block truncate text-9 text-muted">{chat.preview || "No messages yet"}</span>
+          </button>)}
+          {!savedChats.length && <p className="px-5 text-10 leading-150 text-muted">Your chats will appear here.</p>}
+        </nav>
+      </aside>
+      <section className="flex w-full max-w-[820px] flex-1 flex-col px-[clamp(10px,2vw,18px)]">
+        <details className="mb-8 rounded-10 border border-line bg-white px-11 py-8 md:hidden">
+          <summary className="cursor-pointer text-11 font-semibold text-ink">Past chats ({savedChats.length})</summary>
+          <div className="mt-8 flex max-h-180 flex-col gap-4 overflow-y-auto">
+            <button className="rounded-8 px-8 py-7 text-left text-11 font-semibold text-brand hover:bg-pale" onClick={startNewChat}>＋ New chat</button>
+            {savedChats.map((chat) => <button key={chat.id} onClick={() => void openSavedChat(chat.id)} className="rounded-8 px-8 py-7 text-left hover:bg-pale">
+              <span className="block truncate text-11 font-semibold text-ink">{chat.title}</span>
+              <span className="block truncate text-9 text-muted">{chat.preview}</span>
+            </button>)}
+          </div>
+        </details>
         {sessionTitle && <div className="learn-session-context">
           <div className="flex min-w-0 items-center gap-9">
             <span className="grid size-30 shrink-0 place-items-center rounded-9 bg-pale text-brand">{isTopicSession ? <Lightbulb size={15} /> : <FileText size={15} />}</span>
@@ -136,7 +199,7 @@ export function LearnWithAI() {
             </div>
           ) : (
             <div className="w-full space-y-20">
-              {messages.map((message, index) => (
+              {messages.map((message, index) => ({ message, index })).filter(({ message }) => !(busy && message.role === "assistant" && !message.content)).map(({ message, index }) => (
                 <article key={`${index}-${message.role}`} className={`flex items-start gap-10 ${message.role === "user" ? "justify-end" : ""}`}>
                   {message.role === "assistant" && <span className="grid size-30 shrink-0 place-items-center rounded-10 bg-pale text-brand"><Sparkles size={14} /></span>}
                   <div className={`max-w-[min(680px,86%)] whitespace-pre-line break-words text-13 leading-160 ${message.role === "user" ? "rounded-14 bg-brand px-14 py-10 text-white" : "pt-5 text-ink"}`}>
@@ -144,7 +207,7 @@ export function LearnWithAI() {
                   </div>
                 </article>
               ))}
-              {busy && <article className="flex items-start gap-10"><span className="grid size-30 shrink-0 place-items-center rounded-10 bg-pale text-brand"><Sparkles size={14} /></span><div className="flex items-center gap-8 pt-5 text-13 text-muted"><LoaderCircle className="animate-spin" size={15} /> Thinking...</div></article>}
+              {busy && <p className="learn-thinking m-0 flex items-center gap-9 pt-5 text-13 text-muted" role="status" aria-live="polite"><span className="learn-thinking-dots" aria-hidden="true"><i /><i /><i /></span><span>Thinking</span></p>}
               <div ref={bottom} />
             </div>
           )}

@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { PLAN_CATALOG, type PlanId } from '../config/plans.js'
-import { prisma } from '../lib/prisma.js'
+import { prisma, withConnectionRetry } from '../lib/prisma.js'
 
 export type CreditPlan = PlanId
 export type CreditFeature = 'LEARN' | 'QUIZ' | 'FLASHCARD'
@@ -67,7 +67,7 @@ export async function getAiCreditQuota(profileId: string) {
 
 export async function reserveAiCredit(profileId: string, feature: CreditFeature, requestId: string) {
   try {
-    return await prisma.$transaction(async (tx) => {
+    return await withConnectionRetry(() => prisma.$transaction(async (tx) => {
       const account = await tx.profile.findUnique({ where: { id: profileId }, select: { subscriptionPlan: true, tier: true, premiumUntil: true } })
       if (!account) throw new Error('PROFILE_NOT_FOUND')
       const plan = effectivePlan(account)
@@ -85,11 +85,8 @@ export async function reserveAiCredit(profileId: string, feature: CreditFeature,
       const limit = AI_CREDIT_LIMITS[plan] + (bonus._sum.bonusCredits ?? 0)
       if ((usage._sum.units ?? 0) >= limit) throw new AiCreditsExhaustedError()
       return tx.aiCreditUsage.create({ data: { profileId, monthKey: currentMonth, feature, requestId, status: 'RESERVED' } })
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 10000, timeout: 15000 }))
   } catch (reason) {
-    if (reason instanceof Prisma.PrismaClientKnownRequestError && reason.code === 'P2034') {
-      throw new AiCreditsExhaustedError()
-    }
     throw reason
   }
 }

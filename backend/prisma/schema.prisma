@@ -98,6 +98,23 @@ model Profile {
   savedCourses      ProfileCourse[]
   dailyLoginRewards DailyLoginReward[]
   payments          Payment[]
+  learnChats        LearnChat[]
+}
+
+model LearnChat {
+  id           String   @id @default(cuid())
+  profileId    String
+  title        String   @db.VarChar(120)
+  topic        String?  @db.VarChar(200)
+  documentName String?  @db.VarChar(255)
+  documentText String?  @db.Text
+  messages     Json     @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, updatedAt])
 }
 
 model Payment {

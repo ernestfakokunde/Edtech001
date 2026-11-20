@@ -10,7 +10,9 @@ if (process.env.NODE_ENV !== 'production') {
 
 function isConnectionError(error: unknown) {
   return error instanceof Prisma.PrismaClientInitializationError
-    || (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2024')
+    // P2028 can be returned when a pooled connection drops an interactive
+    // transaction. Retrying idempotent operations is safe for this case.
+    || (error instanceof Prisma.PrismaClientKnownRequestError && ['P2024', 'P2028', 'P2034'].includes(error.code))
     || (error instanceof Error && /Can't reach database server|P100[1-3]|P1017|connection.*(?:failed|closed|timed out)/i.test(error.message))
 }
 

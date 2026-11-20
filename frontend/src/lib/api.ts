@@ -417,6 +417,13 @@ export async function generateStudySet(input: { file: File; courseId?: string; t
 }
 
 export type LearnChatMessage = { role: "user" | "assistant"; content: string }
+export type SavedLearnChat = { id: string; title: string; updatedAt: string; preview?: string }
+export async function listLearnChats() {
+  return request<{ chats: SavedLearnChat[] }>("/api/learn/history", { method: "GET" })
+}
+export async function getLearnChat(id: string) {
+  return request<{ chat: SavedLearnChat & { topic: string | null; documentName: string | null; documentText: string | null; messages: LearnChatMessage[] } }>(`/api/learn/history/${encodeURIComponent(id)}`, { method: "GET" })
+}
 export async function uploadLearnDocument(file: File): Promise<{ title: string; documentText: string; truncated: boolean }> {
   const problem = uploadFileProblem(file)
   if (problem) throw new Error(problem)
@@ -432,8 +439,52 @@ export async function uploadLearnDocument(file: File): Promise<{ title: string; 
   if (!body.documentText || !body.title) throw new Error("We could not read this PDF. Try another file.")
   return { title: body.title, documentText: body.documentText, truncated: Boolean(body.truncated) }
 }
-export function askLearnTutor(input: { documentText?: string; topic?: string; question: string; history: LearnChatMessage[] }) {
-  return request<{ answer: string; quota: AiCreditQuota }>("/api/learn/chat", { method: "POST", body: JSON.stringify(input) })
+export async function askLearnTutor(
+  input: { documentText?: string; documentName?: string; topic?: string; question: string; history: LearnChatMessage[]; chatId?: string },
+  onChunk: (chunk: string) => void,
+): Promise<{ quota: AiCreditQuota; chatId: string }> {
+  const send = async () => fetchWithOfflineMessage(`${API_URL}/api/learn/chat`, {
+    method: "POST", credentials: "include",
+    headers: { "content-type": "application/json", [CSRF_HEADER]: await getCsrfToken() },
+    body: JSON.stringify(input),
+  })
+  let response = await send()
+  if (response.status === 403) { csrfToken = null; response = await send() }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({})) as { message?: string }
+    throw apiError(response, body.message)
+  }
+  if (!response.body) throw new Error("Your tutor could not start a response. Please try again.")
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  let quota: AiCreditQuota | undefined
+  let chatId: string | undefined
+  let streamError: string | undefined
+  const consume = (event: string) => {
+    const data = event.split("\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("\n")
+    if (!data || data === "[DONE]") return
+    const message = JSON.parse(data) as { content?: string; quota?: AiCreditQuota; chatId?: string; error?: string }
+    if (typeof message.content === "string") onChunk(message.content)
+    if (message.quota) quota = message.quota
+    if (message.chatId) chatId = message.chatId
+    if (message.error) streamError = message.error
+  }
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, "\n")
+      const events = buffer.split("\n\n")
+      buffer = events.pop() ?? ""
+      for (const event of events) consume(event)
+      if (done) break
+    }
+    if (buffer.trim()) consume(buffer)
+  } finally { reader.releaseLock() }
+  if (streamError) throw new Error(streamError)
+  if (!quota || !chatId) throw new Error("The tutor response ended before it was complete. Please try again.")
+  return { quota, chatId }
 }
 
 /**
