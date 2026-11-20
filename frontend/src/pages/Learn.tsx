@@ -164,9 +164,9 @@ export function LearnWithAI() {
         <button className="mb-16 flex min-h-38 items-center justify-center gap-7 rounded-10 border border-line bg-white px-10 text-11 font-semibold text-ink hover:border-brand hover:text-brand" onClick={startNewChat}><RotateCcw size={13} /> New chat</button>
         <h2 className="mb-8 px-5 text-10 font-bold uppercase tracking-[.08em] text-muted">Recent chats</h2>
         <nav className="flex min-h-0 flex-col gap-4 overflow-y-auto">
-          {savedChats.map((chat) => <button key={chat.id} onClick={() => void openSavedChat(chat.id)} className={`rounded-9 px-9 py-8 text-left transition-colors hover:bg-white ${chat.id === chatId ? "bg-white text-brand shadow-sm" : "text-ink"}`}>
+          {savedChats.map((chat) => <button key={chat.id} onClick={() => void openSavedChat(chat.id)} className={`rounded-9 border-2 border-line px-9 py-8 text-left transition-colors hover:border-brand hover:bg-white ${chat.id === chatId ? "bg-white text-brand shadow-sm" : "text-ink"}`}>
             <span className="block truncate text-11 font-semibold">{chat.title}</span>
-            <span className="mt-3 block truncate text-9 text-muted">{chat.preview || "No messages yet"}</span>
+            <span className="mt-3 block truncate text-10 text-muted">{chat.preview || "No messages yet"}</span>
           </button>)}
           {!savedChats.length && <p className="px-5 text-10 leading-150 text-muted">Your chats will appear here.</p>}
         </nav>
@@ -176,9 +176,9 @@ export function LearnWithAI() {
           <summary className="cursor-pointer text-11 font-semibold text-ink">Past chats ({savedChats.length})</summary>
           <div className="mt-8 flex max-h-180 flex-col gap-4 overflow-y-auto">
             <button className="rounded-8 px-8 py-7 text-left text-11 font-semibold text-brand hover:bg-pale" onClick={startNewChat}>＋ New chat</button>
-            {savedChats.map((chat) => <button key={chat.id} onClick={() => void openSavedChat(chat.id)} className="rounded-8 px-8 py-7 text-left hover:bg-pale">
+            {savedChats.map((chat) => <button key={chat.id} onClick={() => void openSavedChat(chat.id)} className="rounded-8 border-2 border-line px-8 py-7 text-left hover:border-brand hover:bg-pale">
               <span className="block truncate text-11 font-semibold text-ink">{chat.title}</span>
-              <span className="block truncate text-9 text-muted">{chat.preview}</span>
+              <span className="block truncate text-10 text-muted">{chat.preview}</span>
             </button>)}
           </div>
         </details>
