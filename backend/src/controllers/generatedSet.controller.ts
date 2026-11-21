@@ -27,8 +27,8 @@ async function rollbackPersonalPaper(paperId: string, storedPath?: string) {
   try { await prisma.paper.delete({ where: { id: paperId } }) } catch { /* row already gone */ }
 }
 
-function setTitle(course: { code: string }, kind: 'FLASHCARD' | 'QUIZ', grouped: boolean) {
-  const label = kind === 'QUIZ' ? 'Quiz' : 'Flashcards'
+function setTitle(course: { code: string }, kind: 'FLASHCARD' | 'QUIZ' | 'THEORY', grouped: boolean) {
+  const label = kind === 'QUIZ' ? 'Quiz' : kind === 'THEORY' ? 'Theory practice' : 'Flashcards'
   const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   return `${grouped ? course.code : 'Quick practice'} ${label} · ${date}`
 }
@@ -130,7 +130,7 @@ export async function listQuizAttempts(request: Request, response: Response) {
 export async function listSavedQuizzes(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
   const sets = await prisma.generatedSet.findMany({
-    where: { userId: profile.id, type: 'QUIZ' },
+    where: { userId: profile.id, type: { in: ['QUIZ', 'THEORY'] } },
     orderBy: { createdAt: 'desc' },
     include: {
       course: { select: { code: true, title: true } },
@@ -146,7 +146,7 @@ export async function getSavedQuiz(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
   const setId = Array.isArray(request.params.setId) ? request.params.setId[0] : request.params.setId
   const set = await prisma.generatedSet.findFirst({
-    where: { id: setId, userId: profile.id, type: 'QUIZ' },
+    where: { id: setId, userId: profile.id, type: { in: ['QUIZ', 'THEORY'] } },
     include: {
       course: { select: { code: true, title: true } },
       items: { orderBy: { position: 'asc' }, include: { question: true } },
@@ -179,7 +179,7 @@ export async function clearQuizAttempts(request: Request, response: Response) {
 export async function generateStudySet(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
   const file = (request as AuthenticatedRequest & { file?: Express.Multer.File }).file
-  const body = request.body as Partial<{ courseId: string; type: 'FLASHCARD' | 'QUIZ'; length: string; timePerQuestion: string; documentText: string; documentName: string }>
+  const body = request.body as Partial<{ courseId: string; type: 'FLASHCARD' | 'QUIZ' | 'THEORY'; length: string; timePerQuestion: string; documentText: string; documentName: string }>
   const suppliedText = typeof body.documentText === 'string' ? body.documentText.trim() : ''
   if (suppliedText.length > 60_000) {
     response.status(413).json({ message: 'This study material is too large to create a quiz from in chat. Try a shorter document.' })
@@ -195,7 +195,7 @@ export async function generateStudySet(request: Request, response: Response) {
 
   const { courseId, type, length, timePerQuestion } = body
 
-  if ((type !== 'FLASHCARD' && type !== 'QUIZ') || !length) {
+  if ((type !== 'FLASHCARD' && type !== 'QUIZ' && type !== 'THEORY') || !length) {
     response.status(400).json({ message: 'type and length are required.' })
     return
   }
@@ -273,7 +273,7 @@ export async function generateStudySet(request: Request, response: Response) {
   const creditRequestId = randomUUID()
   let creditReservation: { id: string } | undefined
   try {
-    creditReservation = await reserveAiCredit(profile.id, type === 'QUIZ' ? 'QUIZ' : 'FLASHCARD', creditRequestId)
+    creditReservation = await reserveAiCredit(profile.id, type === 'FLASHCARD' ? 'FLASHCARD' : 'QUIZ', creditRequestId)
   } catch (reason) {
     if (reason instanceof AiCreditsExhaustedError) {
       await rollbackPersonalPaper(paper.id, path)
@@ -295,7 +295,7 @@ export async function generateStudySet(request: Request, response: Response) {
       kind: type,
       length: parsedLength,
       ...(file && extension === 'pdf' && hasGeminiPdf ? { pdfBase64: file.buffer.toString('base64') } : {}),
-    })
+    }, type === 'THEORY' ? { provider: 'nvidia', fallbackProviders: ['openrouter'] } : {})
   } catch (reason) {
     // Server-side detail stays here, keyed by the same code the client receives
     // so a Render log line can be matched to what the UI showed.
@@ -306,7 +306,7 @@ export async function generateStudySet(request: Request, response: Response) {
     recordGenerationFailure({
       code,
       requested: null,
-      requestedItems: `${parsedLength} × ${type === 'QUIZ' ? 'quiz' : 'flashcards'}`,
+      requestedItems: `${parsedLength} × ${type === 'QUIZ' ? 'quiz' : type === 'THEORY' ? 'theory questions' : 'flashcards'}`,
       detail: reason instanceof Error ? reason.message : String(reason),
     })
     await rollbackPersonalPaper(paper.id, path)
@@ -334,7 +334,7 @@ export async function generateStudySet(request: Request, response: Response) {
         courseId: course.id,
         type,
         title: typeof body.documentName === 'string' && body.documentName.trim()
-          ? `${body.documentName.trim().replace(/\.(?:pdf|docx?)$/i, '').slice(0, 90)} quiz`
+          ? `${body.documentName.trim().replace(/\.(?:pdf|docx?)$/i, '').slice(0, 90)} ${type === 'THEORY' ? 'theory practice' : type === 'QUIZ' ? 'quiz' : 'flashcards'}`
           : setTitle(course, type, Boolean(courseId)),
         requestedLength: parsedLength,
         ...(parsedTimePerQuestion ? { timePerQuestion: parsedTimePerQuestion } : {}),
@@ -358,7 +358,7 @@ export async function generateStudySet(request: Request, response: Response) {
       },
     })
     if (creditReservation) await completeAiCredit(creditReservation.id)
-    try { await recordMissionAction(profile.id, type === 'QUIZ' ? 'QUIZ_CREATED' : 'FLASHCARD_SET_CREATED') }
+    try { await recordMissionAction(profile.id, type === 'FLASHCARD' ? 'FLASHCARD_SET_CREATED' : 'QUIZ_CREATED') }
     catch (reason) { console.error('[missions] Could not record completed study set:', reason) }
     response.status(201).json({ set })
   } catch (reason) {

@@ -6,6 +6,7 @@ import {
   FileText,
   FlipHorizontal2,
   Loader2,
+  PenLine,
   Plus,
   Sparkles,
   Upload,
@@ -27,6 +28,7 @@ import {
 import type { Mode } from "../types";
 
 const LENGTH_OPTIONS = [5, 10, 15, 20];
+const QUIZ_LENGTH_OPTIONS = [...LENGTH_OPTIONS, 30, 40, 60];
 const TIME_OPTIONS = [30, 60] as const;
 
 type CourseOption = { id: string; code: string; title: string };
@@ -130,7 +132,7 @@ export function GenerateFlow({
       const set = await generateStudySet({
         file: selectedFile,
         ...(course ? { courseId: course.id } : {}),
-        type: mode === "quiz" ? "QUIZ" : "FLASHCARD",
+        type: mode === "flashcards" ? "FLASHCARD" : mode === "theory" ? "THEORY" : "QUIZ",
         length,
         ...(mode === "quiz" ? { timePerQuestion } : {}),
       });
@@ -166,15 +168,14 @@ export function GenerateFlow({
 
   if (busy) {
     return (
-      <main className="mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere] flex min-h-[60vh] items-center justify-center">
-        <div className="grid w-full max-w-[440px] justify-items-center gap-10 rounded-18 border border-line bg-white px-28 py-34 text-center text-muted shadow-[0_22px_40px_#0f172a12]">
-          <span className="mb-4 grid size-54 place-items-center rounded-14 bg-pale text-brand"><Loader2 size={28} className="animate-spin" /></span>
-          <strong className="font-grotesk text-18 font-bold text-ink">Generating your {mode === "quiz" ? "quiz" : "flashcard"} set</strong>
-          <span className="max-w-[300px] text-12 leading-160">{mode === "quiz"
-            ? "Quiz generation usually takes less than a minute. We’re reading your material, writing exam-style questions, and checking the answer choices. Larger files may take a little longer, so please keep this page open."
-            : `We’re reading your material and creating ${length} concise study cards. Smaller sets finish faster.`}</span>
-          <div className="mt-12 flex flex-wrap justify-center gap-8 [&>span]:rounded-full [&>span]:bg-[#f1f5fb] [&>span]:px-10 [&>span]:py-4 [&>span]:text-10 [&>span]:font-bold [&>span]:text-muted [&>.active]:bg-brand [&>.active]:text-white"><span className="active">Upload material</span><span>Review key topics</span><span className="max-w-[300px] text-12 leading-160">{mode === "quiz" ? "Build quiz and answers" : "Create study cards"}</span></div>
-        </div>
+      <main className="generation-loading-page mx-auto w-full max-w-[1020px] px-[clamp(20px,4vw,40px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18">
+        <section className="generation-loading" role="status" aria-live="polite" aria-label={`Generating ${mode === "flashcards" ? "flashcards" : mode === "theory" ? "theory practice" : "a quiz"}`}>
+          <div className={`generation-orb generation-orb-${mode}`} aria-hidden="true"><span /><span /><span /></div>
+          <h1 className="generation-loading-title" key={mode}>
+            <span>Creating {mode === "flashcards" ? "flashcards" : mode === "theory" ? "theory practice" : "your quiz"}</span>
+            <i aria-hidden="true" />
+          </h1>
+        </section>
       </main>
     );
   }
@@ -233,17 +234,21 @@ export function GenerateFlow({
         />
       </label>
 
-      <div className="my-20 grid grid-cols-2 gap-12 max-680:grid-cols-1">
+      <div className="my-20 grid grid-cols-3 gap-12 max-860:grid-cols-2 max-680:grid-cols-1">
         {([
           ["flashcards", "Flashcards", "Flip through key questions and answers at your pace", FlipHorizontal2],
           ["quiz", "Quiz", "Timed multiple-choice practice with a score at the end", Check],
+          ["theory", "Theory", "Write your own answers, then compare with a model answer", PenLine],
         ] as const).map(([value, title, description, Icon]) => (
           <button
             type="button"
             aria-pressed={mode === value}
             className={`choice-card grid cursor-pointer gap-8 rounded-14 border p-17 text-left text-ink transition hover:-translate-y-2 hover:shadow-[0_12px_24px_#6d4cc214] [&>strong]:font-grotesk [&>strong]:text-15 [&>strong]:font-bold [&>small]:text-11 [&>small]:leading-150 [&>small]:text-muted [&_.choice-icon]:grid [&_.choice-icon]:size-38 [&_.choice-icon]:place-items-center [&_.choice-icon]:rounded-10 [&_.choice-icon]:bg-pale [&_.choice-icon]:text-brand`}
             key={value}
-            onClick={() => setMode(value)}
+            onClick={() => {
+              if (value === "flashcards" && !LENGTH_OPTIONS.includes(length)) setLength(20);
+              setMode(value);
+            }}
           >
             <span className={`grid size-38 place-items-center rounded-10 ${mode === value ? "bg-brand text-white" : "bg-pale text-brand"}`}><Icon size={19} /></span>
             <strong>{title}</strong>
@@ -253,13 +258,14 @@ export function GenerateFlow({
       </div>
 
       {mode === "quiz" && <p className="quiz-note -mt-5 mb-18 rounded-r-9 border-l-[3px] px-13 py-11 text-11 leading-[1.55]">Each question has four answer choices. Your answer key and explanations are saved with the quiz, so you can review them after you finish.</p>}
+      {mode === "theory" && <p className="quiz-note -mt-5 mb-18 rounded-r-9 border-l-[3px] px-13 py-11 text-11 leading-[1.55]">Write your answer first, then reveal a model answer and marking points to review it yourself.</p>}
 
       <div className="generation-length-control mb-18 [&>label]:mb-7 [&>label]:block [&>label]:text-12 [&>label]:font-bold [&>small]:mt-6 [&>small]:block [&>small]:text-11 [&>small]:text-muted">
         <div className="generation-length-heading"><label>Set length</label><span>Choose how many questions or cards to practise.</span></div>
         <div className="generation-length-options" role="group" aria-label="Choose set length">
-          {LENGTH_OPTIONS.map((option) => (
+          {(mode === "flashcards" ? LENGTH_OPTIONS : QUIZ_LENGTH_OPTIONS).map((option) => (
             <button key={option} type="button" aria-pressed={length === option} className={`option-pill ${length === option ? "selected" : ""}`} onClick={() => setLength(option)}>
-              <strong>{option}</strong><small>{mode === "quiz" ? "questions" : "cards"}</small>
+              <strong>{option}</strong><small>{mode === "flashcards" ? "cards" : "questions"}</small>
             </button>
           ))}
         </div>
@@ -294,16 +300,16 @@ export function GenerateFlow({
           disabled={!selectedFile || fileProblem !== null || quota.remaining === 0 || pdfBusy}
           onClick={() => void submit()}
         >
-          <Sparkles size={16} /> Create {mode === "quiz" ? "quiz" : "flashcards"}
+          <Sparkles size={16} /> Create {mode === "flashcards" ? "flashcards" : mode === "theory" ? "theory practice" : "quiz"}
         </button>
-        <button
+        {mode === "quiz" && <button
           type="button"
           className="inline-flex min-h-40 w-fit items-center justify-center justify-self-center gap-7 rounded-9 border border-line bg-transparent px-14 text-12 font-bold text-brand transition-colors hover:border-brand hover:bg-pale disabled:cursor-not-allowed disabled:opacity-45"
           disabled={!selectedFile || fileProblem !== null || quota.remaining === 0 || busy || pdfBusy}
           onClick={() => void downloadQuestionPaper()}
         >
           <Download size={16} /> {pdfBusy ? "Preparing question paper…" : `View questions & save as PDF (${length})`}
-        </button>
+        </button>}
       </div>
     </PageFrame>
   );

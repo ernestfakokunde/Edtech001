@@ -11,6 +11,7 @@ import {
   PersonalPractice,
   Flashcards,
   Quiz,
+  TheoryPractice,
   Results,
   QuestionPaper,
 } from "./pages/Study";
@@ -40,6 +41,7 @@ const protectedRoutes: Route[] = [
   "generate",
   "flashcards",
   "quiz",
+  "theory",
   "results",
   "history",
   "rewards",
@@ -53,6 +55,7 @@ const protectedRoutes: Route[] = [
   "admin-promo",
   "admin-submissions",
   "admin-activity",
+  "admin-ai",
 ];
 
 // Keep the repository implementation in place while the feature is paused.
@@ -66,6 +69,7 @@ const adminRoutes: Route[] = [
   "admin-promo",
   "admin-submissions",
   "admin-activity",
+  "admin-ai",
 ];
 
 /* Page titles. The scaffold shipped `<title>frontend</title>`, and because the
@@ -91,6 +95,7 @@ const ROUTE_TITLES: Record<Route, string> = {
   paper: "Question paper",
   flashcards: "Flashcards",
   quiz: "Quiz",
+  theory: "Theory practice",
   results: "Quiz results",
   history: "Past results",
   rewards: "Rewards",
@@ -104,6 +109,7 @@ const ROUTE_TITLES: Record<Route, string> = {
   "admin-promo": "Promo codes",
   "admin-submissions": "Submissions",
   "admin-activity": "Activity",
+  "admin-ai": "AI providers",
 };
 
 function adminSection(route: Route): string {
@@ -114,6 +120,7 @@ function adminSection(route: Route): string {
     case "admin-promo": return "promo";
     case "admin-submissions": return "submissions";
     case "admin-activity": return "activity";
+    case "admin-ai": return "ai";
     default: return "overview";
   }
 }
@@ -251,8 +258,8 @@ function App() {
   /* Every signed-in study surface shares the student rail. `material` and
      `personal` used to render without navigation because they were left out of
      this list, so a student could land on a page with no way back. */
-  const studentRoutes: Route[] = ["dashboard", "hierarchy", "material", "personal", "history", "rewards", "leaderboard", "generate", "paper", "learn", "flashcards", "quiz", "results", "profile"];
-  const showHeader = !["login", "signup", "forgot", "reset", "verify-email", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
+  const studentRoutes: Route[] = ["dashboard", "hierarchy", "material", "personal", "history", "rewards", "leaderboard", "generate", "paper", "learn", "flashcards", "quiz", "theory", "results", "profile"];
+  const showHeader = route !== "home" && !["login", "signup", "forgot", "reset", "verify-email", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   // Admin destinations render outside the student shell, so while the cached
   // identity is still being revalidated they would otherwise show a blank
   // frame. Keep the session panel up until we know whether this is an admin.
@@ -286,7 +293,7 @@ function App() {
           onComplete={(set) => {
             setGeneratedSet(set);
             setQuizResult(null);
-            go(set.type === "QUIZ" ? `quiz/${set.id}` : `flashcards/${set.id}`);
+            go(set.type === "QUIZ" ? `quiz/${set.id}` : set.type === "THEORY" ? `theory/${set.id}` : `flashcards/${set.id}`);
           }}
           onQuestionPaper={(set) => {
             setGeneratedSet(set);
@@ -340,6 +347,15 @@ function App() {
       ) : (
         <MissingSet back="generate" />
       ))}
+      {route === "theory" && (generatedSet && generatedSet.type === "THEORY" ? (
+        <TheoryPractice
+          set={generatedSet}
+          onExit={() => { setGeneratedSet(null); go("history"); }}
+          onCreateNew={() => { setGeneratedSet(null); go("generate"); }}
+        />
+      ) : (
+        <MissingSet back="generate" />
+      ))}
       {route === "results" && (generatedSet && generatedSet.type === "QUIZ" && quizResult ? (
         <Results
           set={generatedSet}
@@ -351,7 +367,7 @@ function App() {
       ) : (
         <MissingSet back="dashboard" />
       ))}
-      {route === "history" && <ResultsHistory onPractice={(set) => { setGeneratedSet(set); setQuizResult(null); go(`quiz/${set.id}`); }} />}
+      {route === "history" && <ResultsHistory onPractice={(set) => { setGeneratedSet(set); setQuizResult(null); go(set.type === "THEORY" ? `theory/${set.id}` : `quiz/${set.id}`); }} />}
       {route === "profile" && <ProfilePage profile={profile} />}
       {route === "rewards" && <RewardsPage />}
       {route === "leaderboard" && <LeaderboardPage />}

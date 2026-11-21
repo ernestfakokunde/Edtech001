@@ -16,6 +16,7 @@ export type Route =
   | "learn"
   | "flashcards"
   | "quiz"
+  | "theory"
   | "results"
   | "history"
   | "rewards"
@@ -30,8 +31,9 @@ export type Route =
   | "admin-missions"
   | "admin-promo"
   | "admin-submissions"
-  | "admin-activity";
-export type Mode = "flashcards" | "quiz";
+  | "admin-activity"
+  | "admin-ai";
+export type Mode = "flashcards" | "quiz" | "theory";
 export type Course = {
   id?: string;
   code: string;

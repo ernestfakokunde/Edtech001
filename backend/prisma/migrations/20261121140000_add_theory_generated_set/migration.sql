@@ -1,0 +1,1 @@
+ALTER TYPE "GeneratedSetType" ADD VALUE 'THEORY';

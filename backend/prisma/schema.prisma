@@ -27,6 +27,7 @@ enum Semester {
 enum GeneratedSetType {
   QUIZ
   FLASHCARD
+  THEORY
 }
 
 enum MissionActionType {
@@ -315,6 +316,27 @@ model AiCreditUsage {
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, monthKey, status])
+}
+
+/// Provider-level telemetry for AI calls. Stores operational metadata only;
+/// prompts and generated answer text are intentionally excluded.
+model AiProviderCall {
+  id               String   @id @default(cuid())
+  provider         String
+  model            String
+  feature          String
+  status           String
+  latencyMs        Int
+  inputTokens      Int?
+  outputTokens     Int?
+  outputCharacters Int?
+  httpStatus       Int?
+  errorCode        String?
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([provider, createdAt])
+  @@index([feature, createdAt])
 }
 
 model GeneratedSetItem {

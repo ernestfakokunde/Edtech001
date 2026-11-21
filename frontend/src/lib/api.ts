@@ -75,7 +75,7 @@ export type Pagination = { page: number; pageSize: number; total: number; pages:
 export type GeneratedQuestionMetadata = { provider?: string; model?: string; promptVersion?: string; options?: string[] }
 export type GeneratedQuestion = { id: string; paperId: string; questionNo: string | null; prompt: string; answer: string | null; explanation: string | null; metadata: GeneratedQuestionMetadata | null; createdAt: string }
 export type GeneratedSetItem = { position: number; question: GeneratedQuestion }
-export type GeneratedSet = { id: string; userId: string; courseId: string; type: "FLASHCARD" | "QUIZ"; title: string; requestedLength: number; timePerQuestion: number | null; createdAt: string; items: GeneratedSetItem[] }
+export type GeneratedSet = { id: string; userId: string; courseId: string; type: "FLASHCARD" | "QUIZ" | "THEORY"; title: string; requestedLength: number; timePerQuestion: number | null; createdAt: string; items: GeneratedSetItem[] }
 export type SavedQuiz = GeneratedSet & {
   course: { code: string; title: string };
   attempts: { score: number; total: number; percent: number; createdAt: string }[];
@@ -103,6 +103,22 @@ export type ActivityEntry = {
   id: string; action: string; entityType: string; createdAt: string;
   actor: { id: string; email: string; displayName: string | null; username: string | null } | null;
   metadata?: { deletedEmail?: string; deletedName?: string | null; deletedUsername?: string | null; title?: string; xpReward?: number } | null
+}
+
+export type AdminAiMonitoring = {
+  providers: Array<{
+    id: string; label: string; configured: boolean; model: string;
+    usage30d: { requests: number; successes: number; failures: number; invalidResponses: number; inputTokens: number; outputTokens: number; lastUsedAt: string | null; restockNeeded: boolean };
+  }>;
+  recentCalls: Array<{
+    id: string; provider: string; model: string; feature: string; status: string; latencyMs: number;
+    inputTokens: number | null; outputTokens: number | null; outputCharacters: number | null;
+    httpStatus: number | null; errorCode: string | null; createdAt: string;
+  }>;
+  openRouter: null | { available: false; checkedAt: string; httpStatus: number | null } | {
+    available: true; checkedAt: string; limit: number | null; remaining: number | null; usage: number | null; isFreeTier: boolean;
+  };
+  periodDays: number;
 }
 
 /**
@@ -353,6 +369,7 @@ export function getAdminSubmissions(filters: { status?: 'PENDING' | 'APPROVED' |
   return request<{ submissions: RepositorySubmission[]; pagination: Pagination }>(`/api/admin/repository-submissions?${params.toString()}`, { method: 'GET' })
 }
 export function getModerationSummary() { return request<{ summary: { pending: number; approved: number; rejected: number; generatedSets: number; users: number } }>('/api/admin/moderation/summary', { method: 'GET' }) }
+export function getAdminAiMonitoring() { return request<AdminAiMonitoring>('/api/admin/ai-monitoring', { method: 'GET' }) }
 export function getRepositoryPapers(filters: { search?: string; level?: string; courseId?: string; universityId?: string; facultyId?: string; departmentId?: string; page?: number; pageSize?: number }) { const params = new URLSearchParams(); Object.entries(filters).forEach(([key, value]) => value !== undefined && value !== '' && params.set(key, String(value))); return request<{ papers: RepositoryPaper[]; pagination: Pagination }>(`/api/papers/repository?${params.toString()}`, { method: 'GET' }) }
 export function getRepositoryPaper(paperId: string) { return request<{ paper: RepositoryPaper }>(`/api/papers/repository/${encodeURIComponent(paperId)}`, { method: 'GET' }) }
 export function reviewSubmission(paperId: string, input: { decision: "APPROVED" | "REJECTED"; note?: string }) { return request<{ paper: RepositoryPaper }>(`/api/admin/repository-submissions/${paperId}`, { method: 'PATCH', body: JSON.stringify(input) }) }
@@ -389,7 +406,7 @@ export function getPaperDownloadUrl(paperId: string) { return request<{ url: str
 
 // POST /api/generation — multipart/form-data, never set Content-Type manually:
 // the browser adds the multipart boundary itself when a FormData is the body.
-export async function generateStudySet(input: { file: File; courseId?: string; type: "FLASHCARD" | "QUIZ"; length: number; timePerQuestion?: 30 | 60 }) {
+export async function generateStudySet(input: { file: File; courseId?: string; type: "FLASHCARD" | "QUIZ" | "THEORY"; length: number; timePerQuestion?: 30 | 60 }) {
   const problem = uploadFileProblem(input.file)
   if (problem) throw new Error(problem)
   const buildGenerationForm = () => {
