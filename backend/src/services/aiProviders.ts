@@ -15,7 +15,7 @@ export type AiProvider = {
   id: AiProviderId
   label: string
   model: string
-  complete(system: string, userText: string, document?: { pdfBase64: string }, format?: 'json' | 'text'): Promise<{ text: string; model: string }>
+  complete(system: string, userText: string, document?: { pdfBase64: string }, format?: 'json' | 'text'): Promise<AiProviderCompletion>
   /**
    * Streaming variant for the study tutor. Yields text chunks as the model
    * writes them so the UI can show an answer building up instead of a spinner
@@ -24,6 +24,8 @@ export type AiProvider = {
    */
   completeStream?(system: string, userText: string, document?: { pdfBase64: string }): AsyncGenerator<string>
 }
+
+export type AiProviderCompletion = { text: string; model: string; inputTokens?: number; outputTokens?: number }
 
 /** Thrown when a provider's HTTP call fails (transport error, non-2xx, or an empty body). */
 export class AiProviderTransportError extends Error {
@@ -48,7 +50,7 @@ type ProviderInput = {
     userText: string,
     document?: { pdfBase64: string },
     format?: 'json' | 'text',
-  ) => Promise<{ text: string; model: string }>
+  ) => Promise<AiProviderCompletion>
   /** Optional streaming implementation for the interactive study tutor. */
   stream?: (
     config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { baseUrl?: string; fallbackModels?: string[] },
@@ -156,7 +158,7 @@ const MAX_TOKENS = 16384
 const MAX_CHAT_TOKENS = 1200
 
 /** Anthropic Messages API — https://platform.anthropic.com/docs/api/messages */
-async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>>, system: string, userText: string, _document?: { pdfBase64: string }, format: 'json' | 'text' = 'json'): Promise<{ text: string; model: string }> {
+async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>>, system: string, userText: string, _document?: { pdfBase64: string }, format: 'json' | 'text' = 'json'): Promise<AiProviderCompletion> {
   const data = await postJson('Anthropic', 'https://api.anthropic.com/v1/messages', {
     'x-api-key': config.apiKey,
     'anthropic-version': '2023-06-01',
@@ -173,7 +175,13 @@ async function completeAnthropic(config: Required<Pick<AiProviderConfig, 'apiKey
     .map((block) => (block as { text: string }).text)
     .join('\n')
   if (!text.trim()) throw new AiProviderTransportError('Anthropic', 'the model returned no text')
-  return { text, model: config.model }
+  const usage = isRecord(data) && isRecord(data.usage) ? data.usage : undefined
+  return {
+    text,
+    model: config.model,
+    ...(typeof usage?.input_tokens === 'number' ? { inputTokens: usage.input_tokens } : {}),
+    ...(typeof usage?.output_tokens === 'number' ? { outputTokens: usage.output_tokens } : {}),
+  }
 }
 
 /**
@@ -260,7 +268,8 @@ async function completeOpenAiCompatible(
   system: string,
   userText: string,
   format: 'json' | 'text' = 'json',
-): Promise<{ text: string; model: string }> {
+  requestOverrides: Record<string, unknown> = {},
+): Promise<AiProviderCompletion> {
   const baseUrl = config.baseUrl.replace(/\/+$/, '')
   const data = await postJson(providerLabel, `${baseUrl}/chat/completions`, {
     authorization: `Bearer ${config.apiKey}`,
@@ -273,6 +282,7 @@ async function completeOpenAiCompatible(
     max_tokens: format === 'text' ? MAX_CHAT_TOKENS : MAX_TOKENS,
     temperature: 0,
     stream: false,
+    ...requestOverrides,
   }, format === 'text' ? 1 : MAX_ATTEMPTS, format === 'text' ? CHAT_PROVIDER_TIMEOUT_MS : undefined)
 
   function firstMessageContent(): string {
@@ -284,7 +294,15 @@ async function completeOpenAiCompatible(
 
   const text = firstMessageContent()
   if (!text.trim()) throw new AiProviderTransportError(providerLabel, 'the model returned no text')
-  return { text, model: config.model }
+  const usage = isRecord(data) && isRecord(data.usage) ? data.usage : undefined
+  const inputTokens = usage?.prompt_tokens ?? usage?.input_tokens
+  const outputTokens = usage?.completion_tokens ?? usage?.output_tokens
+  return {
+    text,
+    model: config.model,
+    ...(typeof inputTokens === 'number' ? { inputTokens } : {}),
+    ...(typeof outputTokens === 'number' ? { outputTokens } : {}),
+  }
 }
 
 /**
@@ -368,9 +386,9 @@ async function* streamOpenAiCompatible(
 }
 
 /** Google Gemini generateContent API — https://ai.google.dev/api/generate-content */
-async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] }, system: string, userText: string, document?: { pdfBase64: string }, format: 'json' | 'text' = 'json'): Promise<{ text: string; model: string }> {
+async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' | 'model'>> & { fallbackModels?: string[] }, system: string, userText: string, document?: { pdfBase64: string }, format: 'json' | 'text' = 'json'): Promise<AiProviderCompletion> {
   const ai = new GoogleGenAI({ apiKey: config.apiKey })
-  const generateWithModel = async (model: string): Promise<string> => {
+  const generateWithModel = async (model: string): Promise<{ text: string; inputTokens?: number; outputTokens?: number }> => {
     try {
       const response = await ai.models.generateContent({
         model,
@@ -411,7 +429,11 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
       })
       const text = response.text ?? ''
       if (!text.trim()) throw new AiProviderTransportError('Gemini', 'the model returned no text')
-      return text
+      return {
+        text,
+        ...(typeof response.usageMetadata?.promptTokenCount === 'number' ? { inputTokens: response.usageMetadata.promptTokenCount } : {}),
+        ...(typeof response.usageMetadata?.candidatesTokenCount === 'number' ? { outputTokens: response.usageMetadata.candidatesTokenCount } : {}),
+      }
     } catch (error) {
       if (error instanceof AiProviderTransportError) throw error
       const detail = error instanceof Error ? error.message : String(error)
@@ -436,8 +458,8 @@ async function completeGemini(config: Required<Pick<AiProviderConfig, 'apiKey' |
   let lastStatus: number | undefined
   for (let index = 0; index < models.length; index++) {
     try {
-      const text = await generateWithModel(models[index])
-      return { text, model: models[index] }
+      const result = await generateWithModel(models[index])
+      return { ...result, model: models[index] }
     } catch (error) {
       // Cascade across every model: a transient overload (or per-model 404)
       // on flash tries flash-lite, then 2.0-flash, before giving up.
@@ -615,6 +637,38 @@ export function getConfiguredProviders(): AiProvider[] {
   if (providers.gemini.apiKey) {
     configured.push(makeProvider({ id: 'gemini', config: providers.gemini, complete: completeGemini, stream: streamGemini }))
   }
+  if (providers.nvidia.apiKey) {
+    configured.push(makeProvider({
+      id: 'nvidia',
+      config: providers.nvidia,
+      complete: (config, system, userText, _document, format = 'json') => completeOpenAiCompatible(
+        providers.nvidia.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
+        format,
+        {
+          max_tokens: 8192,
+          temperature: 1,
+          top_p: 0.95,
+          chat_template_kwargs: { enable_thinking: false },
+        },
+      ),
+    }))
+  }
+  if (providers.openrouter.apiKey) {
+    configured.push(makeProvider({
+      id: 'openrouter',
+      config: providers.openrouter,
+      complete: (config, system, userText, _document, format = 'json') => completeOpenAiCompatible(
+        providers.openrouter.label,
+        config as Required<Pick<AiProviderConfig, 'apiKey' | 'model' | 'baseUrl'>>,
+        system,
+        userText,
+        format,
+      ),
+    }))
+  }
   if (providers.custom.apiKey && providers.custom.baseUrl) {
     configured.push(makeProvider({
       id: 'custom',
@@ -649,6 +703,8 @@ export function listProviderInfo(): ProviderInfo[] {
     { id: 'grok', label: providers.grok.label, configured: Boolean(providers.grok.apiKey) },
     { id: 'groq', label: providers.groq.label, configured: Boolean(providers.groq.apiKey) },
     { id: 'gemini', label: providers.gemini.label, configured: Boolean(providers.gemini.apiKey) },
+    { id: 'nvidia', label: providers.nvidia.label, configured: Boolean(providers.nvidia.apiKey) },
+    { id: 'openrouter', label: providers.openrouter.label, configured: Boolean(providers.openrouter.apiKey) },
     { id: 'custom', label: providers.custom.label, configured: Boolean(providers.custom.apiKey && providers.custom.baseUrl) },
   ]
 }
@@ -667,6 +723,8 @@ const KEY_EXPECTATIONS: Record<AiProviderId, { prefix: string; hint: string }> =
   grok: { prefix: 'xai-', hint: 'console.x.ai' },
   groq: { prefix: 'gsk_', hint: 'console.groq.com' },
   gemini: { prefix: '', hint: 'aistudio.google.com' },
+  nvidia: { prefix: '', hint: 'build.nvidia.com' },
+  openrouter: { prefix: 'sk-or-', hint: 'openrouter.ai' },
   custom: { prefix: '', hint: 'your endpoint’s own key' },
 }
 

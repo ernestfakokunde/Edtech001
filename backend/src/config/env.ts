@@ -30,7 +30,7 @@ for (const key of requiredEnv) {
  * lets a client override the selection per request with an explicit
  * `provider` field (see GET /api/generation/providers).
  */
-export type AiProviderId = 'anthropic' | 'openai' | 'grok' | 'groq' | 'gemini' | 'custom'
+export type AiProviderId = 'anthropic' | 'openai' | 'grok' | 'groq' | 'gemini' | 'nvidia' | 'openrouter' | 'custom'
 
 export type AiProviderConfig = {
   /** Human-friendly name shown in the UI / stored next to nothing sensitive. */
@@ -45,7 +45,7 @@ export type AiProviderConfig = {
   fallbackModels?: string[]
 }
 
-const aiProviderIds: AiProviderId[] = ['anthropic', 'openai', 'grok', 'groq', 'gemini', 'custom']
+const aiProviderIds: AiProviderId[] = ['anthropic', 'openai', 'grok', 'groq', 'gemini', 'nvidia', 'openrouter', 'custom']
 
 /**
  * Render (and any other dashboard) passes env values through verbatim — there
@@ -174,6 +174,18 @@ export const env = {
         // id does not exist for this key), lighter siblings take over — they
         // usually have spare capacity during demand spikes.
         fallbackModels: commaList(process.env.GEMINI_FALLBACK_MODELS ?? 'gemini-3.5-flash-lite,gemini-3.8-flash'),
+      } satisfies AiProviderConfig,
+      nvidia: {
+        label: 'NVIDIA Nemotron Lightning',
+        apiKey: cleanSecret(process.env.NVIDIA_API_KEY),
+        model: process.env.NVIDIA_MODEL ?? 'nvidia/nemotron-3.5-lightning-30b-a3b',
+        baseUrl: cleanSecret(process.env.NVIDIA_BASE_URL) ?? 'https://integrate.api.nvidia.com/v1',
+      } satisfies AiProviderConfig,
+      openrouter: {
+        label: 'OpenRouter Nemotron Super VL Free',
+        apiKey: cleanSecret(process.env.OPEN_ROUTER_API_KEY),
+        model: process.env.OPENROUTER_MODEL ?? 'nvidia/nemotron-3.5-super-vl:free',
+        baseUrl: cleanSecret(process.env.OPENROUTER_BASE_URL) ?? 'https://openrouter.ai/api/v1',
       } satisfies AiProviderConfig,
       // OpenAI-compatible endpoint for any other provider (DeepSeek, Mistral,
       // OpenRouter, LM Studio, Ollama, …). Needs both a base URL and API key.

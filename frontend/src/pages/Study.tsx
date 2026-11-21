@@ -974,6 +974,61 @@ export function Quiz({
     </PlayerFrame>
   );
 }
+
+export function TheoryPractice({ set, onExit, onCreateNew }: { set: GeneratedSet; onExit: () => void; onCreateNew: () => void }) {
+  const [index, setIndex] = useState(0);
+  const [draft, setDraft] = useState("");
+  const [revealed, setRevealed] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const total = set.items.length;
+  const question = set.items[index]?.question;
+
+  function next() {
+    if (index >= total - 1) { setFinished(true); return; }
+    setIndex((current) => current + 1);
+    setDraft("");
+    setRevealed(false);
+  }
+
+  return (
+    <PlayerFrame count={finished ? "Complete" : `Question ${index + 1} of ${total}`} onExit={onExit} progress={finished ? 100 : total ? (index / total) * 100 : 0}>
+      {finished ? (
+        <div className="theory-finish">
+          <h1>Theory practice complete</h1>
+          <p>You worked through {total} {total === 1 ? "question" : "questions"}.</p>
+          <div><button className="secondary-button" onClick={onExit}>Back to study desk</button><button className="primary-button" onClick={onCreateNew}><Plus size={14} /> Create another set</button></div>
+        </div>
+      ) : question ? (
+        <>
+          <div className="mb-18 flex items-center justify-between gap-10 text-11 font-semibold text-muted max-680:items-start">
+            <span className="min-w-0 truncate">{set.title}</span>
+            <button className="quiz-create-new inline-flex shrink-0 items-center gap-6 rounded-9 border border-line px-10 py-7 text-10 font-bold text-brand transition-colors hover:border-brand" onClick={onCreateNew}><Plus size={14} /> New set</button>
+          </div>
+          <p className="mt-10 inline-flex items-center gap-6 text-11 font-bold uppercase text-brand">Theory question {index + 1}</p>
+          <h2 className="my-8 mb-20 text-[23px] font-bold leading-[1.45] text-ink max-680:text-18">{question.prompt}</h2>
+          <label className="theory-answer-label" htmlFor="theory-answer">Your answer</label>
+          <textarea id="theory-answer" className="theory-answer-input" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write your answer in your own words…" disabled={revealed} />
+          {!revealed ? (
+            <button className="primary-button mt-12 inline-flex min-h-40 items-center justify-center gap-7 rounded-9 px-14 text-12 font-bold text-white disabled:cursor-not-allowed disabled:opacity-45" disabled={!draft.trim()} onClick={() => setRevealed(true)}>Reveal model answer</button>
+          ) : (
+            <>
+              <section className="theory-model-answer" aria-live="polite">
+                <h3>Model answer</h3>
+                <p>{question.answer || "No model answer was returned for this question."}</p>
+                {question.explanation && <div className="theory-marking-points"><strong>Marking points</strong><p>{question.explanation}</p></div>}
+              </section>
+              <div className="mt-18 flex flex-wrap items-center justify-between gap-10">
+                <span className="text-11 text-muted">Compare with your answer, then continue.</span>
+                <button className="primary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 px-14 text-12 font-bold text-white" onClick={next}>{index === total - 1 ? "Finish" : "Next question"} <ArrowRight size={15} /></button>
+              </div>
+            </>
+          )}
+        </>
+      ) : null}
+    </PlayerFrame>
+  );
+}
+
 export function Results({
   set,
   score,

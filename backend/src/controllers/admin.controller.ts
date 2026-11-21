@@ -2,6 +2,7 @@ import type { Request, Response } from 'express'
 import type { AuthenticatedRequest } from '../middleware/auth.js'
 import { Prisma } from '@prisma/client'
 import { prisma } from '../lib/prisma.js'
+import { getAiProviderMonitoring } from '../services/aiProviderMonitoring.js'
 
 function routeParam(request: Request, name: string) {
   const value = request.params[name]
@@ -159,6 +160,15 @@ export async function moderationSummary(_request: Request, response: Response) {
     prisma.profile.count(),
   ])
   response.json({ summary: { pending, approved, rejected, generatedSets, users } })
+}
+
+/** GET /api/admin/ai-monitoring — operational usage only; never includes prompts, responses, or API keys. */
+export async function aiProviderMonitoring(_request: Request, response: Response) {
+  try {
+    response.json(await getAiProviderMonitoring())
+  } catch {
+    response.status(503).json({ message: 'AI provider monitoring is temporarily unavailable.' })
+  }
 }
 
 export async function reviewRepositorySubmission(request: Request, response: Response) {

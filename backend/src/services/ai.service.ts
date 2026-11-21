@@ -1,7 +1,8 @@
 import { env, type AiProviderId } from '../config/env.js'
 import { getConfiguredProviders, AiProviderTransportError, type AiProvider } from './aiProviders.js'
+import { recordAiProviderCall, type AiProviderCallStatus } from './aiProviderMonitoring.js'
 
-export type GeneratedSetKind = 'FLASHCARD' | 'QUIZ'
+export type GeneratedSetKind = 'FLASHCARD' | 'QUIZ' | 'THEORY'
 
 /**
  * A single item after strict server-side validation of the AI's response.
@@ -22,7 +23,7 @@ export type GeneratedItem = {
   }
 }
 
-const PROMPT_VERSION = '4'
+const PROMPT_VERSION = '5'
 const MAX_PROMPT_CHARACTERS = 60_000
 const MAX_CHAT_DOCUMENT_CHARACTERS = 32_000
 const MAX_CHAT_HISTORY_MESSAGES = 20
@@ -51,8 +52,10 @@ export class AiNotConfiguredError extends Error {
 }
 
 export type GenerationOptions = {
-  /** Provider requested by the client (must be configured). Defaults to AI_PROVIDER with AI_FALLBACK_PROVIDERS. */
+  /** Preferred provider. If present, only it and explicitly listed fallbacks are tried. */
   provider?: string | null
+  /** Providers to try after the preferred provider when it fails. */
+  fallbackProviders?: string[]
 }
 
 /** True when at least one AI provider has credentials configured. */
@@ -71,6 +74,29 @@ export class GenerationFailedError extends Error {
 }
 
 export type StudyChatMessage = { role: 'user' | 'assistant'; content: string }
+
+function providerFailureMetadata(reason: unknown) {
+  const status = reason instanceof AiProviderTransportError ? reason.status : undefined
+  const message = reason instanceof Error ? reason.message.toLowerCase() : ''
+  const errorCode = status === 402 || /insufficient (?:funds|credit)|out of credits|billing limit/.test(message)
+    ? 'RESTOCK_REQUIRED'
+    : status === 401 || status === 403 ? 'KEY_OR_ACCESS_ERROR'
+      : status === 429 ? 'RATE_LIMITED'
+        : status && status >= 500 ? 'UPSTREAM_ERROR'
+          : reason instanceof AiProviderTransportError ? 'PROVIDER_ERROR' : 'INVALID_RESPONSE'
+  return { ...(status ? { httpStatus: status } : {}), errorCode }
+}
+
+async function recordProviderFailure(provider: AiProvider, feature: string, startedAt: number, reason: unknown, status: AiProviderCallStatus = 'FAILED') {
+  await recordAiProviderCall({
+    provider: provider.id,
+    model: provider.model,
+    feature,
+    status,
+    latencyMs: Date.now() - startedAt,
+    ...providerFailureMetadata(reason),
+  })
+}
 
 export async function* chatWithStudyMaterialStream(input: { text?: string; topic?: string; question: string; history: StudyChatMessage[] }): AsyncGenerator<string> {
   const candidates = resolveCandidates(null)
@@ -99,6 +125,7 @@ export async function* chatWithStudyMaterialStream(input: { text?: string; topic
   for (const provider of candidates) {
     if (!provider.completeStream) { failures.push(`${provider.label} does not support streaming`); continue }
     let chunked = ''
+    const startedAt = Date.now()
     try {
       const stream = provider.completeStream('You are a patient, accurate study tutor. Reply in readable plain text, never JSON.', prompt, undefined)
       for await (const chunk of stream) {
@@ -107,9 +134,14 @@ export async function* chatWithStudyMaterialStream(input: { text?: string; topic
         yield chunk
       }
       const answer = cleanTutorReply(chunked)
-      if (answer) return
+      if (answer) {
+        await recordAiProviderCall({ provider: provider.id, model: provider.model, feature: 'LEARN_CHAT', status: 'SUCCESS', latencyMs: Date.now() - startedAt, outputCharacters: answer.length })
+        return
+      }
+      await recordProviderFailure(provider, 'LEARN_CHAT', startedAt, new Error('empty model reply'), 'INVALID_RESPONSE')
       failures.push(`${provider.label} returned an empty answer`)
     } catch (reason) {
+      await recordProviderFailure(provider, 'LEARN_CHAT', startedAt, reason)
       // Once text has reached the client, switching providers would splice two
       // different answers together. Only fail over before the first chunk.
       if (chunked) throw new GenerationFailedError(generationFailureCode(failures), `${provider.label}: ${reason instanceof Error ? reason.message : String(reason)}`)
@@ -144,12 +176,18 @@ export async function chatWithStudyMaterial(input: { text?: string; topic?: stri
   ].join('\n')
   const failures: string[] = []
   for (const provider of candidates) {
+    const startedAt = Date.now()
     try {
       const result = await provider.complete('You are a patient, accurate study tutor. Reply in readable plain text, never JSON.', prompt, undefined, 'text')
       const answer = cleanTutorReply(result.text)
-      if (answer) return answer.slice(0, 8000)
+      if (answer) {
+        await recordAiProviderCall({ provider: provider.id, model: result.model, feature: 'LEARN_CHAT', status: 'SUCCESS', latencyMs: Date.now() - startedAt, inputTokens: result.inputTokens, outputTokens: result.outputTokens, outputCharacters: answer.length })
+        return answer.slice(0, 8000)
+      }
+      await recordProviderFailure(provider, 'LEARN_CHAT', startedAt, new Error('empty model reply'), 'INVALID_RESPONSE')
       failures.push(`${provider.label} returned an empty answer`)
     } catch (reason) {
+      await recordProviderFailure(provider, 'LEARN_CHAT', startedAt, reason)
       failures.push(`${provider.label}: ${reason instanceof Error ? reason.message : String(reason)}`)
     }
   }
@@ -213,7 +251,7 @@ function generationFailureCode(failures: string[]): 'AI_BAD_KEY' | 'AI_BUSY' | '
  * to user-facing copy — the raw provider text never reaches the UI.
  */
 export async function generateStudyItems(input: { text: string; kind: GeneratedSetKind; length: number; pdfBase64?: string }, options: GenerationOptions = {}): Promise<GeneratedItem[]> {
-  const candidates = resolveCandidates(options.provider)
+  const candidates = resolveCandidates(options.provider, options.fallbackProviders)
   if (candidates.length === 0) throw new AiNotConfiguredError(options.provider)
 
   const prompt = buildPrompt(input)
@@ -225,10 +263,17 @@ export async function generateStudyItems(input: { text: string; kind: GeneratedS
     // asking again, so it fails over immediately.
     const maxAttempts = input.kind === 'FLASHCARD' ? 1 : 2
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const startedAt = Date.now()
+      let receivedCompletion = false
+      let completion: Awaited<ReturnType<AiProvider['complete']>> | undefined
       try {
-        const { text: payload, model } = await provider.complete(SYSTEM_PROMPT, attempt === 1 ? prompt : `${prompt}${REPAIR_INSTRUCTION}`, input.pdfBase64 ? { pdfBase64: input.pdfBase64 } : undefined)
-        return mapItems(parsePayloadItems(payload), input.kind, provider.id, model, input.length)
+        completion = await provider.complete(SYSTEM_PROMPT, attempt === 1 ? prompt : `${prompt}${REPAIR_INSTRUCTION}`, input.pdfBase64 ? { pdfBase64: input.pdfBase64 } : undefined)
+        receivedCompletion = true
+        const items = mapItems(parsePayloadItems(completion.text), input.kind, provider.id, completion.model, input.length)
+        await recordAiProviderCall({ provider: provider.id, model: completion.model, feature: input.kind, status: 'SUCCESS', latencyMs: Date.now() - startedAt, inputTokens: completion.inputTokens, outputTokens: completion.outputTokens, outputCharacters: completion.text.length })
+        return items
       } catch (reason) {
+        await recordProviderFailure(provider, input.kind, startedAt, reason, receivedCompletion ? 'INVALID_RESPONSE' : 'FAILED')
         const detail = reason instanceof Error ? reason.message : String(reason)
         if (attempt === 1 && !(reason instanceof AiProviderTransportError)) {
           console.warn('[generate] The response was incomplete; trying again.')
@@ -245,18 +290,24 @@ export async function generateStudyItems(input: { text: string; kind: GeneratedS
 
 /**
  * Builds the ordered list of providers to try:
- * 1. a client-requested provider (that one alone),
+ * 1. a client-requested provider followed by its explicitly requested fallbacks,
  * 2. otherwise the configured primary (AI_PROVIDER) followed by each
  *    configured fallback (AI_FALLBACK_PROVIDERS) in order, deduplicated,
  * 3. and as a last resort every other configured provider in registration
  *    order — so a single key (e.g. only GEMINI_API_KEY) works with no extra
  *    env config instead of erroring while a provider is ready to serve.
  */
-function resolveCandidates(requested: string | null | undefined): AiProvider[] {
+function resolveCandidates(requested: string | null | undefined, requestedFallbacks: string[] = []): AiProvider[] {
   const configured = getConfiguredProviders()
   if (requested) {
-    const match = configured.find((provider) => provider.id === requested)
-    return match ? [match] : []
+    const requestedIds = [requested, ...requestedFallbacks]
+    const seen = new Set<string>()
+    return requestedIds.flatMap((id) => {
+      if (seen.has(id)) return []
+      seen.add(id)
+      const match = configured.find((provider) => provider.id === id)
+      return match ? [match] : []
+    })
   }
 
   const order = [env.ai.provider, ...env.ai.fallbacks]
@@ -277,8 +328,9 @@ function resolveCandidates(requested: string | null | undefined): AiProvider[] {
 
 function buildPrompt({ text, kind, length }: { text: string; kind: GeneratedSetKind; length: number }) {
   const isQuiz = kind === 'QUIZ'
+  const isTheory = kind === 'THEORY'
   return [
-    `Create up to ${length} ${isQuiz ? 'multiple-choice quiz questions' : 'flashcards'} from the most important examinable concepts in the supplied material. Return fewer when the material does not support that many strong, distinct items.`,
+    `Create up to ${length} ${isQuiz ? 'multiple-choice quiz questions' : isTheory ? 'open-ended theory practice questions' : 'flashcards'} from the most important examinable concepts in the supplied material. Return fewer when the material does not support that many strong, distinct items.`,
     '',
     'CONTENT AND QUALITY RULES:',
     '- Test core concepts, definitions, terminology, mechanisms, cause and effect, comparisons, and application where supported.',
@@ -299,6 +351,11 @@ function buildPrompt({ text, kind, length }: { text: string; kind: GeneratedSetK
         '- Vary the correct option position. Keep options similar in style and length.',
         '- The answer field must exactly match the correct option text.',
         '- Give a concise explanation of why the correct answer is right.']
+      : isTheory ? ['THEORY PRACTICE FORMAT:',
+        '- Write clear open-ended questions that require the student to explain, compare, apply, or describe a process in their own words.',
+        '- Do not include answer choices. Avoid questions that can be answered with only yes/no or a single trivial fact.',
+        '- The answer field is a concise model answer grounded only in the supplied material.',
+        '- The explanation field is a short marking guide: essential points a strong answer should include.']
       : ['FLASHCARD FORMAT:',
         '- Keep each prompt short and focused.',
         '- Give a concise, accurate answer, usually one to three sentences.',
@@ -307,7 +364,9 @@ function buildPrompt({ text, kind, length }: { text: string; kind: GeneratedSetK
     `Return ONLY a valid JSON array of up to ${length} objects. Do not add prose or markdown. Use this exact shape:`,
     isQuiz
       ? '[{"prompt":"question text","answer":"correct option copied verbatim from options","explanation":"why this is correct","options":["option A","option B","option C","option D"]}]'
-      : '[{"prompt":"question text","answer":"concise factual answer","explanation":"optional short note"}]',
+      : isTheory
+        ? '[{"prompt":"open-ended question","answer":"concise model answer","explanation":"essential marking points"}]'
+        : '[{"prompt":"question text","answer":"concise factual answer","explanation":"optional short note"}]',
     '',
     'STUDY MATERIAL:',
     '',

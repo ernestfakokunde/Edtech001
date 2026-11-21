@@ -1,80 +1,62 @@
-import { ArrowRight, BookOpen, Brain, CircleCheck, Clock3, Layers3, Sparkles, Upload, Zap } from "lucide-react";
+import { ArrowRight, Brain, CircleCheck, Clock3, Sparkles, Upload, Zap, ChevronRight, Menu } from "lucide-react";
 import { BrandCarousel } from "../components/BrandCarousel";
 import { go } from "../components/Layout";
 import { BrandLogo } from "../components/BrandLogo";
-import { useEffect, useState } from "react";
-
-const HEADLINES = [
-  { lead: "Learn smarter with ", highlight: "the world's most advanced AI." },
-  { lead: "Pass your exams with ", highlight: "AI that actually understands your course." },
-];
+import { useState } from "react";
 
 export function Home() {
-  const [headlineIndex, setHeadlineIndex] = useState(0);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => setHeadlineIndex((current) => (current + 1) % HEADLINES.length), 4200);
-    return () => window.clearInterval(timer);
-  }, []);
+  const [menuOpen, setMenuOpen] = useState(false);
   const scrollToPricing = () => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollToFeatures = () => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <main className="landing-page dark-home min-h-screen overflow-x-clip bg-[#08090f] text-[#f2efff] [background-image:radial-gradient(ellipse_at_76%_50%,#542b7540,transparent_38%),linear-gradient(120deg,#090a11,#08090f_58%)] [background-size:auto,auto] [background-position:center,center]">
-      <section className="landing-hero mx-auto grid w-full max-w-[1260px] grid-cols-[1.04fr_.96fr] items-center gap-[clamp(36px,7vw,94px)] px-[clamp(26px,6vw,80px)] py-[95px] max-1020:grid-cols-1 max-1020:gap-38 max-1020:px-22 max-1020:py-60 max-1020:text-left max-680:px-19 max-680:py-47">
-        <div className="max-w-[600px]">
-          <p className="hero-eyebrow eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand mb-22 justify-start text-[#b4a6ff]">
-            <Sparkles size={15} /> A better way to prepare
-          </p>
-          <h1 className="hero-headline mb-8 h-[3.35em] max-w-[660px] text-[clamp(34px,3.5vw,44px)] font-medium leading-[1.05] tracking-[-.035em] text-white max-1020:max-w-[600px] max-1020:text-[clamp(34px,4.3vw,42px)] max-680:h-[4.3em] max-680:text-[clamp(30px,7.5vw,34px)]">
-            {HEADLINES[headlineIndex].lead}<em key={headlineIndex} className="hero-headline-highlight box-decoration-clone rounded-[.18em] bg-[#211d3a] px-[.12em] py-[.015em] not-italic text-[#b9a8ff]" aria-live="polite">{HEADLINES[headlineIndex].highlight}</em>
-          </h1>
-          <p className="hero-description m-0 max-w-[500px] text-16 leading-[1.75] text-[#aaa5b7] max-1020:text-15">
-            Turn lecture notes and exam PDFs into focused quizzes, flashcards, and clear explanations - all in one study space.
-          </p>
-          <div className="mt-27 flex flex-wrap justify-start gap-12 [&_.primary-button]:min-h-50 [&_.primary-button]:px-19 [&_.secondary-button]:min-h-50 [&_.secondary-button]:px-19">
-            <button className="landing-primary primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-999 bg-[#2563eb] px-18 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={() => go("learn")}>
-              Build my study desk <ArrowRight size={17} />
-            </button>
-            <button
-              className="landing-secondary secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-999 border border-[#d6e3f5] bg-white px-18 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={() => go("hierarchy")}
-            >
-              Explore courses
-            </button>
+    <main className="landing-page landing-refresh min-h-screen overflow-x-clip text-[#15131d]">
+      <section className="landing-hero landing-scene">
+        <div className="landing-browser-window">
+          <div className="landing-browser-chrome" aria-hidden="true">
+            <span className="landing-browser-dots"><i /><i /><i /></span>
+            <span>|||</span><span>&lt;</span><span>&gt;</span><span>o</span>
+            <span className="landing-browser-address"><i /> recapp-edu.pro</span>
+            <span className="landing-browser-avatar">R</span><span>⋮</span>
           </div>
-          <div className="mt-23 flex flex-wrap items-center gap-10 text-12 text-[#64748b] [&_button]:font-semibold [&_button]:text-brand">
-            <span>Already have an account?</span>
-            <button onClick={() => go("login")}>Sign in</button>
-            <button onClick={() => go("signup")}>Create account</button>
-          </div>
-        </div>
-        <div className="relative w-full max-w-[500px] justify-self-end max-1020:justify-self-center">
-          <div className="absolute -inset-28 -z-10 rounded-full bg-[radial-gradient(ellipse,#863da833,transparent_68%)] blur-2xl" />
-          <div className="study-preview-card relative rounded-20 border border-[#45415d] bg-[#171621] p-22 text-[#f3f0ff] shadow-[0_30px_90px_#0009,0_0_45px_#7545aa20] max-680:p-16">
-            <div className="flex items-center gap-11 border-b border-white/10 pb-17">
-              <span className="grid size-36 place-items-center rounded-10 bg-[#342a4c] text-[#c8afff]"><BookOpen size={17} /></span>
-              <div className="grid gap-3"><strong className="text-12">Your study desk</strong><span className="text-10 text-[#aaa6bd]">A clear place to pick up where you left off</span></div>
-              <span className="ml-auto inline-flex items-center gap-6 rounded-full border border-[#544773] bg-[#29233a] px-10 py-6 text-10 font-semibold text-[#d5c4ff]"><i className="size-6 rounded-full bg-[#a78bfa]" /> Ready</span>
+          <header className="landing-site-nav">
+            <button className="landing-wordmark" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="RecappEdu home"><BrandLogo className="h-34" /></button>
+            <nav aria-label="Landing page navigation">
+              <button onClick={scrollToFeatures}>Features</button>
+              <button onClick={() => go("hierarchy")}>Courses</button>
+              <button onClick={scrollToPricing}>Pricing</button>
+              <button onClick={scrollToFeatures}>How it works</button>
+            </nav>
+            <div className="landing-nav-actions"><button className="landing-contact" onClick={() => go("login")}>Sign in</button><button className="landing-download" onClick={() => go("signup")}>Get started <ArrowRight size={14} /></button></div>
+            <button className="landing-mobile-menu" aria-label="Toggle navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? "\u00d7" : <Menu size={20} />}</button>
+          </header>
+          {menuOpen && <nav className="landing-mobile-nav" aria-label="Mobile navigation"><button onClick={() => { setMenuOpen(false); scrollToFeatures(); }}>Features</button><button onClick={() => { setMenuOpen(false); go("hierarchy"); }}>Courses</button><button onClick={() => { setMenuOpen(false); scrollToPricing(); }}>Pricing</button><button onClick={() => { setMenuOpen(false); go("login"); }}>Sign in</button></nav>}
+          <div className="landing-browser-content">
+            <div className="landing-hero-badge"><Sparkles size={13} /> Study smarter with RecappEdu <button onClick={scrollToFeatures}>See how <ArrowRight size={12} /></button></div>
+            <h1>Turn your notes and past papers<br /><span>into exam-ready practice</span></h1>
+            <p>Create AI flashcards, practice quizzes, and theory questions from your course material.</p>
+            <div className="landing-hero-actions"><button className="landing-download" onClick={() => go("learn")}>Build my study desk <ChevronRight size={16} /></button><button className="landing-contact" onClick={() => go("hierarchy")}>Explore courses</button></div>
+            <div className="landing-product-stage" aria-label="Preview of the RecappEdu study experience">
+              <div className="landing-float-card landing-float-left">
+                <span className="landing-card-kicker">QUICK PRACTICE</span><strong>What is the role of mitochondria?</strong>
+                <div className="landing-mini-options"><i /><i /><i /><i /></div><span className="landing-card-caption"><CircleCheck size={13} /> Multiple choice quiz</span>
+              </div>
+              <div className="landing-float-card landing-float-right">
+                <span className="landing-card-kicker">YOUR PROGRESS <ArrowRight size={13} /></span><strong>Small steps add up.</strong><span className="landing-progress-number">+21%</span><div className="landing-progress-bars"><i /><i /><i /><i /><i /><i /><i /></div><span className="landing-card-caption">This week</span>
+              </div>
+              <div className="landing-phone">
+                <div className="landing-phone-island" />
+                <div className="landing-phone-top"><span>9:41</span><span>Wi-Fi&nbsp;100%</span></div>
+                <div className="landing-phone-greeting"><span className="landing-student-avatar">S</span><span><small>Welcome back,</small><strong>Your study desk</strong></span><span className="landing-xp"><Zap size={12} /> 245</span></div>
+                <div className="landing-phone-month"><button>&lt;</button><strong>Keep your streak going</strong><button>&gt;</button></div>
+                <div className="landing-week-days"><span>M<small>12</small></span><span>T<small>13</small></span><span>W<small>14</small></span><span className="is-today">T<small>15</small></span><span>F<small>16</small></span><span>S<small>17</small></span><span>S<small>18</small></span></div>
+                <button className="landing-daily-card" onClick={() => go("generate")}><span><small>DAILY STUDY SESSION</small><strong>Cell biology basics</strong><em>5 questions &middot; 8 min</em></span><span className="landing-daily-icon"><Brain size={24} /></span><b>Continue <ArrowRight size={12} /></b></button>
+                <div className="landing-phone-stats"><span>Weekly progress</span><strong>4 of 5 days</strong><i><b /></i></div>
+              </div>
             </div>
-            <button className="mt-16 flex w-full items-center gap-12 rounded-13 border border-white/10 bg-[#201f2c] p-13 text-left transition hover:border-[#7656a8]" onClick={() => go("learn")}>
-              <span className="grid size-39 shrink-0 place-items-center rounded-11 bg-[#352a4e] text-[#c5a7ff]"><Layers3 size={18} /></span>
-              <span className="grid min-w-0 gap-4"><small className="text-[8px] font-bold tracking-[.1em] text-[#aaa3bd]">CONTINUE LEARNING</small><strong className="truncate text-12">Foundations of Biology</strong><span className="text-10 text-[#aaa6bd]">Cell structure - Topic 03</span></span>
-              <span className="ml-auto grid size-30 shrink-0 place-items-center rounded-8 bg-[#38304d] text-[#d6c6ff]"><ArrowRight size={15} /></span>
-            </button>
-            <div className="mx-2 my-16 grid gap-8 text-10 text-[#b1adc2]"><div className="flex justify-between"><span>Topic progress</span><strong className="text-[#d2b8ff]">3 of 5</strong></div><span className="block h-5 overflow-hidden rounded-full bg-[#373348]"><i className="block h-full w-3/5 rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-300" /></span></div>
-            <div className="rounded-13 border border-white/5 bg-[#242230] p-15">
-              <div className="flex items-center justify-between text-[9px] font-semibold tracking-[.08em] text-[#aaa6bd]"><span>UP NEXT</span><span className="inline-flex items-center gap-5 font-normal tracking-normal"><Clock3 size={12} /> 10 min</span></div>
-              <strong className="mt-10 block font-grotesk text-15">Cell structure &amp; function</strong>
-              <p className="mb-12 mt-5 text-10 text-[#aaa6bd]">Quick quiz <span className="px-4 text-[#c7a2ff]">·</span> 8 questions</p>
-              <button className="inline-flex items-center gap-7 text-10 font-bold text-[#c6a6ff]" onClick={() => go("generate")}>Start a practice round <ArrowRight size={13} /></button>
-            </div>
-            <div className="flex items-center gap-8 px-2 pt-14 text-[9px] text-[#b8b2c9]"><CircleCheck size={14} className="text-[#b391ff]" /> Small sessions add up. Pick up where you left off.</div>
-            <div className="absolute -top-15 right-25 grid size-36 place-items-center rounded-12 border-4 border-[#171621] bg-gradient-to-br from-fuchsia-400 to-violet-600 text-white shadow-[0_8px_28px_#8b45d866] rotate-[7deg]"><Zap size={17} /></div>
           </div>
         </div>
       </section>
-      {/* Brand showcase - the course-archive / study-desk imagery, right where a
-          first-time visitor decides whether the product is for them. */}
       <BrandCarousel />
       <section className="mx-auto grid max-w-[1170px] grid-cols-3 gap-32 border-t border-[#dbeafe] px-24 pb-70 pt-12 max-760:grid-cols-1 max-760:gap-18 max-760:px-22 max-760:pb-48" aria-label="Study tools">
         <div className="grid grid-cols-[40px_1fr] content-start gap-x-12 [&>span]:row-span-2 [&>span]:grid [&>span]:size-40 [&>span]:place-items-center [&>span]:rounded-12 [&>span]:bg-pale [&>span]:text-brand [&>strong]:self-end [&>strong]:font-grotesk [&>strong]:text-14 [&>strong]:text-ink [&>p]:mt-5 [&>p]:text-12 [&>p]:leading-155 [&>p]:text-muted"><span><Upload size={19} /></span><strong>Bring your own material</strong><p>Use your PDFs and notes to start a personal study session.</p></div>

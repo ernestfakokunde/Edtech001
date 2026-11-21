@@ -1,11 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Activity, ArrowLeft, Ban, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Copy, FileText, Flag, LayoutDashboard, Menu, Plus, Power, Search, ShieldCheck, Sparkles, Ticket, Trash2, UserRound, Users, X } from "lucide-react";
+import { Activity, ArrowLeft, Ban, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, CircleCheck, Clock3, Coins, Copy, Cpu, FileText, Flag, LayoutDashboard, Menu, Plus, Power, RefreshCw, Search, ShieldCheck, Sparkles, Ticket, Trash2, UserRound, Users, X } from "lucide-react";
 import { go, useDrawerScrollLock } from "../components/Layout";
 import { motion } from "motion/react";
 import type { Route } from "../types";
-import { createAdminMission, createAdminPromoCode, deleteAdminMission, deleteAdminPromoCode, errorMessage, getAdminActivity, getAdminMissions, getAdminPromoCodes, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getModerationSummary, getUniversities, promoteAdminUser, reviewSubmission, suspendAdminUser, unsuspendAdminUser, updateAdminMission, updateAdminPromoCode } from "../lib/api";
-import type { ActivityEntry, AdminMission, AdminPromoCode, AdminUser, Department, Faculty, GiftPlan, MissionActionType, Pagination, RepositorySubmission, University } from "../lib/api";
+import { createAdminMission, createAdminPromoCode, deleteAdminMission, deleteAdminPromoCode, errorMessage, getAdminActivity, getAdminAiMonitoring, getAdminMissions, getAdminPromoCodes, getAdminSubmissions, getAdminUsers, getDepartments, getFaculties, getModerationSummary, getUniversities, promoteAdminUser, reviewSubmission, suspendAdminUser, unsuspendAdminUser, updateAdminMission, updateAdminPromoCode } from "../lib/api";
+import type { ActivityEntry, AdminAiMonitoring, AdminMission, AdminPromoCode, AdminUser, Department, Faculty, GiftPlan, MissionActionType, Pagination, RepositorySubmission, University } from "../lib/api";
 
 /* Phase 5 — standalone admin board: a Tailwind sidebar shell (drawer below
    1020px) with one sub-page per concern. App.tsx maps each `admin-*` hash
@@ -22,6 +22,7 @@ const ADMIN_TITLES: Record<string, string> = {
   promo: "Promo codes",
   submissions: "Submissions",
   activity: "Signals",
+  ai: "AI providers",
 };
 
 const ADMIN_NAV: { key: string; route: Route; label: string; icon: ReactNode }[] = [
@@ -32,6 +33,7 @@ const ADMIN_NAV: { key: string; route: Route; label: string; icon: ReactNode }[]
   { key: "promo", route: "admin-promo", label: "Promo codes", icon: <Ticket size={16} /> },
   { key: "submissions", route: "admin-submissions", label: "Submissions", icon: <FileText size={16} /> },
   { key: "activity", route: "admin-activity", label: "Signals", icon: <Activity size={16} /> },
+  { key: "ai", route: "admin-ai", label: "AI providers", icon: <Cpu size={16} /> },
 ];
 
 const QUICK_LINKS: { route: Route; icon: ReactNode; title: string; text: string }[] = [
@@ -41,6 +43,7 @@ const QUICK_LINKS: { route: Route; icon: ReactNode; title: string; text: string 
   { route: "admin-promo", icon: <Ticket size={17} />, title: "Promo codes", text: "Hand out free Pro days and bonus XP." },
   { route: "admin-submissions", icon: <FileText size={17} />, title: "Submissions", text: "Review the repository upload queue." },
   { route: "admin-activity", icon: <Activity size={17} />, title: "Signals", text: "Signups, referrals and moderation events." },
+  { route: "admin-ai", icon: <Cpu size={17} />, title: "AI providers", text: "Provider health, request history and available credits." },
 ];
 
 /* Shared control styling for every admin form. Without these the mission and
@@ -88,6 +91,8 @@ export function AdminPage({ section }: { section: string }) {
   const [activityType, setActivityType] = useState("all");
   const [activitySearchInput, setActivitySearchInput] = useState("");
   const [activitySearch, setActivitySearch] = useState("");
+  const [aiMonitoring, setAiMonitoring] = useState<AdminAiMonitoring | null>(null);
+  const [aiMonitoringLoading, setAiMonitoringLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [suspending, setSuspending] = useState<AdminUser | null>(null);
@@ -137,6 +142,12 @@ export function AdminPage({ section }: { section: string }) {
   async function loadSummary() {
     try { const result = await getModerationSummary(); setSummary(result.summary); }
     catch (reason) { setError(errorMessage(reason, "Could not load the summary.")); }
+  }
+  async function loadAiMonitoring() {
+    setAiMonitoringLoading(true);
+    try { setAiMonitoring(await getAdminAiMonitoring()); }
+    catch (reason) { setError(errorMessage(reason, "Could not load AI provider monitoring.")); }
+    finally { setAiMonitoringLoading(false); }
   }
   async function loadUniversities() {
     if (universities.length > 0) return;
@@ -266,6 +277,7 @@ export function AdminPage({ section }: { section: string }) {
     if (section === "admins") void loadAdmins();
     if (section === "missions") void loadMissions();
     if (section === "promo") void loadPromoCodes();
+    if (section === "ai") void loadAiMonitoring();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);
   useEffect(() => {
@@ -352,6 +364,90 @@ export function AdminPage({ section }: { section: string }) {
                     activity.map((entry) => <ActivityRow key={entry.id} entry={entry} />)
                   )}
                 </div>
+              </section>
+            </div>
+          )}
+
+          {section === "ai" && (
+            <div className="flex flex-col gap-16">
+              <section className="rounded-13 border border-line bg-white p-20 shadow-card">
+                <div className="mb-16 flex flex-wrap items-start justify-between gap-12">
+                  <div>
+                    <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Provider health</p>
+                    <h2 className="mb-0 mt-4 text-[17px] font-bold text-ink">Requests over the last 30 days</h2>
+                    <p className="mb-0 mt-6 text-12 text-muted">Tracks provider, model, result, latency and reported token use. Prompts and answers are never stored here.</p>
+                  </div>
+                  <button className="secondary-button inline-flex min-h-40 items-center justify-center gap-7 rounded-9 border border-line bg-white px-13 text-12 font-semibold text-muted hover:border-outline hover:text-brand disabled:opacity-50" disabled={aiMonitoringLoading} onClick={() => void loadAiMonitoring()}>
+                    <RefreshCw size={14} className={aiMonitoringLoading ? "animate-spin" : ""} /> Refresh
+                  </button>
+                </div>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-11">
+                  {(aiMonitoring?.providers ?? []).map((provider) => {
+                    const usage = provider.usage30d;
+                    const warning = usage.restockNeeded;
+                    const healthy = provider.configured && usage.failures === 0 && usage.invalidResponses === 0;
+                    return <article key={provider.id} className="rounded-11 border border-line bg-[#fbfcfe] p-14">
+                      <div className="flex items-start justify-between gap-10">
+                        <div className="min-w-0">
+                          <strong className="block truncate text-13 font-bold text-ink">{provider.label}</strong>
+                          <small className="mt-3 block break-all text-10 text-muted">{provider.model}</small>
+                        </div>
+                        <span className={`inline-flex shrink-0 items-center gap-5 rounded-999 px-8 py-5 text-10 font-bold ${!provider.configured ? "bg-slate-100 text-slate-600" : warning ? "bg-amber-100 text-amber-800" : healthy ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"}`}>
+                          {!provider.configured ? "Not configured" : warning ? "Restock" : healthy ? "Healthy" : "Check"}
+                        </span>
+                      </div>
+                      <div className="mt-14 grid grid-cols-2 gap-y-9 text-11">
+                        <span className="text-muted">Requests</span><strong className="text-right text-ink">{usage.requests}</strong>
+                        <span className="text-muted">Successful</span><strong className="text-right text-ink">{usage.successes}</strong>
+                        <span className="text-muted">Failed / invalid</span><strong className="text-right text-ink">{usage.failures + usage.invalidResponses}</strong>
+                        <span className="text-muted">Reported tokens</span><strong className="text-right text-ink">{(usage.inputTokens + usage.outputTokens).toLocaleString()}</strong>
+                      </div>
+                      {usage.lastUsedAt && <small className="mt-10 block text-10 text-slate-icon">Last used {new Date(usage.lastUsedAt).toLocaleString()}</small>}
+                    </article>;
+                  })}
+                  {(!aiMonitoring || aiMonitoring.providers.length === 0) && <div className="rounded-11 border border-line p-16 text-12 text-muted">{aiMonitoringLoading ? "Loading providers…" : "No provider data is available."}</div>}
+                </div>
+              </section>
+
+              {aiMonitoring?.openRouter && <section className="rounded-13 border border-line bg-white p-20 shadow-card">
+                <div className="flex flex-wrap items-center justify-between gap-12">
+                  <div className="flex items-start gap-10">
+                    <span className="grid size-36 shrink-0 place-items-center rounded-10 bg-pale text-brand"><Coins size={17} /></span>
+                    <div>
+                      <h2 className="mb-0 mt-1 text-[16px] font-bold text-ink">OpenRouter balance</h2>
+                      <p className="mb-0 mt-4 text-11 text-muted">Checked {new Date(aiMonitoring.openRouter.checkedAt).toLocaleTimeString()}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {aiMonitoring.openRouter.available ? (
+                      <>
+                        <strong className="block text-20 font-bold text-ink">{aiMonitoring.openRouter.isFreeTier ? "Free tier" : aiMonitoring.openRouter.remaining == null ? "No spend limit" : `$${aiMonitoring.openRouter.remaining.toFixed(2)} left`}</strong>
+                        <small className="text-10 text-muted">{aiMonitoring.openRouter.isFreeTier ? "Free models remain subject to provider limits." : aiMonitoring.openRouter.limit == null ? `Usage: $${(aiMonitoring.openRouter.usage ?? 0).toFixed(2)}` : `$${(aiMonitoring.openRouter.usage ?? 0).toFixed(2)} of $${aiMonitoring.openRouter.limit.toFixed(2)} used`}</small>
+                      </>
+                    ) : <span className="inline-flex items-center gap-6 text-12 font-semibold text-amber-800"><CircleAlert size={15} /> Could not read key status{aiMonitoring.openRouter.httpStatus ? ` (${aiMonitoring.openRouter.httpStatus})` : ""}</span>}
+                  </div>
+                </div>
+                {aiMonitoring.openRouter.available && !aiMonitoring.openRouter.isFreeTier && aiMonitoring.openRouter.remaining != null && aiMonitoring.openRouter.remaining <= 2 && <p className="mb-0 mt-13 flex items-center gap-7 rounded-9 bg-amber-50 px-11 py-9 text-11 font-semibold text-amber-800"><CircleAlert size={14} /> OpenRouter balance is low. Restock before paid model requests are blocked.</p>}
+              </section>}
+
+              <section className="rounded-13 border border-line bg-white p-20 shadow-card">
+                <div className="mb-13">
+                  <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Request log</p>
+                  <h2 className="mb-0 mt-4 text-[17px] font-bold text-ink">Recent provider responses</h2>
+                </div>
+                {!aiMonitoring?.recentCalls.length ? <div className="flex items-center gap-8 border-t border-line py-20 text-12 text-muted"><CircleCheck size={16} /> No provider calls recorded in the last 30 days.</div> : (
+                  <div className="grid border-t border-line">
+                    {aiMonitoring.recentCalls.map((call) => <div key={call.id} className="grid grid-cols-[minmax(0,1.4fr)_minmax(90px,.7fr)_auto_auto] items-center gap-12 border-b border-line py-11 max-760:grid-cols-[minmax(0,1fr)_auto]">
+                      <div className="min-w-0">
+                        <strong className="block truncate text-12 font-semibold text-ink">{call.provider} · {call.model}</strong>
+                        <small className="mt-3 block text-10 text-muted">{call.feature.replace(/_/g, " ")} · {new Date(call.createdAt).toLocaleString()}</small>
+                      </div>
+                      <span className={`justify-self-start rounded-999 px-8 py-5 text-10 font-bold ${call.status === "SUCCESS" ? "bg-emerald-100 text-emerald-800" : call.errorCode === "RESTOCK_REQUIRED" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-700"}`}>{call.errorCode === "RESTOCK_REQUIRED" ? "RESTOCK" : call.status}</span>
+                      <span className="text-11 text-muted">{call.latencyMs.toLocaleString()} ms</span>
+                      <span className="text-right text-10 text-muted">{call.inputTokens == null && call.outputTokens == null ? `${(call.outputCharacters ?? 0).toLocaleString()} chars` : `${((call.inputTokens ?? 0) + (call.outputTokens ?? 0)).toLocaleString()} tokens`}</span>
+                    </div>)}
+                  </div>
+                )}
               </section>
             </div>
           )}
