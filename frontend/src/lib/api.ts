@@ -416,7 +416,15 @@ export async function generateStudySet(input: { file: File; courseId?: string; t
   return body.set!
 }
 
-export type LearnChatMessage = { role: "user" | "assistant"; content: string }
+export async function generateStudySetFromText(input: { documentText: string; title?: string; type: "QUIZ"; length: number; timePerQuestion?: 30 | 60 }) {
+  const body = await request<{ set: GeneratedSet }>("/api/generation/from-text", {
+    method: "POST",
+    body: JSON.stringify({ documentText: input.documentText, documentName: input.title, type: input.type, length: input.length, timePerQuestion: input.timePerQuestion ?? 60 }),
+  })
+  return body.set
+}
+
+export type LearnChatMessage = { role: "user" | "assistant"; content: string; attachmentName?: string; quizSet?: GeneratedSet }
 export type SavedLearnChat = { id: string; title: string; updatedAt: string; preview?: string }
 export async function listLearnChats() {
   return request<{ chats: SavedLearnChat[] }>("/api/learn/history", { method: "GET" })
@@ -427,7 +435,7 @@ export async function getLearnChat(id: string) {
 export async function uploadLearnDocument(file: File): Promise<{ title: string; documentText: string; truncated: boolean }> {
   const problem = uploadFileProblem(file)
   if (problem) throw new Error(problem)
-  if (!file.name.toLowerCase().endsWith(".pdf")) throw new Error("Learn with AI currently supports PDF files.")
+  if (!/\.(pdf|docx)$/i.test(file.name)) throw new Error("Learn with AI supports PDF and DOCX files.")
   const makeForm = () => { const form = new FormData(); form.append("file", file); return form }
   const send = async () => fetchWithOfflineMessage(`${API_URL}/api/learn/document`, {
     method: "POST", credentials: "include", body: makeForm(), headers: { [CSRF_HEADER]: await getCsrfToken() },
@@ -436,11 +444,11 @@ export async function uploadLearnDocument(file: File): Promise<{ title: string; 
   if (response.status === 403) { csrfToken = null; response = await send() }
   const body = await response.json().catch(() => ({})) as { title?: string; documentText?: string; truncated?: boolean; message?: string }
   if (!response.ok) throw apiError(response, body.message)
-  if (!body.documentText || !body.title) throw new Error("We could not read this PDF. Try another file.")
+  if (!body.documentText || !body.title) throw new Error("We could not read this document. Try another file.")
   return { title: body.title, documentText: body.documentText, truncated: Boolean(body.truncated) }
 }
 export async function askLearnTutor(
-  input: { documentText?: string; documentName?: string; topic?: string; question: string; history: LearnChatMessage[]; chatId?: string },
+  input: { documentText?: string; documentName?: string; appendDocument?: boolean; attachmentName?: string; topic?: string; question: string; history: LearnChatMessage[]; chatId?: string; quizSetId?: string },
   onChunk: (chunk: string) => void,
 ): Promise<{ quota: AiCreditQuota; chatId: string }> {
   const send = async () => fetchWithOfflineMessage(`${API_URL}/api/learn/chat`, {

@@ -275,7 +275,7 @@ function App() {
       {route === "reset" && <ResetPasswordPage token={safeDecode(sub)} />}
       {route === "verify-email" && <VerifyEmailPage token={safeDecode(sub)} onVerified={() => void refreshProfile()} />}
       {route === "personal" && <PersonalPractice />}
-      {route === "learn" && <LearnWithAI />}
+      {route === "learn" && <LearnWithAI onTakeQuiz={(set) => { setGeneratedSet(set); setQuizResult(null); go(`quiz/${set.id}`); }} />}
       {route === "hierarchy" && (COURSE_REPOSITORY_ENABLED
         ? <Hierarchy onMaterial={chooseMaterial} />
         : <RepositoryComingSoon />)}

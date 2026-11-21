@@ -7,12 +7,14 @@ import { assertDocumentSignature, fileExtension } from '../utils/file.js'
 import { AiCreditsExhaustedError, completeAiCredit, getAiCreditQuota, refundAiCredit, reserveAiCredit } from '../services/aiCredits.service.js'
 import { recordMissionAction } from '../services/missions.service.js'
 import { prisma } from '../lib/prisma.js'
+import { Prisma } from '@prisma/client'
 
 const MAX_DOCUMENT_TEXT = 60_000
 const FREE_CHAT_HISTORY_MESSAGES = 5
 const PAID_CHAT_HISTORY_MESSAGES = 20
 const FREE_CHAT_RETENTION = 5
 const PAID_CHAT_RETENTION = 50
+type StoredLearnMessage = StudyChatMessage & { attachmentName?: string; quizSet?: Prisma.InputJsonValue }
 
 function chatHistoryLimit(profile: { subscriptionPlan: string; tier: 'FREE' | 'PREMIUM'; premiumUntil: Date | null }) {
   const hasActivePlan = profile.premiumUntil !== null
@@ -31,13 +33,13 @@ async function trimLearnChats(profile: { id: string; subscriptionPlan: string; t
   if (oldChats.length) await prisma.learnChat.deleteMany({ where: { id: { in: oldChats.map((item) => item.id) }, profileId: profile.id } })
 }
 
-function readStoredMessages(value: unknown): StudyChatMessage[] {
+function readStoredMessages(value: unknown): StoredLearnMessage[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((entry) => {
     if (!entry || typeof entry !== 'object') return []
-    const item = entry as { role?: unknown; content?: unknown }
+    const item = entry as { role?: unknown; content?: unknown; attachmentName?: unknown; quizSet?: unknown }
     return (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string'
-      ? [{ role: item.role as StudyChatMessage['role'], content: item.content.slice(0, 8000) }]
+      ? [{ role: item.role as StudyChatMessage['role'], content: item.content.slice(0, 8000), ...(typeof item.attachmentName === 'string' ? { attachmentName: item.attachmentName.slice(0, 255) } : {}), ...(item.quizSet && typeof item.quizSet === 'object' ? { quizSet: item.quizSet as Prisma.InputJsonValue } : {}) }]
       : []
   }).slice(-100)
 }
@@ -77,14 +79,15 @@ function uploadFile(request: Request) {
 
 export async function readLearnDocument(request: Request, response: Response) {
   const file = uploadFile(request)
-  if (!file) { response.status(400).json({ message: 'Choose a PDF to start a study session.' }); return }
-  if (fileExtension(file) !== 'pdf') { response.status(415).json({ message: 'Learn with AI currently supports PDF files.' }); return }
+  if (!file) { response.status(400).json({ message: 'Choose a PDF or DOCX file to start a study session.' }); return }
+  const extension = fileExtension(file)
+  if (extension !== 'pdf' && extension !== 'docx') { response.status(415).json({ message: 'Learn with AI supports PDF and DOCX files.' }); return }
   assertDocumentSignature(file)
   let text: string
-  try { text = await extractText(file, 'pdf') }
-  catch { response.status(422).json({ message: 'We could not read this PDF. Try another file.' }); return }
+  try { text = await extractText(file, extension) }
+  catch { response.status(422).json({ message: 'We could not read this document. Try another file.' }); return }
   if (text.trim().length < 80) {
-    response.status(422).json({ message: 'This PDF does not contain enough selectable text yet. Scanned PDFs are not supported in Learn with AI.' })
+    response.status(422).json({ message: 'This document does not contain enough selectable text. Scanned or image-only documents are not supported in Learn with AI.' })
     return
   }
   const { profile } = request as AuthenticatedRequest
@@ -94,32 +97,59 @@ export async function readLearnDocument(request: Request, response: Response) {
 export async function askLearnTutor(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
   const body = request.body && typeof request.body === 'object'
-    ? request.body as { documentText?: unknown; documentName?: unknown; topic?: unknown; question?: unknown; history?: unknown; chatId?: unknown }
+    ? request.body as { documentText?: unknown; documentName?: unknown; appendDocument?: unknown; attachmentName?: unknown; topic?: unknown; question?: unknown; history?: unknown; chatId?: unknown; quizSetId?: unknown }
     : {}
   const requestedChatId = typeof body.chatId === 'string' ? body.chatId : undefined
   const savedChat = requestedChatId
     ? await prisma.learnChat.findFirst({ where: { id: requestedChatId, profileId: profile.id } })
     : null
   if (requestedChatId && !savedChat) { response.status(404).json({ message: 'That chat could not be found. Start a new chat.' }); return }
-  const text = savedChat?.documentText ?? (typeof body.documentText === 'string' ? body.documentText.trim() : '')
   const topic = savedChat?.topic ?? (typeof body.topic === 'string' ? body.topic.trim() : '')
-  const documentName = savedChat?.documentName ?? (typeof body.documentName === 'string' ? body.documentName.trim().slice(0, 255) : '')
+  const incomingText = typeof body.documentText === 'string' ? body.documentText.trim() : ''
+  const incomingName = typeof body.documentName === 'string' ? body.documentName.trim().slice(0, 255) : ''
+  // A PDF staged in an existing chat becomes additional context and keeps the
+  // earlier source available for follow-up questions in that conversation.
+  const appendDocument = Boolean(savedChat?.documentText && body.appendDocument === true && incomingText)
+  const text = appendDocument
+    ? `${savedChat!.documentText}\n\n[Additional document: ${incomingName || 'uploaded document'}]\n${incomingText}`
+    : incomingText || savedChat?.documentText || ''
+  const documentName = appendDocument
+    ? `${savedChat!.documentName || 'Previous document'}, ${incomingName || 'uploaded document'}`.slice(0, 255)
+    : incomingName || savedChat?.documentName || ''
+  const attachmentName = typeof body.attachmentName === 'string' ? body.attachmentName.trim().slice(0, 255) : ''
+  if (appendDocument && text.length > MAX_DOCUMENT_TEXT) {
+    response.status(400).json({ message: 'The added PDF would make this chat too large. Start a new chat for this document.' }); return
+  }
   const question = typeof body.question === 'string' ? body.question.trim() : ''
   if (text.length > MAX_DOCUMENT_TEXT || (text.length > 0 && text.length < 80) || (!text && (topic.length < 2 || topic.length > 200))) {
-    response.status(400).json({ message: 'Start with a readable PDF or enter a topic of up to 200 characters.' }); return
+    response.status(400).json({ message: 'Start with a readable PDF or DOCX, or enter a topic of up to 200 characters.' }); return
   }
   if (!question || question.length > 2000) { response.status(400).json({ message: 'Ask a question up to 2,000 characters long.' }); return }
-  const rawHistory = savedChat ? readStoredMessages(savedChat.messages) : Array.isArray(body.history) ? body.history : []
+  const quizSetId = typeof body.quizSetId === 'string' ? body.quizSetId : ''
+  const quizSet = quizSetId ? await prisma.generatedSet.findFirst({
+    where: { id: quizSetId, userId: profile.id, type: 'QUIZ' },
+    include: { items: { orderBy: { position: 'asc' }, include: { question: true } } },
+  }) : null
+  if (quizSetId && !quizSet) { response.status(404).json({ message: 'The generated quiz could not be attached to this chat.' }); return }
   const historyLimit = chatHistoryLimit(profile)
+  // Saved transcript messages can be longer than user prompts. Keep the full
+  // bounded transcript for storage/display, but send only the recent context
+  // window to the model and don't validate it against the shorter prompt cap.
+  const storedHistory: StoredLearnMessage[] = savedChat ? readStoredMessages(savedChat.messages) : []
+  const rawHistory = savedChat
+    ? storedHistory.slice(-historyLimit)
+    : Array.isArray(body.history) ? body.history : []
   if (!savedChat && rawHistory.length > PAID_CHAT_HISTORY_MESSAGES) { response.status(400).json({ message: 'Start a fresh chat to continue studying.' }); return }
   const history: StudyChatMessage[] = []
   for (const item of rawHistory) {
     if (!item || typeof item !== 'object') { response.status(400).json({ message: 'The conversation could not be read.' }); return }
-    const message = item as { role?: unknown; content?: unknown }
-    if ((message.role !== 'user' && message.role !== 'assistant') || typeof message.content !== 'string' || message.content.length > 2000) {
+    const message = item as { role?: unknown; content?: unknown; attachmentName?: unknown }
+    const maximumMessageLength = savedChat ? 8000 : 2000
+    if ((message.role !== 'user' && message.role !== 'assistant') || typeof message.content !== 'string' || message.content.length > maximumMessageLength) {
       response.status(400).json({ message: 'The conversation could not be read.' }); return
     }
     history.push({ role: message.role, content: message.content.slice(0, 8000) })
+    if (!savedChat) storedHistory.push({ role: message.role, content: message.content.slice(0, 8000), ...(typeof message.attachmentName === 'string' ? { attachmentName: message.attachmentName.slice(0, 255) } : {}) })
   }
   const creditRequestId = randomUUID()
   let creditReservation: { id: string } | undefined
@@ -130,14 +160,17 @@ export async function askLearnTutor(request: Request, response: Response) {
     response.setHeader('Cache-Control', 'no-cache')
     response.setHeader('Connection', 'keep-alive')
     let fullAnswer = ''
-    for await (const chunk of chatWithStudyMaterialStream({ text: text || undefined, topic: topic || undefined, question, history: history.slice(-historyLimit) })) {
+    const tutorQuestion = quizSet
+      ? 'A quiz has been generated and attached to this chat message. Briefly introduce it and invite the student to take it or download the question paper. Do not write out the quiz questions again.'
+      : question
+    for await (const chunk of chatWithStudyMaterialStream({ text: text || undefined, topic: topic || undefined, question: tutorQuestion, history: history.slice(-historyLimit) })) {
       streamStarted = true
       response.write(`data: ${JSON.stringify({ content: chunk })}\n\n`)
       fullAnswer += chunk
     }
-    const messages = [...history, { role: 'user' as const, content: question }, { role: 'assistant' as const, content: fullAnswer }].slice(-100)
+    const messages = [...storedHistory, { role: 'user' as const, content: question, ...(attachmentName ? { attachmentName } : {}) }, { role: 'assistant' as const, content: fullAnswer, ...(quizSet ? { quizSet: JSON.parse(JSON.stringify(quizSet)) as Prisma.InputJsonValue } : {}) }].slice(-100)
     const chat = savedChat
-      ? await prisma.learnChat.update({ where: { id: savedChat.id }, data: { messages, title: savedChat.title } })
+      ? await prisma.learnChat.update({ where: { id: savedChat.id }, data: { messages, title: savedChat.title, topic: topic || null, documentName: documentName || null, documentText: text || null } })
       : await prisma.learnChat.create({ data: {
         profileId: profile.id,
         title: (topic || documentName || question).slice(0, 120),

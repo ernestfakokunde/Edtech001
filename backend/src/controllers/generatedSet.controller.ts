@@ -179,21 +179,21 @@ export async function clearQuizAttempts(request: Request, response: Response) {
 export async function generateStudySet(request: Request, response: Response) {
   const { profile } = request as AuthenticatedRequest
   const file = (request as AuthenticatedRequest & { file?: Express.Multer.File }).file
-
-  if (!file) {
+  const body = request.body as Partial<{ courseId: string; type: 'FLASHCARD' | 'QUIZ'; length: string; timePerQuestion: string; documentText: string; documentName: string }>
+  const suppliedText = typeof body.documentText === 'string' ? body.documentText.trim() : ''
+  if (suppliedText.length > 60_000) {
+    response.status(413).json({ message: 'This study material is too large to create a quiz from in chat. Try a shorter document.' })
+    return
+  }
+  if (!file && !suppliedText) {
     response.status(400).json({ message: 'No file uploaded. A file is required.' })
     return
   }
   // Reject renamed/mislabelled files before a Paper row or storage object is
   // created. Throwing here reaches the shared upload error mapper.
-  assertDocumentSignature(file)
+  if (file) assertDocumentSignature(file)
 
-  const { courseId, type, length, timePerQuestion } = request.body as Partial<{
-    courseId: string
-    type: 'FLASHCARD' | 'QUIZ'
-    length: string
-    timePerQuestion: string
-  }>
+  const { courseId, type, length, timePerQuestion } = body
 
   if ((type !== 'FLASHCARD' && type !== 'QUIZ') || !length) {
     response.status(400).json({ message: 'type and length are required.' })
@@ -235,37 +235,27 @@ export async function generateStudySet(request: Request, response: Response) {
     },
   })
 
-  const extension = fileExtension(file)
-  if (!extension) {
-    await rollbackPersonalPaper(paper.id)
-    response.status(400).json({ message: 'Only PDF, DOC, or DOCX files are supported.' })
-    return
+  const extension = file ? fileExtension(file) : null
+  let path: string | undefined
+  let text = suppliedText
+  if (file) {
+    if (!extension) {
+      await rollbackPersonalPaper(paper.id)
+      response.status(400).json({ message: 'Only PDF, DOC, or DOCX files are supported.' })
+      return
+    }
+    path = `personal/${profile.id}/${paper.id}.${extension}`
+    const { error } = await supabase.storage.from(env.supabaseBucket).upload(path, file.buffer, { contentType: file.mimetype, upsert: false })
+    if (error) console.warn(`[generate] archive upload failed, continuing without archive: ${error.message}`)
+    else await prisma.paper.update({ where: { id: paper.id }, data: { fileUrl: path } })
+    try { text = await extractText(file, extension) }
+    catch (reason) {
+      console.error('[generate] text extraction failed:', reason)
+      await rollbackPersonalPaper(paper.id, path)
+      response.status(422).json({ message: reason instanceof Error ? reason.message : 'Could not read text from this file. Please try another format.' })
+      return
+    }
   }
-
-  const path = `personal/${profile.id}/${paper.id}.${extension}`
-
-  const { error } = await supabase.storage.from(env.supabaseBucket).upload(path, file.buffer, {
-    contentType: file.mimetype,
-    upsert: false,
-  })
-
-  if (error) {
-    console.warn(`[generate] archive upload failed, continuing without archive: ${error.message}`)
-  } else {
-    await prisma.paper.update({ where: { id: paper.id }, data: { fileUrl: path } })
-  }
-
-  // 10–11. Extract text from the file (pdf-parse for .pdf, mammoth for .docx).
-  let text: string
-  try {
-    text = await extractText(file, extension)
-  } catch (reason) {
-    console.error('[generate] text extraction failed:', reason)
-    await rollbackPersonalPaper(paper.id, path)
-    response.status(422).json({ message: reason instanceof Error ? reason.message : 'Could not read text from this file. Please try another format.' })
-    return
-  }
-
   const hasGeminiPdf = env.ai.provider === 'gemini' || env.ai.fallbacks.includes('gemini')
   if (text.trim().length < 80 && !(hasGeminiPdf && extension === 'pdf')) {
     await rollbackPersonalPaper(paper.id, path)
@@ -304,7 +294,7 @@ export async function generateStudySet(request: Request, response: Response) {
       text,
       kind: type,
       length: parsedLength,
-      ...(extension === 'pdf' && hasGeminiPdf ? { pdfBase64: file.buffer.toString('base64') } : {}),
+      ...(file && extension === 'pdf' && hasGeminiPdf ? { pdfBase64: file.buffer.toString('base64') } : {}),
     })
   } catch (reason) {
     // Server-side detail stays here, keyed by the same code the client receives
@@ -343,7 +333,9 @@ export async function generateStudySet(request: Request, response: Response) {
         userId: profile.id,
         courseId: course.id,
         type,
-        title: setTitle(course, type, Boolean(courseId)),
+        title: typeof body.documentName === 'string' && body.documentName.trim()
+          ? `${body.documentName.trim().replace(/\.(?:pdf|docx?)$/i, '').slice(0, 90)} quiz`
+          : setTitle(course, type, Boolean(courseId)),
         requestedLength: parsedLength,
         ...(parsedTimePerQuestion ? { timePerQuestion: parsedTimePerQuestion } : {}),
         items: {

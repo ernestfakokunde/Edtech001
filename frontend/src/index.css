@@ -3013,6 +3013,27 @@ body,
 }
 .learn-thinking-dots i:nth-child(2) { animation-delay: .14s; }
 .learn-thinking-dots i:nth-child(3) { animation-delay: .28s; }
+.learn-chat-message { font-family: "Inter", sans-serif; font-size: clamp(15px, calc(13px + .28vw), 17px); line-height: 1.6; }
+.learn-chat-input { font-family: "Inter", sans-serif; font-size: clamp(16px, calc(15px + .14vw), 17px); line-height: 1.5; }
+.learn-answer-content { display: grid; gap: 13px; }
+.learn-answer-content p,
+.learn-answer-content ul,
+.learn-answer-content ol { margin: 0; }
+.learn-answer-content ul,
+.learn-answer-content ol { display: grid; gap: 7px; padding-left: 1.45em; }
+.learn-answer-content li { padding-left: .2em; }
+.learn-answer-content li::marker { color: var(--theme-brand); font-weight: 700; }
+.learn-answer-content .learn-code-block { min-width: 0; overflow: hidden; border: 1px solid #303030; border-radius: 12px; background: #1b1b1b; color: #f0f0f0; }
+.learn-code-header { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 14px; color: #a6a6a6; font-family: Inter, sans-serif; font-size: 12px; }
+.learn-code-header button { display: inline-flex; min-height: 32px; align-items: center; gap: 7px; border: 0; border-radius: 7px; background: transparent; padding: 0 8px; color: #d0d0d0; cursor: pointer; }
+.learn-code-header button:hover { background: #303030; color: #fff; }
+.learn-code-block pre { max-width: 100%; margin: 0; overflow: auto; background: #1b1b1b !important; padding: 12px 16px 17px; font-size: .88em; line-height: 1.65; tab-size: 4; }
+.learn-code-block pre code { display: block; width: max-content; min-width: 100%; background: transparent !important; font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+.learn-code-block .hljs { background: transparent !important; color: #f0f0f0; }
+.learn-quiz-card { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; border: 1px solid var(--color-line); border-radius: 12px; background: #fff; padding: 12px; }
+.learn-quiz-card > button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--color-line); border-radius: 8px; background: #fff; padding: 0 10px; color: var(--color-brand); font-size: 12px; font-weight: 700; }
+.learn-quiz-card > button:first-of-type { border-color: var(--color-brand); background: var(--color-brand); color: #fff; }
+@media (max-width: 560px) { .learn-quiz-card > div { flex-basis: calc(100% - 48px); } .learn-quiz-card > button { flex: 1 1 130px; } }
 @media (prefers-reduced-motion: reduce) {
   .learn-thinking-dots i { animation: none; opacity: .75; }
 }

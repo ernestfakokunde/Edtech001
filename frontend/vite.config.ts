@@ -18,6 +18,9 @@ const isRemoteTarget = !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.t
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    include: ['rehype-highlight'],
+  },
   server: {
     proxy: {
       '/api': {
