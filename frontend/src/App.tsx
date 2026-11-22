@@ -36,6 +36,7 @@ const protectedRoutes: Route[] = [
   "paper",
   "personal",
   "learn",
+  "theory-ai",
   "hierarchy",
   "material",
   "generate",
@@ -87,6 +88,7 @@ const ROUTE_TITLES: Record<Route, string> = {
   "verify-email": "Verify your email",
   personal: "Practise from my PDF",
   learn: "Learn with AI",
+  "theory-ai": "Theory mode",
   hierarchy: "Browse courses",
   material: "Material",
   courses: "Courses",
@@ -258,7 +260,7 @@ function App() {
   /* Every signed-in study surface shares the student rail. `material` and
      `personal` used to render without navigation because they were left out of
      this list, so a student could land on a page with no way back. */
-  const studentRoutes: Route[] = ["dashboard", "hierarchy", "material", "personal", "history", "rewards", "leaderboard", "generate", "paper", "learn", "flashcards", "quiz", "theory", "results", "profile"];
+  const studentRoutes: Route[] = ["dashboard", "hierarchy", "material", "personal", "history", "rewards", "leaderboard", "generate", "paper", "learn", "theory-ai", "flashcards", "quiz", "theory", "results", "profile"];
   const showHeader = route !== "home" && !["login", "signup", "forgot", "reset", "verify-email", "onboarding", "privacy", "terms", ...studentRoutes].includes(route) && !adminRoutes.includes(route);
   // Admin destinations render outside the student shell, so while the cached
   // identity is still being revalidated they would otherwise show a blank
@@ -283,6 +285,7 @@ function App() {
       {route === "verify-email" && <VerifyEmailPage token={safeDecode(sub)} onVerified={() => void refreshProfile()} />}
       {route === "personal" && <PersonalPractice />}
       {route === "learn" && <LearnWithAI onTakeQuiz={(set) => { setGeneratedSet(set); setQuizResult(null); go(`quiz/${set.id}`); }} />}
+      {route === "theory-ai" && <LearnWithAI theoryMode />}
       {route === "hierarchy" && (COURSE_REPOSITORY_ENABLED
         ? <Hierarchy onMaterial={chooseMaterial} />
         : <RepositoryComingSoon />)}

@@ -129,7 +129,7 @@ function renderTutorText(content: string): ReactNode {
   return output.length ? <div className="learn-answer-content">{output}</div> : renderTutorProse(content);
 }
 
-export function LearnWithAI({ onTakeQuiz }: { onTakeQuiz: (set: GeneratedSet) => void }) {
+export function LearnWithAI({ onTakeQuiz, theoryMode = false }: { onTakeQuiz?: (set: GeneratedSet) => void; theoryMode?: boolean }) {
   const [topicInput, setTopicInput] = useState("");
   const [activeTopic, setActiveTopic] = useState("");
   const [fileTitle, setFileTitle] = useState("");
@@ -228,7 +228,9 @@ export function LearnWithAI({ onTakeQuiz }: { onTakeQuiz: (set: GeneratedSet) =>
       setMessages((current) => [...current, { role: "assistant", content: "" }]);
       const result = await askLearnTutor({
         topic,
-        question: topic,
+        question: theoryMode
+          ? `Start a theory quiz on “${topic}”. Act as an interactive examiner: ask one open-ended question at a time and wait for my answer. Do not reveal the answer before I respond. After each response, assess it, explain any gaps briefly, then ask the next question.`
+          : topic,
         history: [],
       }, (chunk) => setMessages((current) => current.map((message, index) => index === current.length - 1 && message.role === "assistant" ? { ...message, content: message.content + chunk } : message)));
       setChatId(result.chatId);
@@ -247,7 +249,7 @@ export function LearnWithAI({ onTakeQuiz }: { onTakeQuiz: (set: GeneratedSet) =>
     // Keep every turn within the backend's request validation limit. Tutor
     // replies can be longer than that after streaming a full explanation.
     const history = messages.slice(-20).map((message) => ({ ...message, content: message.content.slice(0, 2000) }));
-    const makeQuiz = /\b(?:create|make|generate|build|prepare)\b.{0,45}\b(?:quiz|test|multiple.choice questions?)\b|\bquiz\b.{0,45}\b(?:create|make|generate|build|prepare)\b/i.test(asked);
+    const makeQuiz = !theoryMode && /\b(?:create|make|generate|build|prepare)\b.{0,45}\b(?:quiz|test|multiple.choice questions?)\b|\bquiz\b.{0,45}\b(?:create|make|generate|build|prepare)\b/i.test(asked);
     const quizSource = attachment?.documentText ?? documentText ?? (activeTopic ? `Topic: ${activeTopic}\n\nCreate a practice quiz that assesses its key concepts, definitions, processes, and applications. Student request: ${asked}` : "");
     setQuestion(""); setError(""); setBusy(true);
     setMessages((current) => [...current, { role: "user", content: asked, ...(attachment?.documentText ? { attachmentName: attachment.title } : {}) }]);
@@ -262,7 +264,10 @@ export function LearnWithAI({ onTakeQuiz }: { onTakeQuiz: (set: GeneratedSet) =>
         timePerQuestion: 60,
       }) : undefined;
       createdQuizSet = quizSet;
-      const result = await askLearnTutor({ documentText: attachment?.documentText ?? (documentText || undefined), documentName: attachment?.title ?? (fileTitle || undefined), appendDocument: Boolean(attachment?.documentText && chatId && documentText), attachmentName: attachment?.documentText ? attachment.title : undefined, topic: activeTopic || undefined, question: asked, history, chatId, quizSetId: quizSet?.id }, (chunk) => setMessages((current) => current.map((message, index) => index === current.length - 1 && message.role === "assistant" ? { ...message, content: message.content + chunk } : message)));
+      const tutorQuestion = theoryMode
+        ? `${asked}\n\nContinue in theory examiner mode: assess my answer to the previous open-ended question, briefly explain what is correct or missing, then ask exactly one next question. If this is my first answer, ask one question based on the topic or attached material. Do not give away the answer before I respond.`
+        : asked;
+      const result = await askLearnTutor({ documentText: attachment?.documentText ?? (documentText || undefined), documentName: attachment?.title ?? (fileTitle || undefined), appendDocument: Boolean(attachment?.documentText && chatId && documentText), attachmentName: attachment?.documentText ? attachment.title : undefined, topic: activeTopic || undefined, question: tutorQuestion, history, chatId, quizSetId: quizSet?.id }, (chunk) => setMessages((current) => current.map((message, index) => index === current.length - 1 && message.role === "assistant" ? { ...message, content: message.content + chunk } : message)));
       if (quizSet) setMessages((current) => current.map((message, index) => index === current.length - 1 && message.role === "assistant" ? { ...message, quizSet } : message));
       setChatId(result.chatId);
       if (attachment?.documentText) {
@@ -337,8 +342,8 @@ export function LearnWithAI({ onTakeQuiz }: { onTakeQuiz: (set: GeneratedSet) =>
           {!sessionTitle ? (
             <div className="w-full max-w-[610px] text-center">
               <span className="mx-auto mb-18 grid size-56 place-items-center rounded-18 border border-line bg-white text-brand shadow-card"><Lightbulb size={25} /></span>
-              <h1 className="m-0 text-[clamp(26px,5vw,38px)] font-bold tracking-[-.04em] text-ink">What would you like to learn?</h1>
-              <p className="mx-auto mt-10 max-w-480 text-16 leading-170 text-muted">Ask anything and learn through a natural conversation. You can also attach a PDF or DOCX and ask questions about it.</p>
+              <h1 className="m-0 text-[clamp(26px,5vw,38px)] font-bold tracking-[-.04em] text-ink">{theoryMode ? "Start a theory quiz" : "What would you like to learn?"}</h1>
+              <p className="mx-auto mt-10 max-w-480 text-16 leading-170 text-muted">{theoryMode ? "Choose a topic or attach your notes. Your AI examiner will ask one open-ended question at a time, review your answers, and help you improve." : "Ask anything and learn through a natural conversation. You can also attach a PDF or DOCX and ask questions about it."}</p>
               <button className="mt-14 inline-flex min-h-40 items-center gap-7 text-13 font-semibold text-brand hover:underline" type="button" disabled={uploading} onClick={() => fileInput.current?.click()}><Paperclip size={16} /> {uploading ? "Reading your document..." : "Attach a PDF or DOCX"}</button>
             </div>
           ) : (
@@ -354,7 +359,7 @@ export function LearnWithAI({ onTakeQuiz }: { onTakeQuiz: (set: GeneratedSet) =>
                     {message.role === "assistant" && message.quizSet && <div className="learn-quiz-card">
                       <span className="grid size-38 shrink-0 place-items-center rounded-10 bg-pale text-brand"><FileText size={18} /></span>
                       <div className="min-w-0 flex-1"><strong className="block truncate text-13 text-ink">{message.quizSet.title}</strong><span className="mt-3 block text-11 text-muted">{message.quizSet.items.length}-question quiz · Interactive quiz and PDF</span></div>
-                      <button type="button" onClick={() => onTakeQuiz(message.quizSet!)}><Play size={15} /> Take quiz</button>
+                      {onTakeQuiz && <button type="button" onClick={() => onTakeQuiz(message.quizSet!)}><Play size={15} /> Take quiz</button>}
                       <button type="button" onClick={() => downloadQuestionPaperPdf(message.quizSet!.title, message.quizSet!)}><Download size={15} /> Download PDF</button>
                     </div>}
                   </div>
@@ -372,7 +377,7 @@ export function LearnWithAI({ onTakeQuiz }: { onTakeQuiz: (set: GeneratedSet) =>
         <form className="learn-chat-composer sticky bottom-0 mb-8 grid grid-cols-[auto_1fr_auto] items-end gap-8 rounded-15 border border-line bg-white px-12 py-10 shadow-card focus-within:border-outline focus-within:shadow-focus" onSubmit={(event) => sessionTitle ? void sendQuestion(event) : void startTopicSession(event)}>
           {attachment && <div className="col-span-3 flex min-w-0 items-center gap-9 rounded-9 bg-pale px-12 py-10 text-13 text-ink" role="status"><FileText size={17} className="shrink-0 text-brand" /><span className="min-w-0 flex-1 truncate">{attachment.title}</span><span className="shrink-0 text-12 text-muted">{uploading ? "Uploading…" : attachment.documentText ? "Ready" : "Preparing…"}</span><button type="button" className="grid size-32 shrink-0 place-items-center rounded-6 text-muted hover:bg-white hover:text-ink disabled:opacity-40" aria-label="Remove attached document" disabled={uploading} onClick={() => { uploadRequestId.current += 1; setAttachment(null); }}><span aria-hidden="true">×</span></button></div>}
           <button className="grid size-40 max-760:size-44 place-items-center rounded-10 text-muted hover:bg-pale hover:text-brand" type="button" aria-label="Attach a document" disabled={uploading || Boolean(attachment)} onClick={() => fileInput.current?.click()}><Paperclip size={19} /></button>
-          <textarea className="learn-chat-input max-h-140 min-h-40 resize-none border-0 bg-transparent py-8 text-16 leading-150 text-ink outline-0 placeholder:text-muted" rows={1} value={sessionTitle ? question : topicInput} onChange={(event) => sessionTitle ? setQuestion(event.target.value) : setTopicInput(event.target.value)} onKeyDown={sessionTitle ? onComposerKeyDown : undefined} placeholder={sessionTitle ? (isTopicSession ? `Ask about ${activeTopic}...` : "Ask a question about your document...") : "Start with a topic..." } disabled={busy} aria-label={sessionTitle ? "Ask your AI tutor" : "Topic to learn"} aria-keyshortcuts={sessionTitle ? "Enter" : undefined} />
+          <textarea className="learn-chat-input max-h-140 min-h-40 resize-none border-0 bg-transparent py-8 text-16 leading-150 text-ink outline-0 placeholder:text-muted" rows={1} value={sessionTitle ? question : topicInput} onChange={(event) => sessionTitle ? setQuestion(event.target.value) : setTopicInput(event.target.value)} onKeyDown={sessionTitle ? onComposerKeyDown : undefined} placeholder={sessionTitle ? (isTopicSession ? `${theoryMode ? "Answer or ask about" : "Ask about"} ${activeTopic}...` : "Ask a question about your document...") : (theoryMode ? "Enter a topic to be quizzed on..." : "Start with a topic...")} disabled={busy} aria-label={sessionTitle ? "Ask your AI tutor" : "Topic to learn"} aria-keyshortcuts={sessionTitle ? "Enter" : undefined} />
           <button className="grid size-40 max-760:size-44 place-items-center rounded-10 bg-brand text-white disabled:cursor-not-allowed disabled:opacity-40" type="submit" aria-label={sessionTitle ? "Send question" : "Start learning"} disabled={sessionTitle ? (!question.trim() || busy || uploading || (!attachment?.documentText && !documentText && !activeTopic)) : topicInput.trim().length < 2}><ArrowUp size={19} /></button>
         </form>
         <p className="mb-14 text-center text-12 text-muted">AI can make mistakes. Check important details against your original material.</p>

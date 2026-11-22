@@ -14,6 +14,7 @@ export type Route =
   | "generate"
   | "paper"
   | "learn"
+  | "theory-ai"
   | "flashcards"
   | "quiz"
   | "theory"
