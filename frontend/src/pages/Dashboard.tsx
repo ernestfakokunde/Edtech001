@@ -9,8 +9,10 @@ import {
   Plus,
   Sparkles,
   Crown,
+  Search,
+  X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { displayNameOf, go } from "../components/Layout";
 import { addMyCourse, errorMessage, getGenerationQuota, getMyCourses, getMyXp, type AuthProfile, type GenerationQuota, type MySchool } from "../lib/api";
 import { getQuizStats } from "../lib/results";
@@ -18,6 +20,8 @@ import practiceArt from "../assets/brand1.png";
 
 /* Student study desk. */
 export function Dashboard({ profile }: { profile: AuthProfile | null }) {
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [dashboardSearch, setDashboardSearch] = useState("");
   const [stats, setStats] = useState({ attempts: 0, average: 0, best: 0, streak: 0 });
   const [school, setSchool] = useState<MySchool>(null);
   const [courses, setCourses] = useState<{ id: string; code: string; title: string }[]>([]);
@@ -28,6 +32,20 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   const [savingCourse, setSavingCourse] = useState(false);
   const [activePro, setActivePro] = useState(() => isProActive(profile?.subscriptionPlan, profile?.tier, profile?.premiumUntil));
   const [quota, setQuota] = useState<GenerationQuota | null>(null);
+  const dashboardSearchActions = [
+    { title: "Create practice", detail: "Make flashcards or a quiz from a PDF", route: "generate", terms: "practice pdf flashcards quiz create" },
+    { title: "Browse course library", detail: "Find study materials by course", route: "hierarchy", terms: "browse course library materials find" },
+    { title: "Continue studying", detail: "Open saved sets and results", route: "history", terms: "continue study saved sets quizzes results" },
+    { title: "Rewards", detail: "View XP, invites and promo codes", route: "rewards", terms: "rewards xp invites promo" },
+  ];
+  const normalizedSearch = dashboardSearch.trim().toLowerCase();
+  const searchResults = normalizedSearch ? [
+    ...dashboardSearchActions.filter((item) => `${item.title} ${item.detail} ${item.terms}`.toLowerCase().includes(normalizedSearch)).map((item) => ({ title: item.title, detail: item.detail, goTo: () => go(item.route) })),
+    ...courses.filter((course) => `${course.code} ${course.title}`.toLowerCase().includes(normalizedSearch)).map((course) => ({ title: course.code, detail: course.title, goTo: () => go(`generate/${encodeURIComponent(course.id)}`) })),
+  ].slice(0, 6) : [];
+  const firstName = displayNameOf(profile).trim().split(/[\s._-]+/)[0];
+  const welcomeText = `Welcome back, ${firstName}`;
+  const [typedWelcome, setTypedWelcome] = useState("");
   useEffect(() => {
     setStats(getQuizStats());
     // Each block is independent and best-effort: a failing call leaves its card
@@ -37,6 +55,41 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
       .catch(() => { /* the courses card falls back to its empty state */ });
     getMyXp().then((account) => setActivePro(isProActive(profile?.subscriptionPlan, account.tier, account.premiumUntil))).catch(() => undefined);
     getGenerationQuota().then(setQuota).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (reducedMotion.matches) { setTypedWelcome(welcomeText); return; }
+    let step = 0;
+    const typeLength = welcomeText.length;
+    const holdLength = 18;
+    const eraseStart = typeLength + holdLength;
+    const loopLength = eraseStart + typeLength + 12;
+    const timer = window.setInterval(() => {
+      step = (step + 1) % loopLength;
+      const visibleLength = step < typeLength
+        ? step + 1
+        : step < eraseStart
+          ? typeLength
+          : step < eraseStart + typeLength
+            ? typeLength - (step - eraseStart + 1)
+            : 0;
+      setTypedWelcome(welcomeText.slice(0, visibleLength));
+    }, 78);
+    const showFullWhenReduced = () => { if (reducedMotion.matches) setTypedWelcome(welcomeText); };
+    reducedMotion.addEventListener("change", showFullWhenReduced);
+    return () => { window.clearInterval(timer); reducedMotion.removeEventListener("change", showFullWhenReduced); };
+  }, [welcomeText]);
+
+  useEffect(() => {
+    const onShortcut = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "f") return;
+      event.preventDefault();
+      searchRef.current?.focus();
+      searchRef.current?.select();
+    };
+    window.addEventListener("keydown", onShortcut);
+    return () => window.removeEventListener("keydown", onShortcut);
   }, []);
 
   /* Nothing has been practised on this device yet, so the desk opens with the
@@ -57,12 +110,19 @@ export function Dashboard({ profile }: { profile: AuthProfile | null }) {
   }
 
   return (
-    <main className="dashboard-workspace mx-auto flex w-full max-w-[1200px] flex-col px-[clamp(20px,4vw,48px)] pt-44 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-32 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
-      <section className="mb-23 [&>.eyebrow]:mb-12 [&>h1]:mb-5 [&>h1]:mt-0 [&>h1]:text-[clamp(24px,3vw,32px)] [&>p:last-child]:m-0 [&>p:last-child]:text-13 [&>p:last-child]:text-muted">
-        <p className="eyebrow mb-17 flex items-center gap-8 text-10 font-bold uppercase tracking-[.13em] text-brand">Your study desk</p>
-        <h1>Welcome back, {displayNameOf(profile)}</h1>
-        <p>{school ? `${school.facultyName} · ${school.universityName}` : "Add your school on your profile to organize PDFs by course."}</p>
+    <main className="dashboard-workspace dashboard-colorful mx-auto flex w-full max-w-[1200px] flex-col px-[clamp(20px,4vw,48px)] pt-26 pb-64 max-860:px-[clamp(16px,4vw,24px)] max-860:pt-20 max-860:pb-56 max-680:min-w-0 max-680:px-18 [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
+      <section className="dashboard-welcome mb-23 [&>.eyebrow]:mb-12 [&>h1]:mb-5 [&>h1]:mt-0 [&>h1]:text-[clamp(24px,3vw,32px)] [&>p:last-child]:m-0 [&>p:last-child]:text-13 [&>p:last-child]:text-muted">
+        <div className="dashboard-welcome-orb" aria-hidden="true"><span /><i /><b /></div>
+        <h1 aria-label={welcomeText}><span aria-hidden="true">{typedWelcome}</span><i className="dashboard-type-caret" aria-hidden="true" /></h1>
       </section>
+      <div className="dashboard-search-wrap" role="search">
+        <Search size={18} aria-hidden="true" />
+        <input ref={searchRef} type="search" value={dashboardSearch} onChange={(event) => setDashboardSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setDashboardSearch(""); if (event.key === "Enter" && searchResults[0]) searchResults[0].goTo(); }} placeholder="Find courses, quizzes, and study tools" aria-label="Search courses and study tools" aria-keyshortcuts="Control+F Meta+F" />
+        {dashboardSearch ? <button type="button" aria-label="Clear search" onClick={() => { setDashboardSearch(""); searchRef.current?.focus(); }}><X size={16} /></button> : <kbd>Ctrl F</kbd>}
+        {normalizedSearch && <div className="dashboard-search-results" role="listbox" aria-label="Search results">
+          {searchResults.length ? searchResults.map((item, index) => <button type="button" role="option" aria-selected={index === 0} key={`${item.title}-${index}`} onClick={item.goTo}><span><strong>{item.title}</strong><small>{item.detail}</small></span><ArrowRight size={15} /></button>) : <p>No matches. Try a course code or a study tool.</p>}
+        </div>}
+      </div>
       {firstPractice && (
         <section className="dashboard-first-practice mb-22 grid grid-cols-[minmax(0,1.25fr)_minmax(0,.75fr)] items-center gap-28 overflow-hidden rounded-20 border border-[#e5dcf4] bg-[linear-gradient(135deg,#f8f5fcaa,#eee8fa66)] px-[clamp(22px,3vw,38px)] py-30 shadow-[0_18px_38px_#6d4cc214] max-760:grid-cols-1 max-760:rounded-20 max-760:px-20 max-760:py-24">
           <div className="max-w-[560px] text-ink [&_.eyebrow]:mb-10 [&_.eyebrow]:text-brand [&_h2]:mb-10 [&_h2]:text-[clamp(24px,3vw,32px)] [&>p:not(.eyebrow)]:m-0 [&>p:not(.eyebrow)]:text-13 [&>p:not(.eyebrow)]:leading-170 [&>p:not(.eyebrow)]:text-muted">
