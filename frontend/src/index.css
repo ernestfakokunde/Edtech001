@@ -3285,3 +3285,6 @@ body,
 .dashboard-search-results small { overflow: hidden; color: #80798c; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-search-results > p { margin: 0; padding: 13px 11px; color: #80798c; font-size: 12px; }
 @media (max-width: 520px) { .dashboard-search-wrap { min-height: 48px; margin-bottom: 22px; border-radius: 13px; } .dashboard-search-wrap > input { min-height: 44px; font-size: 12px; } .dashboard-search-wrap > kbd { font-size: 9px; } }
+.password-visibility-button { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 8px; background: transparent; padding: 0; color: #798092; cursor: pointer; transition: background-color .16s ease, color .16s ease; }
+.password-visibility-button:hover { background: #f2edfc; color: var(--theme-brand); }
+.password-visibility-button:focus-visible { outline: 2px solid #a98bdc; outline-offset: 1px; }

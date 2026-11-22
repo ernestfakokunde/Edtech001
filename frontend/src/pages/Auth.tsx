@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { ArrowRight, Check, LockKeyhole, Mail } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { BrandLogo } from "../components/BrandLogo";
 import authStudyImage from "../assets/brand2.png";
 import { go } from "../components/Layout";
@@ -12,6 +12,8 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isSignup = mode === "signup";
 
   /* Layout tokens used more than once inside this component.
@@ -139,11 +141,14 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
                   <input
                     className={fieldInput}
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     minLength={8}
                     placeholder="At least 8 characters"
                   />
+                  <button type="button" className="password-visibility-button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
                 </div>
               </label>
               {!isSignup && (
@@ -161,12 +166,15 @@ export function AuthPage({ mode, onAuthenticated, notice = "" }: { mode: "login"
                     <input
                       className={fieldInput}
                       name="confirmPassword"
-                      type="password"
+                      type={showConfirmPassword ? "text" : "password"}
                       required
                       minLength={8}
                       autoComplete="new-password"
                       placeholder="Re-enter your password"
                     />
+                    <button type="button" className="password-visibility-button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} aria-pressed={showConfirmPassword} onClick={() => setShowConfirmPassword((visible) => !visible)}>
+                      {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
                   </div>
                 </label>
               )}

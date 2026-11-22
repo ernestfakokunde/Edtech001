@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowRight, Check, KeyRound, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, KeyRound, Mail, ShieldCheck } from "lucide-react";
 import { BrandLogo } from "../components/BrandLogo";
 import { go } from "../components/Layout";
 import { errorMessage, requestPasswordReset, resetPassword, verifyEmailAddress } from "../lib/api";
@@ -96,6 +96,8 @@ export function ForgotPasswordPage() {
 export function ResetPasswordPage({ token }: { token: string }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -142,14 +144,20 @@ export function ResetPasswordPage({ token }: { token: string }) {
             New password
             <div className={fieldBox}>
               <KeyRound size={16} className="text-slate-icon" />
-              <input className={fieldInput} type="password" required minLength={8} maxLength={200} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" />
+              <input className={fieldInput} type={showPassword ? "text" : "password"} required minLength={8} maxLength={200} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" />
+              <button type="button" className="password-visibility-button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
           </label>
           <label className={label}>
             Confirm new password
             <div className={fieldBox}>
               <KeyRound size={16} className="text-slate-icon" />
-              <input className={fieldInput} type="password" required minLength={8} maxLength={200} autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} placeholder="Re-enter your password" />
+              <input className={fieldInput} type={showConfirmPassword ? "text" : "password"} required minLength={8} maxLength={200} autoComplete="new-password" value={confirm} onChange={(event) => setConfirm(event.target.value)} placeholder="Re-enter your password" />
+              <button type="button" className="password-visibility-button" aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} aria-pressed={showConfirmPassword} onClick={() => setShowConfirmPassword((visible) => !visible)}>
+                {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
           </label>
           <button className={primaryCta} type="submit" disabled={busy || !password || !confirm}>
