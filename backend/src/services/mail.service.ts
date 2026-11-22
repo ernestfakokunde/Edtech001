@@ -55,13 +55,19 @@ async function sendMail(mail: Mail): Promise<boolean> {
 }
 
 function layout(heading: string, body: string, actionLabel: string, actionUrl: string) {
-  return `<div style="font-family:Inter,Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:28px 24px;color:#1f2937">
-  <p style="margin:0 0 18px;font-size:13px;font-weight:700;color:#2563eb">RecappEdu</p>
-  <h1 style="margin:0 0 14px;font-size:22px;line-height:1.3">${escapeHtml(heading)}</h1>
-  <p style="margin:0 0 22px;font-size:14px;line-height:1.65;color:#4b5563">${body}</p>
-  <a href="${escapeHtml(actionUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 18px;border-radius:8px">${escapeHtml(actionLabel)}</a>
-  <p style="margin:22px 0 0;font-size:12px;line-height:1.6;color:#6b7280">If the button does not work, paste this link into your browser:<br><span style="color:#2563eb;word-break:break-all">${escapeHtml(actionUrl)}</span></p>
-  <p style="margin:18px 0 0;font-size:12px;color:#9ca3af">If you did not request this email, you can ignore it.</p>
+  return `<div style="background:#f5f7fb;padding:32px 16px;font-family:Inter,Segoe UI,Arial,sans-serif;color:#182033">
+  <div style="max-width:520px;margin:0 auto;overflow:hidden;border:1px solid #e5e9f2;border-radius:16px;background:#ffffff">
+    <div style="height:5px;background:#2563eb"></div>
+    <div style="padding:28px 28px 24px">
+      <p style="margin:0 0 28px;font-size:16px;font-weight:750;letter-spacing:-.3px;color:#2563eb">RecappEdu</p>
+      <h1 style="margin:0 0 12px;font-size:23px;line-height:1.3;letter-spacing:-.5px">${escapeHtml(heading)}</h1>
+      <p style="margin:0 0 24px;font-size:14px;line-height:1.65;color:#536078">${body}</p>
+      <a href="${escapeHtml(actionUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 18px;border-radius:9px">${escapeHtml(actionLabel)}</a>
+      <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#6b7280">If the button does not work, paste this link into your browser:<br><a href="${escapeHtml(actionUrl)}" style="color:#2563eb;word-break:break-all">${escapeHtml(actionUrl)}</a></p>
+      <p style="margin:18px 0 0;font-size:12px;color:#8992a4">If you did not request this email, you can ignore it.</p>
+    </div>
+  </div>
+  <p style="margin:16px auto 0;max-width:520px;text-align:center;font-size:11px;color:#8992a4">RecappEdu · <a href="${escapeHtml(env.mail.publicAppUrl)}" style="color:#667085;text-decoration:none">recapp-edu.pro</a></p>
 </div>`
 }
 

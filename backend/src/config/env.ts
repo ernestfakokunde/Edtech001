@@ -123,7 +123,7 @@ export const env = {
      * deployment that has not configured email yet; the server logs a warning.
      */
     resendApiKey: cleanSecret(process.env.RESEND_API_KEY),
-    from: cleanSecret(process.env.MAIL_FROM) ?? 'RecappEdu <no-reply@recappedu.app>',
+    from: cleanSecret(process.env.MAIL_FROM) ?? 'RecappEdu <no-reply@recapp-edu.pro>',
     publicAppUrl: (cleanSecret(process.env.PUBLIC_APP_URL) ?? frontendOrigins[0] ?? 'http://localhost:5173').replace(/\/+$/, ''),
     enabled: Boolean(cleanSecret(process.env.RESEND_API_KEY)),
   },

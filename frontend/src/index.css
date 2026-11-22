@@ -3156,6 +3156,8 @@ body,
 .landing-refresh .landing-site-nav button:focus-visible, .landing-refresh .landing-hero-actions button:focus-visible { outline: 3px solid #9d7beb; outline-offset: 3px; }
 .landing-refresh > section:not(.landing-scene) { color: #24212c; }
 :root[data-theme] .landing-refresh { background: #f8f7fc !important; color: #191622 !important; }
+:root[data-theme] .landing-refresh .pricing-headline { color: #172033 !important; }
+:root[data-theme] .landing-refresh .pricing-highlight { background-color: #e9e3ff !important; color: #5a438f !important; }
 :root[data-theme] .landing-refresh .landing-scene { grid-template-columns: none; justify-items: stretch; gap: 0; max-width: none; padding: clamp(22px, 5vw, 70px) clamp(12px, 5vw, 60px); text-align: center; background: linear-gradient(180deg, #9eafff 0%, #cbbaf5 42%, #efc8e2 70%, #a7a1df 100%) !important; }
 :root[data-theme] .landing-refresh .landing-scene > .landing-browser-window { width: min(1120px, 100%); max-width: 1120px; justify-self: center; }
 @media (max-width: 760px) {
