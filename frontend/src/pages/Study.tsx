@@ -649,14 +649,24 @@ function ConfettiBurst() {
 
 type Grade = "known" | "unknown";
 
+export type QuizReviewAnswer = {
+  prompt: string;
+  selectedAnswer: string | null;
+  correctAnswer: string | null;
+  explanation: string | null;
+  correct: boolean;
+};
+
 export function Flashcards({
   set,
   onExit,
   onQuiz,
+  onStudyMore,
 }: {
   set: GeneratedSet;
   onExit: () => void;
   onQuiz?: () => void;
+  onStudyMore?: () => void;
 }) {
   const total = set.items.length;
   const [index, setIndex] = useState(0);
@@ -769,7 +779,7 @@ export function Flashcards({
       {total === 0 ? (
         <div className="grid min-h-[320px] w-full place-items-center rounded-20 border border-dashed border-[#bfdbfe] bg-[#f8fbff] text-12 text-muted">This set has no cards yet.</div>
       ) : finished ? (
-        <div className="relative grid justify-items-center gap-16 rounded-20 border border-line bg-white px-26 py-36 text-center shadow-[0_22px_40px_rgba(15,23,42,.07)] max-680:px-16 max-680:py-24" role="status">
+        <div className="relative grid justify-items-center gap-16 rounded-20 border border-line bg-white px-26 py-36 text-center shadow-[0_22px_40px_rgba(15,23,42,.07)] max-680:px-16 max-680:py-24" role="region" aria-label="Deck complete">
           <ConfettiBurst />
           <div className="fc-complete-ring">
             <strong className="text-[32px] font-bold text-ink">{Math.round((knownCount / total) * 100)}%</strong>
@@ -780,6 +790,19 @@ export function Flashcards({
               You marked {knownCount} of {total} cards as known{reviewCount ? ` — ${reviewCount} ${reviewCount === 1 ? "card needs" : "cards need"} another look.` : ". Perfect run."}
             </small>
           </div>
+          <section className="flashcard-review" aria-label="Flashcards to review">
+            <h2>{reviewCount ? "Cards to revisit" : "You know every card"}</h2>
+            {reviewCount ? <>
+              <p>Focus on these cards in your next study session:</p>
+              <div className="flashcard-review-list">
+                {set.items.map((entry, cardIndex) => grades[cardIndex] === "unknown" ? <article key={entry.question.id}>
+                  <strong>{entry.question.prompt}</strong>
+                  <span>{entry.question.answer || "Review this answer in your source material."}</span>
+                  {entry.question.explanation && <small>{entry.question.explanation}</small>}
+                </article> : null)}
+              </div>
+            </> : <p>All cards were marked as known. Keep the streak going with a quick review later.</p>}
+          </section>
           <div className="flex flex-wrap justify-center gap-8">
             <span className="fc-grade-pill known"><Check size={12} /> {knownCount} known</span>
             <span className="fc-grade-pill unknown"><X size={12} /> {reviewCount} to review</span>
@@ -791,6 +814,11 @@ export function Flashcards({
             {onQuiz && (
               <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onQuiz}>
                 Try this as a quiz <ArrowRight size={14} />
+              </button>
+            )}
+            {onStudyMore && (
+              <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onStudyMore}>
+                Make more practice for this course <ArrowRight size={14} />
               </button>
             )}
             <button className="primary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 bg-[#2563eb] px-14 text-12 font-bold leading-[1.25] text-white shadow-[0_7px_18px_rgba(37,99,235,.14)] transition-[transform,background,box-shadow] duration-200 hover:-translate-y-2 hover:bg-[#1d4ed8] hover:shadow-[0_10px_22px_rgba(37,99,235,.19)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none" onClick={onExit}>
@@ -897,12 +925,13 @@ export function Quiz({
   set: GeneratedSet;
   onExit: () => void;
   onCreateNew: () => void;
-  onFinish: (score: number, total: number) => void;
+  onFinish: (score: number, total: number, answers: QuizReviewAnswer[]) => void;
 }) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [score, setScore] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string | null>>({});
   const [timeLeft, setTimeLeft] = useState(set.timePerQuestion ?? 30);
   const total = set.items.length;
   const item = set.items[index]?.question;
@@ -924,13 +953,21 @@ export function Quiz({
   function choose(option: string) {
     if (revealed || !item) return;
     setSelected(option);
+    setSelectedAnswers((current) => ({ ...current, [index]: option }));
     setRevealed(true);
     if (option === item.answer) setScore((current) => current + 1);
   }
 
   function next() {
     if (index === total - 1) {
-      onFinish(score, total);
+      const answers = set.items.map((entry, itemIndex) => ({
+        prompt: entry.question.prompt,
+        selectedAnswer: selectedAnswers[itemIndex] ?? null,
+        correctAnswer: entry.question.answer,
+        explanation: entry.question.explanation,
+        correct: Boolean(entry.question.answer && selectedAnswers[itemIndex] === entry.question.answer),
+      }));
+      onFinish(score, total, answers);
       return;
     }
     setIndex((current) => current + 1);
@@ -1033,14 +1070,18 @@ export function Results({
   set,
   score,
   total,
+  answers,
   onRetake,
   onBack,
+  onStudyMore,
 }: {
   set: GeneratedSet;
   score: number;
   total: number;
+  answers: QuizReviewAnswer[];
   onRetake: () => void;
   onBack: () => void;
+  onStudyMore: () => void;
 }) {
   const percent = total > 0 ? Math.round((score / total) * 100) : 0;
   const missed = Math.max(total - score, 0);
@@ -1070,7 +1111,25 @@ export function Results({
           <span>Per question</span>
         </div>
       </div>
+      <section className="quiz-review-panel mt-20" aria-label="Quiz answer review">
+        <div className="quiz-review-heading">
+          <div><span className="quiz-review-kicker">Personal review</span><h2>What to study next</h2><p>Review the questions you missed, then use the explanations to focus your next session.</p></div>
+          <span className="quiz-review-summary"><strong>{answers.filter((answer) => !answer.correct).length}</strong> to revisit</span>
+        </div>
+        <div className="quiz-review-list">
+          {answers.map((answer, index) => <article className={answer.correct ? "is-correct" : "needs-review"} key={`${index}-${answer.prompt}`}>
+            <div className="quiz-review-status"><span>Question {index + 1}</span><strong>{answer.correct ? "Correct" : "Review"}</strong></div>
+            <h3>{answer.prompt}</h3>
+            <p><span>Your answer</span>{answer.selectedAnswer ?? "Not answered"}</p>
+            {!answer.correct && answer.correctAnswer && <p><span>Correct answer</span>{answer.correctAnswer}</p>}
+            {answer.explanation && <small>{answer.explanation}</small>}
+          </article>)}
+        </div>
+      </section>
       <div className="mt-26 flex flex-wrap gap-10 [&>button]:flex-1 max-760:flex-col">
+        <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onStudyMore}>
+          Make more practice for this course
+        </button>
         <button className="secondary-button inline-flex min-h-40 max-w-full items-center justify-center gap-7 whitespace-normal rounded-9 border border-[#d6e3f5] bg-white px-14 text-12 font-bold leading-[1.25] text-[#4f46e5] transition-colors duration-200 hover:border-[#b7b7b3] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" onClick={onRetake}>
           Retake quiz
         </button>

@@ -14,6 +14,7 @@ import {
   TheoryPractice,
   Results,
   QuestionPaper,
+  type QuizReviewAnswer,
 } from "./pages/Study";
 import { GenerateFlow } from "./pages/Generate";
 import { getRepositoryPaper, recordQuizAttempt, type RepositoryPaper, type GeneratedSet } from "./lib/api";
@@ -147,7 +148,7 @@ function App() {
   const hadCachedProfile = useRef(hasProfileCache()).current;
   const [selectedMaterial, setSelectedMaterial] = useState<RepositoryPaper | null>(null);
   const [generatedSet, setGeneratedSet] = useState<GeneratedSet | null>(null);
-  const [quizResult, setQuizResult] = useState<{ score: number; total: number } | null>(null);
+  const [quizResult, setQuizResult] = useState<{ score: number; total: number; answers: QuizReviewAnswer[] } | null>(null);
   // A warm identity cache means we already know who this is, so the app never
   // shows the "Checking your session..." flash on every reload.
   const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">(hadCachedProfile ? "authenticated" : "checking");
@@ -311,7 +312,7 @@ function App() {
         <MissingSet back="generate" />
       ))}
       {route === "flashcards" && (generatedSet && generatedSet.type === "FLASHCARD" ? (
-        <Flashcards set={generatedSet} onExit={() => { setGeneratedSet(null); go("dashboard"); }} />
+        <Flashcards set={generatedSet} onExit={() => { setGeneratedSet(null); go("dashboard"); }} onStudyMore={() => go(`generate/${generatedSet.courseId}`)} />
       ) : (
         <MissingSet back="generate" />
       ))}
@@ -321,6 +322,8 @@ function App() {
             set={generatedSet}
             score={quizResult.score}
             total={quizResult.total}
+            answers={quizResult.answers}
+            onStudyMore={() => go(`generate/${generatedSet.courseId}`)}
             onRetake={() => { setQuizResult(null); go(`quiz/${generatedSet.id}`); }}
             onBack={() => { setQuizResult(null); setGeneratedSet(null); go("history"); }}
           />
@@ -329,12 +332,12 @@ function App() {
             set={generatedSet}
             onExit={() => { setQuizResult(null); go("dashboard"); }}
             onCreateNew={() => { setGeneratedSet(null); setQuizResult(null); go("generate"); }}
-            onFinish={(score, total) => {
+            onFinish={(score, total, answers) => {
               /* Persist the run locally (offline-safe; this is what the dashboard
                  + history page read) and mirror it to the server, which also
                  feeds the admin activity log. Best-effort: a failed POST must
                  never block the results screen. */
-              setQuizResult({ score, total });
+              setQuizResult({ score, total, answers });
               saveQuizResult({
                 setId: generatedSet.id,
                 title: generatedSet.title,
@@ -364,6 +367,8 @@ function App() {
           set={generatedSet}
           score={quizResult.score}
           total={quizResult.total}
+          answers={quizResult.answers}
+          onStudyMore={() => go(`generate/${generatedSet.courseId}`)}
           onRetake={() => { setQuizResult(null); go(`quiz/${generatedSet.id}`); }}
           onBack={() => { setQuizResult(null); setGeneratedSet(null); go("history"); }}
         />
